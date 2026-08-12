@@ -1,0 +1,23 @@
+{
+  "name": "Погода для бега",
+  "short_name": "Бег·Погода",
+  "description": "Погода с оценкой условий для бега: лучшее окно дня, разбор факторов, воздух и пыльца.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF3F8",
+  "theme_color": "#3E97E8",
+  "categories": ["weather", "health", "sports"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Лучшее время сегодня", "url": "./index.html#analysis" },
+    { "name": "Радар осадков", "url": "./index.html#radar" }
+  ]
+}
