@@ -4,7 +4,7 @@ const AIR = 'https://air-quality-api.open-meteo.com/v1/air-quality';
 const GEO = 'https://geocoding-api.open-meteo.com/v1/search';
 const REVGEO = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
 
-export const DEFAULT_PLACE = { name: 'Берлин', lat: 52.52, lon: 13.405, country: 'Германия' };
+export const DEFAULT_PLACE = { name: 'Berlin', lat: 52.52, lon: 13.405, country: 'Germany' };
 
 export const DEFAULT_PROFILE = {
   heat: 'normal',      // low | normal | high  — переносимость жары
@@ -65,9 +65,9 @@ export async function searchCity(name) {
   }));
 }
 
-export async function reverseGeocode(lat, lon) {
+export async function reverseGeocode(lat, lon, lang = 'en') {
   try {
-    const r = await fetch(`${REVGEO}?latitude=${lat}&longitude=${lon}&localityLanguage=ru`);
+    const r = await fetch(`${REVGEO}?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`);
     const j = await r.json();
     return { name: j.city || j.locality || j.principalSubdivision || 'Моё место', lat, lon, country: j.countryName || '' };
   } catch { return { name: 'Моё место', lat, lon, country: '' }; }
@@ -222,15 +222,14 @@ export function bestWindowOfDay(hours, dayISO, durationMin) {
   return best;
 }
 
-export const AQI_BANDS = [
-  [20, 'Отличный', '#1F9D4D', 'Дышится легко'],
-  [40, 'Хороший', '#5FBF7E', 'Дышится легко'],
-  [60, 'Умеренный', '#E9A21B', 'Для большинства нормально'],
-  [80, 'Плохой', '#EF6C2E', 'Снизьте темп и объём'],
-  [100, 'Очень плохой', '#DC4B3E', 'Лучше в помещении'],
-  [Infinity, 'Опасный', '#8E2A20', 'Не бегайте на улице']
-];
-export const aqiBand = (v) => AQI_BANDS.find(b => v <= b[0]) || AQI_BANDS.at(-1);
+export const AQI_COLORS = ['#2E9E4F', '#5FBF7E', '#E9A21B', '#EF6C2E', '#DE5B4A', '#8E2A20'];
+export const AQI_LIMITS = [20, 40, 60, 80, 100, Infinity];
+// Возвращает [индексПолосы, цвет] — названия берутся из словаря языка.
+export const aqiBand = (v) => {
+  const i = AQI_LIMITS.findIndex(l => v <= l);
+  const k = i < 0 ? 5 : i;
+  return [k, AQI_COLORS[k]];
+};
 
 export const POLLEN_LEVEL = (v) =>
   v == null ? ['—', '#8C9CB5'] :

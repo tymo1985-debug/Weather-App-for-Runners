@@ -1,260 +1,272 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
-<title>Погода для бега</title>
-<meta name="description" content="Погода с оценкой условий для бега: лучшее окно, разбор факторов, качество воздуха и пыльца.">
+<title>Run Weather</title>
+<meta name="description" content="Weather with a running score: the best window of the day, factor breakdown, air quality and pollen.">
 <meta name="theme-color" content="#4A9FE8">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Бег·Погода">
+<meta name="apple-mobile-web-app-title" content="Run Weather">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-
 <div id="app">
 
-  <!-- ГЛАВНАЯ -->
-  <section class="screen screen--home is-active" data-screen="home">
-    <header class="hero" id="hero">
-      <div class="hero__sky"></div>
-      <div class="hero__skyline" aria-hidden="true"></div>
-      <div class="hero__top safe-top">
+<!-- 1 - ГЛАВНАЯ -->
+<section class="screen is-active" data-screen="home">
+  <header class="hero">
+    <div class="hero__sky"></div>
+    <div class="hero__scene" aria-hidden="true"></div>
+    <div class="hero__top safe-top">
+      <div>
         <button class="hero__place" id="btnPlace">
-          <svg viewBox="0 0 24 24" class="i16"><path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg>
-          <span id="placeName">Определяем…</span>
+          <span class="hero__pin" id="pinIcon"></span>
+          <span id="placeName">...</span>
           <svg viewBox="0 0 24 24" class="i12 chev"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
-        <div class="hero__actions">
-          <button class="round-btn" id="btnLocate" title="Моё местоположение" aria-label="Моё местоположение">
-            <svg viewBox="0 0 24 24" class="i18"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm9 3h-1.06A8.01 8.01 0 0 0 13 4.06V3h-2v1.06A8.01 8.01 0 0 0 4.06 11H3v2h1.06A8.01 8.01 0 0 0 11 19.94V21h2v-1.06A8.01 8.01 0 0 0 19.94 13H21v-2Zm-9 7a6 6 0 1 1 0-12 6 6 0 0 1 0 12Z"/></svg>
-          </button>
-          <button class="round-btn" id="btnAddCity" title="Добавить город" aria-label="Добавить город">
-            <svg viewBox="0 0 24 24" class="i18"><path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
-          </button>
-        </div>
+        <p class="hero__date" id="heroDate">&nbsp;</p>
       </div>
-      <p class="hero__date" id="heroDate">&nbsp;</p>
-      <div class="hero__now">
-        <div class="hero__icon" id="heroIcon"></div>
-        <div class="hero__temp">
-          <div class="hero__deg"><span id="heroTemp">—</span><span class="deg">°</span></div>
-          <div class="hero__cond" id="heroCond">Загружаем погоду</div>
-          <div class="hero__feels" id="heroFeels">&nbsp;</div>
-        </div>
-      </div>
-      <div class="hero__minmax" id="heroMinMax"></div>
-    </header>
-
-    <div class="sheet">
-      <div class="grid2">
-        <button class="card card--score" id="cardScore">
-          <div class="card--score__head">
-            <svg viewBox="0 0 24 24" class="i18 run-glyph"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM9.8 8.9 7 10.4 5.6 8.6 9.9 6a2.6 2.6 0 0 1 2.9.2l2 1.6 2.4-.9.7 1.9-3.4 1.3-1.3-1-1 4.1 3 2.6 1.5 5.2-2 .6-1.3-4.4-4-3.4-1.4 5-1.9 3.4-1.8-1 1.7-3 1.7-6.9Z"/></svg>
-            <span>Условия для бега</span>
-          </div>
-          <div class="card--score__value" id="scoreBig">—</div>
-          <div class="card--score__label"><span id="scoreLabel">—</span></div>
-          <div class="card--score__sub" id="scoreSub">Считаем оценку</div>
-        </button>
-
-        <div class="card card--facts">
-          <div class="fact">
-            <svg viewBox="0 0 24 24" class="i18 c-blue"><path d="M12 4a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm1 8.4 3.3 2-1 1.6-4.3-2.6V7h2v5.4ZM7.3 1.9 8.6 3.4 4.8 6.6 3.5 5.1 7.3 1.9Zm9.4 0 3.8 3.2-1.3 1.5-3.8-3.2 1.3-1.5Z"/></svg>
-            <div><span class="fact__k">Лучшее время</span><span class="fact__v" id="factWindow">—</span></div>
-          </div>
-          <div class="fact">
-            <svg viewBox="0 0 24 24" class="i18 c-slate"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16Zm0-13a5 5 0 1 0 0 10 5 5 0 0 0 0-10Zm0 8a3 3 0 1 1 0-6 3 3 0 0 1 0 6Z"/></svg>
-            <div><span class="fact__k">Длительность</span><span class="fact__v" id="factDuration">60 мин</span></div>
-          </div>
-          <div class="fact">
-            <svg viewBox="0 0 24 24" class="i18 c-amber"><path d="M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0-13V1h0m-1 0h2v3h-2V1Zm0 19h2v3h-2v-3ZM1 11h3v2H1v-2Zm19 0h3v2h-3v-2ZM4.2 3.4l2.1 2.1-1.4 1.4-2.1-2.1 1.4-1.4Zm13.5 13.5 2.1 2.1-1.4 1.4-2.1-2.1 1.4-1.4Zm2.1-13.5 1.4 1.4-2.1 2.1-1.4-1.4 2.1-2.1ZM4.9 16.9l1.4 1.4-2.1 2.1-1.4-1.4 2.1-2.1Z"/></svg>
-            <div><span class="fact__k">УФ-индекс</span><span class="fact__v" id="factUv">—</span></div>
-          </div>
-          <button class="linkrow" data-go="analysis">Подробный разбор
-            <svg viewBox="0 0 24 24" class="i14"><path d="M9 5l7 7-7 7z"/></svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="segmented" role="tablist">
-        <button class="seg is-on" data-range="hours" role="tab">Ближайшие часы</button>
-        <button class="seg" data-range="today" role="tab">Сегодня</button>
-        <button class="seg" data-range="days" role="tab">10 дней</button>
-      </div>
-
-      <div class="strip" id="strip"></div>
-
-      <div class="card card--tip" id="homeTip" hidden></div>
-
-      <div class="quick">
-        <button class="quick__btn" data-go="air">
-          <span class="quick__k">Воздух</span>
-          <span class="quick__v" id="quickAqi">—</span>
-        </button>
-        <button class="quick__btn" data-go="radar">
-          <span class="quick__k">Радар</span>
-          <span class="quick__v">Осадки</span>
-        </button>
-        <button class="quick__btn" data-go="details">
-          <span class="quick__k">Детали</span>
-          <span class="quick__v">Погода</span>
-        </button>
-      </div>
-      <div class="updated" id="updatedAt"></div>
-    </div>
-  </section>
-
-  <!-- ПОЧАСОВОЙ -->
-  <section class="screen screen--plain" data-screen="hourly">
-    <header class="topbar topbar--sky safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b id="hourlyCity">—</b><span id="hourlyDate"></span></div>
-      <span class="topbar__spacer"></span>
-    </header>
-    <div class="sheet sheet--flat">
-      <div class="card card--table">
-        <div class="thead"><span>Время</span><span>Погода</span><span>Темп.</span><span>Осадки</span><span>Оценка</span></div>
-        <div id="hourlyRows"></div>
-      </div>
-      <div class="card card--window" id="windowCard"></div>
-    </div>
-  </section>
-
-  <!-- 10 ДНЕЙ -->
-  <section class="screen screen--plain" data-screen="daily">
-    <header class="topbar safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b>Прогноз на 10 дней</b></div>
-      <span class="topbar__spacer"></span>
-    </header>
-    <div class="sheet sheet--flat">
-      <div class="segmented segmented--pill">
-        <button class="seg" data-dcol="temp">Температура</button>
-        <button class="seg" data-dcol="precip">Осадки</button>
-        <button class="seg is-on" data-dcol="score">Оценка бега</button>
-      </div>
-      <div class="card card--table">
-        <div class="thead thead--daily"><span>День</span><span>Погода</span><span>Темп.</span><span>Осадки</span><span id="dailyColLabel">Оценка</span></div>
-        <div id="dailyRows"></div>
+      <div class="hero__actions">
+        <button class="round-btn" id="btnLocate"></button>
+        <button class="round-btn" id="btnAddCity"></button>
       </div>
     </div>
-  </section>
-
-  <!-- РАЗБОР -->
-  <section class="screen screen--plain" data-screen="analysis">
-    <header class="topbar topbar--sky safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b>Условия для бега</b></div>
-      <button class="topbar__back" data-share aria-label="Поделиться"><svg viewBox="0 0 24 24" class="i20"><path d="M12 3l4 4h-3v9h-2V7H8l4-4Zm-7 8h2v8h10v-8h2v10H5V11Z"/></svg></button>
-    </header>
-    <div class="sheet sheet--flat">
-      <div class="card card--ringrow">
-        <div class="ringwrap" id="ringWrap"></div>
-        <ul class="checks" id="analysisChecks"></ul>
-      </div>
-
-      <div class="card">
-        <h3 class="card__h">Как меняется в течение дня</h3>
-        <div id="dayChart"></div>
-      </div>
-
-      <div class="card card--note" id="analysisNote"></div>
-
-      <div class="card">
-        <h3 class="card__h">Из чего складывается оценка</h3>
-        <div class="tabs2">
-          <button class="tab2 is-on" data-btab="score">Разбор баллов</button>
-          <button class="tab2" data-btab="good">Что хорошо</button>
-        </div>
-        <div id="breakdown"></div>
-      </div>
-
-      <div class="card">
-        <h3 class="card__h">Таймлайн на 24 часа</h3>
-        <div id="timeline"></div>
+    <div class="hero__now">
+      <div class="hero__icon" id="heroIcon"></div>
+      <div class="hero__temp">
+        <div class="hero__deg"><span id="heroTemp">—</span><span class="deg">°</span></div>
+        <div class="hero__cond" id="heroCond"></div>
+        <div class="hero__feels" id="heroFeels">&nbsp;</div>
       </div>
     </div>
-  </section>
+    <div class="hero__minmax" id="heroMinMax"></div>
+  </header>
 
-  <!-- ВОЗДУХ -->
-  <section class="screen screen--plain" data-screen="air">
-    <header class="topbar safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b>Воздух и пыльца</b></div>
-      <span class="topbar__spacer"></span>
-    </header>
-    <div class="sheet sheet--flat">
-      <div class="card" id="aqiCard"></div>
-      <div class="card" id="pollenCard"></div>
+  <div class="sheet">
+    <div class="grid2">
+      <button class="scorecard" id="cardScore">
+        <div class="scorecard__head"><span class="scorecard__ic" id="scoreRunIc"></span><span id="scoreHeadLbl"></span></div>
+        <div class="scorecard__value" id="scoreBig">—</div>
+        <div class="scorecard__label"><svg viewBox="0 0 24 24" class="i16"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg><span id="scoreLabel"></span></div>
+        <div class="scorecard__sub" id="scoreSub"></div>
+      </button>
+
+      <div class="factcard">
+        <div class="fact"><span class="fact__ic" id="icBest"></span>
+          <div><span class="fact__k" id="lblBestTime"></span><span class="fact__v" id="factWindow">—</span></div></div>
+        <div class="fact"><span class="fact__ic" id="icDur"></span>
+          <div><span class="fact__k" id="lblDuration"></span><span class="fact__v" id="factDuration">—</span></div></div>
+        <div class="fact"><span class="fact__ic" id="icUv"></span>
+          <div><span class="fact__k" id="lblUv"></span><span class="fact__v" id="factUv">—</span></div></div>
+        <button class="linkrow" data-go="analysis"><span id="lblViewDetails"></span>
+          <svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+      </div>
     </div>
-  </section>
 
-  <!-- РАДАР -->
-  <section class="screen screen--plain" data-screen="radar">
-    <header class="topbar safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b>Радар осадков</b></div>
-      <span class="topbar__spacer"></span>
-    </header>
-    <div class="radarwrap">
-      <div id="map"></div>
-      <div class="radar__bar">
-        <button class="radar__play" id="radarPlay" aria-label="Проиграть"><svg viewBox="0 0 24 24" class="i20"><path d="M8 5v14l11-7z"/></svg></button>
-        <div class="radar__track"><input type="range" id="radarTime" min="0" max="0" value="0"><div class="radar__time" id="radarLabel">—</div></div>
-      </div>
-      <div class="radar__legend"><span class="lg lg1">Слабые</span><span class="lg lg2">Умеренные</span><span class="lg lg3">Сильные</span><span class="lg lg4">Ливень</span></div>
+    <div class="segmented" role="tablist">
+      <button class="seg is-on" data-range="hours" role="tab"></button>
+      <button class="seg" data-range="today" role="tab"></button>
+      <button class="seg" data-range="days" role="tab"></button>
     </div>
-  </section>
 
-  <!-- ДЕТАЛИ И ПРОФИЛЬ -->
-  <section class="screen screen--plain" data-screen="details">
-    <header class="topbar safe-top">
-      <button class="topbar__back" data-back aria-label="Назад"><svg viewBox="0 0 24 24" class="i20"><path d="M15.4 6.4 14 5l-7 7 7 7 1.4-1.4L9.8 12z"/></svg></button>
-      <div class="topbar__title"><b>Детали и профиль</b></div>
-      <span class="topbar__spacer"></span>
-    </header>
-    <div class="sheet sheet--flat">
-      <div class="card">
-        <h3 class="card__h">Погода сейчас</h3>
-        <div id="detailsList"></div>
-      </div>
-      <div class="card">
-        <h3 class="card__h">Ваш профиль бегуна</h3>
-        <p class="card__sub">Оценка подстраивается под то, как вы переносите погоду.</p>
-        <div id="profileList"></div>
-      </div>
-      <div class="card">
-        <h3 class="card__h">Города</h3>
-        <div id="savedCities"></div>
-      </div>
-      <button class="btn btn--ghost" id="btnInstall" hidden>Установить приложение</button>
-      <p class="fineprint">Данные: Open-Meteo · Радар: RainViewer · Работает офлайн на сохранённом прогнозе.</p>
+    <div class="hstrip" id="strip"></div>
+    <div class="updated" id="updatedAt"></div>
+  </div>
+</section>
+
+<!-- 2 - ПОЧАСОВОЙ -->
+<section class="screen" data-screen="hourly">
+  <header class="topbar topbar--sky topbar--left safe-top">
+    <button class="iconbtn" data-back></button>
+    <div class="topbar__lead"><b id="hourlyCity">—</b><span id="hourlyDate"></span></div>
+  </header>
+  <div class="sheet sheet--flat">
+    <div class="table">
+      <div class="thead" id="hourlyHead"></div>
+      <div id="hourlyRows"></div>
     </div>
-  </section>
+    <div class="windowcard" id="windowCard"></div>
+  </div>
+</section>
 
-  <nav class="tabbar safe-bottom" id="tabbar">
-    <button class="tab is-on" data-go="home"><svg viewBox="0 0 24 24" class="i22"><path d="M12 3 3 10.5V21h6v-6h6v6h6V10.5z"/></svg><span>Главная</span></button>
-    <button class="tab" data-go="radar"><svg viewBox="0 0 24 24" class="i22"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2c1.7 2.3 2.6 5.1 2.6 8s-.9 5.7-2.6 8c-1.7-2.3-2.6-5.1-2.6-8s.9-5.7 2.6-8Zm-7.7 7h3.1a19 19 0 0 0 .9 5.4A8 8 0 0 1 4.3 11Zm0-2A8 8 0 0 1 8.3 4.6 19 19 0 0 0 7.4 9H4.3Zm12.3 0a19 19 0 0 0-.9-4.4A8 8 0 0 1 19.7 9h-3.1Zm0 2h3.1a8 8 0 0 1-4 5.4 19 19 0 0 0 .9-5.4Z"/></svg><span>Карта</span></button>
-    <button class="tab" data-go="cities"><svg viewBox="0 0 24 24" class="i22"><path d="m12 17.3 6.2 3.7-1.6-7 5.4-4.7-7.1-.6L12 2 9.1 8.7l-7.1.6 5.4 4.7-1.6 7z"/></svg><span>Города</span></button>
-    <button class="tab" data-go="details"><svg viewBox="0 0 24 24" class="i22"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5Z"/></svg><span>Профиль</span></button>
-  </nav>
+<!-- 3 - 10 ДНЕЙ -->
+<section class="screen" data-screen="daily">
+  <div class="sheet sheet--flat safe-top">
+    <h1 class="bigtitle" id="dailyTitle"></h1>
+    <div class="utabs">
+      <button class="utab" data-dcol="temp"></button>
+      <button class="utab" data-dcol="precip"></button>
+      <button class="utab is-on" data-dcol="score"></button>
+    </div>
+    <div class="table">
+      <div class="thead thead--daily" id="dailyHead"></div>
+      <div id="dailyRows"></div>
+    </div>
+  </div>
+</section>
 
+<!-- 4 - ОБЗОР УСЛОВИЙ -->
+<section class="screen" data-screen="analysis">
+  <header class="topbar topbar--sky safe-top">
+    <button class="iconbtn" data-back></button>
+    <div class="topbar__title"><b id="analysisTitle"></b></div>
+    <button class="iconbtn" data-share></button>
+  </header>
+  <div class="sheet sheet--flat">
+    <div class="card overview">
+      <div class="overview__ring" id="ringWrap"></div>
+      <ul class="overview__list" id="analysisChecks"></ul>
+    </div>
+    <div class="card">
+      <h3 class="card__h" id="dayChartTitle"></h3>
+      <div id="dayChart"></div>
+    </div>
+    <div class="notecard" id="analysisNote"></div>
+  </div>
+</section>
+
+<!-- 5 - ПОЧЕМУ СЕЙЧАС ХОРОШО -->
+<section class="screen" data-screen="why">
+  <header class="topbar safe-top">
+    <button class="iconbtn" data-back></button>
+    <span class="topbar__spacer"></span>
+    <button class="iconbtn" data-share></button>
+  </header>
+  <div class="sheet sheet--flat">
+    <h1 class="bigtitle bigtitle--tight" id="whyTitle"></h1>
+    <div class="whyring" id="whyRing"></div>
+    <p class="whycap" id="whyCap"></p>
+    <div class="utabs utabs--center">
+      <button class="utab is-on" data-btab="score"></button>
+      <button class="utab" data-btab="good"></button>
+    </div>
+    <div class="table table--flush" id="breakdown"></div>
+    <button class="linkcard" data-go="timeline">
+      <span class="linkcard__ic" id="tlLinkIc"></span>
+      <span class="linkcard__txt"><small id="tlLinkK"></small><b id="tlLinkV"></b></span>
+      <svg viewBox="0 0 24 24" class="i18 c-blue"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg>
+    </button>
+  </div>
+</section>
+
+<!-- 6 - РАЗБОР ФАКТОРА -->
+<section class="screen" data-screen="factor">
+  <header class="topbar safe-top">
+    <button class="iconbtn" data-back></button>
+    <span class="topbar__spacer"></span>
+    <button class="iconbtn" data-share></button>
+  </header>
+  <div class="sheet sheet--flat" id="factorBody"></div>
+</section>
+
+<!-- 7 - ТАЙМЛАЙН -->
+<section class="screen" data-screen="timeline">
+  <header class="topbar safe-top">
+    <button class="iconbtn" data-back></button>
+    <span class="topbar__spacer"></span>
+    <button class="iconbtn" data-share></button>
+  </header>
+  <div class="sheet sheet--flat">
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="tlTitle"></h3>
+      <div id="tlChart"></div>
+      <div id="tlList"></div>
+      <button class="linkcard linkcard--inset" data-go="details">
+        <span class="linkcard__ic" id="tlOptIc"></span>
+        <span class="linkcard__txt"><small id="tlOptK"></small><b id="tlOptV"></b></span>
+        <svg viewBox="0 0 24 24" class="i18 c-blue"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- 8 - ВОЗДУХ И ПЫЛЬЦА -->
+<section class="screen" data-screen="air">
+  <header class="topbar safe-top">
+    <button class="iconbtn" data-back></button>
+    <span class="topbar__spacer"></span>
+    <span class="topbar__spacer"></span>
+  </header>
+  <div class="sheet sheet--flat">
+    <div class="card" id="aqiCard"></div>
+    <div class="card" id="pollenCard"></div>
+  </div>
+</section>
+
+<!-- 9 - РАДАР -->
+<section class="screen screen--map" data-screen="radar">
+  <div id="map"></div>
+  <div class="mapchip safe-top">
+    <span class="mapchip__pin" id="mapPin"></span>
+    <span class="mapchip__city" id="mapCity">—</span>
+    <span class="mapchip__live" id="mapLive"></span>
+  </div>
+  <div class="mapctl">
+    <button class="mapbtn" id="btnLayers"></button>
+    <button class="mapbtn" id="btnMapLocate"></button>
+    <div class="mapzoom"><button id="btnZoomIn"></button><button id="btnZoomOut"></button></div>
+  </div>
+  <div class="radarpanel safe-bottom">
+    <div class="radarpanel__row">
+      <button class="radar__play" id="radarPlay"></button>
+      <span class="radar__now" id="radarLabel">—</span>
+      <input type="range" id="radarTime" min="0" max="0" value="0">
+    </div>
+    <div class="radar__ticks" id="radarTicks"></div>
+    <div class="radar__grad"></div>
+    <div class="radar__legend" id="radarLegend"></div>
+  </div>
+</section>
+
+<!-- 10 - ДЕТАЛИ И НАСТРОЙКИ -->
+<section class="screen" data-screen="details">
+  <div class="sheet sheet--flat safe-top">
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="detailsTitle"></h3>
+      <div id="detailsList"></div>
+      <div class="linkgroup" id="detailsLinks"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="profileTitle"></h3>
+      <div id="profileList"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="langTitle"></h3>
+      <div class="chooser" id="langChooser"></div>
+    </div>
+    <button class="btn btn--ghost" id="btnInstall" hidden></button>
+    <p class="tagline" id="tagline"></p>
+    <p class="fineprint" id="fineprint"></p>
+  </div>
+</section>
+
+<!-- ГОРОДА -->
+<section class="screen" data-screen="cities">
+  <div class="sheet sheet--flat safe-top">
+    <h1 class="bigtitle" id="citiesTitle"></h1>
+    <input class="searchbox" id="cityQ" autocomplete="off">
+    <ul class="reslist" id="cityRes"></ul>
+    <div class="card" id="cityList"></div>
+  </div>
+</section>
+
+<nav class="tabbar safe-bottom">
+  <button class="tab is-on" data-go="home"><span class="tab__ic" data-ic="house"></span><span data-t="tabHome"></span></button>
+  <button class="tab" data-go="radar"><span class="tab__ic" data-ic="globe"></span><span data-t="tabMap"></span></button>
+  <button class="tab" data-go="cities"><span class="tab__ic" data-ic="star"></span><span data-t="tabFav"></span></button>
+  <button class="tab" data-go="details"><span class="tab__ic" data-ic="person"></span><span data-t="tabProfile"></span></button>
+</nav>
 </div>
 
-<!-- Нижняя шторка -->
 <div class="sheetover" id="sheetover" hidden>
   <div class="sheetover__back" data-close-sheet></div>
-  <div class="sheetover__panel safe-bottom">
-    <div class="sheetover__grab"></div>
-    <div id="sheetoverBody"></div>
-  </div>
+  <div class="sheetover__panel safe-bottom"><div class="sheetover__grab"></div><div id="sheetoverBody"></div></div>
 </div>
-
 <div class="toast" id="toast" hidden></div>
 
 <script src="js/app.js" type="module"></script>
