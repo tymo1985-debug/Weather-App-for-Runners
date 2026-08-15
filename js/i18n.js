@@ -61,7 +61,10 @@ const EN = {
   noAir: 'No air data for this spot. The score is calculated without it.',
   noPollen: 'No pollen data for this region.',
   // радар
-  liveRadar: 'Live radar', legLight: 'Light', legModerate: 'Moderate',
+  liveRadar: 'Live radar', radarLoading: 'Loading radar…', retry: 'Try again',
+  play: 'Play', pause: 'Pause', forecastWord: 'forecast', pastWord: 'past',
+  basemapNames: ['Standard map', 'Light map', 'Dark map'],
+  legLight: 'Light', legModerate: 'Moderate',
   legHeavy: 'Heavy', legExtreme: 'Extreme', radarOffline: 'The radar needs a connection. Reconnect and open the map again.',
   layers: 'Layers',
   // детали
@@ -173,7 +176,10 @@ const RU = {
   pollenOptional: 'Пыльца (по желанию)', considerPollen: 'Учитывать пыльцу в оценке',
   noAir: 'Для этой точки нет данных о воздухе. Оценка считается без них.',
   noPollen: 'Для этого региона нет данных о пыльце.',
-  liveRadar: 'Радар сейчас', legLight: 'Слабые', legModerate: 'Умеренные',
+  liveRadar: 'Радар сейчас', radarLoading: 'Загружаем радар…', retry: 'Повторить',
+  play: 'Проиграть', pause: 'Пауза', forecastWord: 'прогноз', pastWord: 'было',
+  basemapNames: ['Обычная карта', 'Светлая карта', 'Тёмная карта'],
+  legLight: 'Слабые', legModerate: 'Умеренные',
   legHeavy: 'Сильные', legExtreme: 'Ливень',
   radarOffline: 'Радар работает только онлайн. Подключитесь к сети и откройте карту снова.',
   layers: 'Слои',

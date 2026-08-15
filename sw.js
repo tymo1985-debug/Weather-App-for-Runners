@@ -1,8 +1,10 @@
-const V = 'rw-v1';
+const V = 'rw-v2';
 const SHELL = [
   './', './index.html', './css/styles.css',
   './js/app.js', './js/engine.js', './js/icons.js',
-  './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
+  './js/i18n.js', './manifest.webmanifest',
+  './icons/icon-192.png', './icons/icon-512.png',
+  './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css'
 ];
 
 self.addEventListener('install', e => {
@@ -23,7 +25,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   // Тайлы карты и радара — только из сети, без кеша.
-  if (/tilecache\.rainviewer|basemaps\.cartocdn|unpkg\.com/.test(url.host)) return;
+  if (/tilecache\.rainviewer|basemaps\.cartocdn/.test(url.host)) return;
 
   // Погодные API — сеть вперёд, кеш как запасной вариант.
   if (/open-meteo\.com|bigdatacloud\.net/.test(url.host)) {

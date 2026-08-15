@@ -46,6 +46,7 @@ const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', 
 
 function go(name, push = true) {
   if (name === S.screen) return;
+  if (S.screen === 'radar' && name !== 'radar') stopPlay();   // не крутим кадры в фоне
   if (push) S.stack.push(S.screen);
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
@@ -132,8 +133,9 @@ function staticText() {
   $('#btnZoomOut').innerHTML = glyph.minus;
   $('#radarLegend').innerHTML = [T.legLight, T.legModerate, T.legHeavy, T.legExtreme]
     .map(x => `<span>${x}</span>`).join('');
-  if (!timer) $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
-  if (!frames.length) $('#radarLabel').textContent = T.now;
+  if (!R.timer) stopPlay();
+  if (!R.frames.length) $('#radarLabel').innerHTML = `<b>${T.now}</b>`;
+  else { renderTicks(); showFrame(R.idx); }
   $('#detailsTitle').textContent = T.weatherDetails;
   $('#profileTitle').textContent = T.yourProfile;
   $('#langTitle').textContent = T.language;
@@ -714,7 +716,7 @@ function renderAir() {
     }).join('') : `<p style="margin:8px 0 0;font-size:13.5px;color:var(--muted)">${T.noPollen}</p>`}
     <div class="switchrow"><span>${T.considerPollen}</span>
       <button class="switch ${S.profile.pollen === 'on' ? 'is-on' : ''}" id="pollenSwitch" role="switch"
-        aria-checked="${S.profile.pollen === 'on'}"></button></div>`;
+        aria-checked="${S.profile.pollen === 'on'}" aria-label="${T.considerPollen}"></button></div>`;
 
   $('#pollenSwitch').addEventListener('click', () => {
     S.profile.pollen = S.profile.pollen === 'on' ? 'off' : 'on';
@@ -723,68 +725,180 @@ function renderAir() {
 }
 
 // ── 9. РАДАР ───────────────────────────────────────────────────────────────
-let map, frames = [], layer = null, fi = 0, timer = null, mapReady = false;
+const BASEMAPS = [
+  ['voyager', 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'],
+  ['light', 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png'],
+  ['dark', 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png']
+];
+const R = { map: null, base: null, baseIdx: 0, marker: null, frames: [], layers: new Map(),
+  idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0 };
+
+const placeKey = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
+
+function mapState(kind, msg) {
+  const el = $('#mapState');
+  if (kind === 'hide') { el.hidden = true; return; }
+  el.hidden = false;
+  el.innerHTML = kind === 'loading'
+    ? `<div class="mapstate__box"><span class="spinner"></span><span>${msg}</span></div>`
+    : `<div class="mapstate__box"><span>${msg}</span>
+        <button class="mapstate__retry" id="mapRetry">${T.retry}</button></div>`;
+  if (kind === 'error') $('#mapRetry').addEventListener('click', () => { R.ready = false; initRadar(); });
+}
 
 async function initRadar() {
   $('#mapCity').textContent = S.place.name;
-  if (mapReady) { map.invalidateSize(); return; }
+
+  if (R.ready) {
+    R.map.invalidateSize();
+    if (R.placeKey !== placeKey(S.place)) {   // сменили город — переносим карту
+      R.placeKey = placeKey(S.place);
+      R.map.setView([S.place.lat, S.place.lon], R.map.getZoom());
+      R.marker.setLatLng([S.place.lat, S.place.lon]);
+    }
+    return;
+  }
+
+  mapState('loading', T.radarLoading);
   try {
     await loadLeaflet();
-    map = L.map('map', { zoomControl: false, attributionControl: true })
-      .setView([S.place.lat, S.place.lon], 8);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-      { attribution: '© OpenStreetMap, © CARTO', maxZoom: 14 }).addTo(map);
-    L.circleMarker([S.place.lat, S.place.lon],
-      { radius: 8, color: '#fff', weight: 3, fillColor: '#2F6FEB', fillOpacity: 1 }).addTo(map);
-
-    const j = await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => r.json());
-    const host = j.host || 'https://tilecache.rainviewer.com';
-    frames = [...(j.radar?.past || []), ...(j.radar?.nowcast || [])]
-      .map(f => ({ ...f, url: `${host}${f.path}/256/{z}/{x}/{y}/4/1_1.png` }));
-    fi = Math.max(0, (j.radar?.past?.length || 1) - 1);
-    const sl = $('#radarTime'); sl.max = frames.length - 1; sl.value = fi;
-    sl.addEventListener('input', () => { stopPlay(); showFrame(+sl.value); });
-    $('#radarPlay').addEventListener('click', () => timer ? stopPlay() : startPlay());
-    $('#btnZoomIn').addEventListener('click', () => map.zoomIn());
-    $('#btnZoomOut').addEventListener('click', () => map.zoomOut());
-    $('#btnMapLocate').addEventListener('click', () => map.setView([S.place.lat, S.place.lon], 9));
-    $('#btnLayers').addEventListener('click', () => toast(T.layers));
-    stopPlay(); showFrame(fi); mapReady = true;
+    if (!R.map) {
+      R.map = L.map('map', { zoomControl: false, attributionControl: true })
+        .setView([S.place.lat, S.place.lon], 8);
+      R.map.attributionControl.setPrefix('');
+      setBasemap(0);
+      R.marker = L.circleMarker([S.place.lat, S.place.lon],
+        { radius: 8, color: '#fff', weight: 3, fillColor: '#2F6FEB', fillOpacity: 1 }).addTo(R.map);
+      bindMapControls();
+    }
+    R.placeKey = placeKey(S.place);
+    await loadFrames();
+    mapState('hide');
+    R.ready = true;
   } catch {
-    $('#map').innerHTML = `<div style="display:grid;place-items:center;height:100%;padding:28px;
-      text-align:center;color:#C7D3E0;font-size:14px">${T.radarOffline}</div>`;
+    mapState('error', T.radarOffline);
   }
 }
+
+function setBasemap(i) {
+  R.baseIdx = i;
+  if (R.base) R.map.removeLayer(R.base);
+  R.base = L.tileLayer(BASEMAPS[i][1], {
+    attribution: '© OpenStreetMap, © CARTO · © RainViewer', maxZoom: 14, zIndex: 100
+  }).addTo(R.map);
+}
+
+async function loadFrames() {
+  const j = await fetch('https://api.rainviewer.com/public/weather-maps.json').then(r => {
+    if (!r.ok) throw new Error('radar'); return r.json();
+  });
+  const host = j.host || 'https://tilecache.rainviewer.com';
+  const past = j.radar?.past || [], soon = j.radar?.nowcast || [];
+  R.frames = [...past, ...soon].map(f => ({
+    time: f.time * 1000,
+    url: `${host}${f.path}/256/{z}/{x}/{y}/4/1_1.png`,
+    forecast: f.time * 1000 > Date.now()
+  }));
+  if (!R.frames.length) throw new Error('empty');
+
+  R.layers.forEach(l => R.map.removeLayer(l));
+  R.layers.clear();
+  R.nowIdx = Math.max(0, past.length - 1);
+  R.idx = R.nowIdx;
+
+  const sl = $('#radarTime');
+  sl.max = R.frames.length - 1; sl.value = R.idx;
+  renderTicks();
+  showFrame(R.idx);
+}
+
+// Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.
+function layerFor(i) {
+  if (R.layers.has(i)) return R.layers.get(i);
+  const l = L.tileLayer(R.frames[i].url, { opacity: 0, zIndex: 300 + i, maxZoom: 14 }).addTo(R.map);
+  R.layers.set(i, l);
+  return l;
+}
+
+function showFrame(i) {
+  if (!R.frames[i]) return;
+  R.idx = i;
+  const cur = layerFor(i);
+  R.layers.forEach((l, k) => l.setOpacity(k === i ? .78 : 0));
+  cur.setOpacity(.78);
+  layerFor((i + 1) % R.frames.length);            // подгружаем следующий заранее
+
+  const f = R.frames[i];
+  $('#radarLabel').innerHTML = i === R.nowIdx
+    ? `<b>${T.now}</b>`
+    : `<b>${hhmm(new Date(f.time))}</b><small>${f.forecast ? T.forecastWord : T.pastWord}</small>`;
+  $('#radarTime').value = i;
+  $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
+}
+
+function renderTicks() {
+  const n = R.frames.length, last = n - 1;
+  // Всегда показываем начало, «сейчас» и конец — и ставим метку туда, где кадр на шкале.
+  const at = i => (last ? i / last : 0) * 100;
+  const MIN = 15;                       // минимальный зазор между метками, %
+  const idxs = [];
+  for (const i of [0, R.nowIdx, last, Math.round((R.nowIdx + last) / 2)]) {
+    if (i < 0 || i > last) continue;
+    if (idxs.some(j => Math.abs(at(j) - at(i)) < MIN)) continue;
+    idxs.push(i);
+  }
+  idxs.sort((a, b) => a - b);
+  $('#radarTicks').innerHTML = idxs.map(i => {
+    const pos = at(i);
+    const shift = i === 0 ? 'translateX(-4px)' : i === last ? 'translateX(-100%)' : 'translateX(-50%)';
+    return `<span data-i="${i}" style="left:${pos}%;transform:${shift}"
+      class="${i === R.idx ? 'on' : ''}">${i === R.nowIdx ? T.now : hhmm(new Date(R.frames[i].time))}</span>`;
+  }).join('');
+}
+
+function bindMapControls() {
+  $('#radarTime').addEventListener('input', e => { stopPlay(); showFrame(+e.target.value); });
+  $('#radarPlay').addEventListener('click', () => R.timer ? stopPlay() : startPlay());
+  $('#btnZoomIn').addEventListener('click', () => R.map.zoomIn());
+  $('#btnZoomOut').addEventListener('click', () => R.map.zoomOut());
+  $('#btnMapLocate').addEventListener('click', () => R.map.setView([S.place.lat, S.place.lon], 9));
+  $('#btnLayers').addEventListener('click', () => {
+    setBasemap((R.baseIdx + 1) % BASEMAPS.length);
+    toast(T.basemapNames[R.baseIdx]);
+  });
+  $('#mapLive').addEventListener('click', () => { stopPlay(); showFrame(R.nowIdx); });
+  $('#radarTicks').addEventListener('click', e => {
+    const t = e.target.closest('[data-i]'); if (t) { stopPlay(); showFrame(+t.dataset.i); }
+  });
+}
+
+function startPlay() {
+  if (!R.frames.length) return;
+  $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>';
+  $('#radarPlay').setAttribute('aria-label', T.pause);
+  const tick = () => {
+    const next = (R.idx + 1) % R.frames.length;
+    showFrame(next);
+    R.timer = setTimeout(tick, next === R.frames.length - 1 ? 1400 : 520); // пауза на последнем кадре
+  };
+  R.timer = setTimeout(tick, 520);
+}
+function stopPlay() {
+  clearTimeout(R.timer); R.timer = null;
+  $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+  $('#radarPlay').setAttribute('aria-label', T.play);
+}
+
 function loadLeaflet() {
   if (window.L) return Promise.resolve();
   return new Promise((res, rej) => {
     const css = document.createElement('link');
-    css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    css.rel = 'stylesheet'; css.href = 'vendor/leaflet/leaflet.css';
     document.head.appendChild(css);
     const s = document.createElement('script');
-    s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    s.src = 'vendor/leaflet/leaflet.js';
     s.onload = res; s.onerror = rej; document.head.appendChild(s);
   });
-}
-function showFrame(i) {
-  if (!frames[i]) return;
-  fi = i;
-  const next = L.tileLayer(frames[i].url, { opacity: .8, zIndex: 400 }).addTo(map);
-  const prev = layer; layer = next;
-  setTimeout(() => prev && map.removeLayer(prev), 200);
-  const d = new Date(frames[i].time * 1000);
-  $('#radarLabel').textContent = frames[i].time * 1000 <= Date.now() ? T.now : hhmm(d);
-  $('#radarTime').value = i;
-  $('#radarTicks').innerHTML = frames.map((f, k) => k % Math.ceil(frames.length / 4) === 0
-    ? `<span class="${k === i ? 'on' : ''}">${k === 0 ? T.now : hhmm(new Date(f.time * 1000))}</span>` : '').join('');
-}
-function startPlay() {
-  $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>';
-  timer = setInterval(() => showFrame((fi + 1) % frames.length), 600);
-}
-function stopPlay() {
-  clearInterval(timer); timer = null;
-  $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
 }
 
 // ── 10. ДЕТАЛИ И ПРОФИЛЬ ───────────────────────────────────────────────────
