@@ -48,7 +48,16 @@ export async function fetchAll(place) {
     fetch(aUrl).then(r => r.ok ? r.json() : null).catch(() => null)
   ]);
   const bundle = { weather: w, air: a, place, at: Date.now() };
-  try { localStorage.setItem(cacheKey(place), JSON.stringify(bundle)); } catch {}
+  try { localStorage.setItem(cacheKey(place), JSON.stringify(bundle)); }
+  catch {
+    // Хранилище переполнено: чистим прогнозы других городов и пробуем ещё раз.
+    try {
+      Object.keys(localStorage)
+        .filter(k => k.startsWith('rw.data.') && k !== cacheKey(place))
+        .forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(cacheKey(place), JSON.stringify(bundle));
+    } catch {}
+  }
   return bundle;
 }
 
@@ -56,8 +65,8 @@ export function cachedBundle(place) {
   try { return JSON.parse(localStorage.getItem(cacheKey(place)) || 'null'); } catch { return null; }
 }
 
-export async function searchCity(name) {
-  const r = await fetch(`${GEO}?name=${encodeURIComponent(name)}&count=8&language=ru&format=json`);
+export async function searchCity(name, lang = 'en') {
+  const r = await fetch(`${GEO}?name=${encodeURIComponent(name)}&count=8&language=${lang}&format=json`);
   const j = await r.json();
   return (j.results || []).map(x => ({
     name: x.name, lat: x.latitude, lon: x.longitude,
@@ -65,12 +74,12 @@ export async function searchCity(name) {
   }));
 }
 
-export async function reverseGeocode(lat, lon, lang = 'en') {
+export async function reverseGeocode(lat, lon, lang = 'en', fallback = 'My location') {
   try {
     const r = await fetch(`${REVGEO}?latitude=${lat}&longitude=${lon}&localityLanguage=${lang}`);
     const j = await r.json();
-    return { name: j.city || j.locality || j.principalSubdivision || 'Моё место', lat, lon, country: j.countryName || '' };
-  } catch { return { name: 'Моё место', lat, lon, country: '' }; }
+    return { name: j.city || j.locality || j.principalSubdivision || fallback, lat, lon, country: j.countryName || '' };
+  } catch { return { name: fallback, lat, lon, country: '' }; }
 }
 
 // ── Оценка ─────────────────────────────────────────────────────────────────
@@ -153,15 +162,36 @@ export function scoreHour(h, profile) {
 export const band = (s) =>
   s >= 80 ? 'good' : s >= 65 ? 'mid' : s >= 45 ? 'low' : 'bad';
 
-export const bandText = (s) =>
-  s >= 88 ? 'Отлично' : s >= 80 ? 'Хорошо' : s >= 65 ? 'Приемлемо' : s >= 45 ? 'Так себе' : 'Плохо';
-
 export const bandColor = (s) =>
   s >= 80 ? '#1F9D4D' : s >= 65 ? '#E9A21B' : s >= 45 ? '#EF6C2E' : '#DC4B3E';
 
 // ── Нормализация часов ─────────────────────────────────────────────────────
+// Смещение места от UTC. У бандлов, сохранённых прошлой версией, поля нет —
+// тогда берём смещение браузера, как было раньше.
+export function placeOffsetSec(bundle) {
+  const v = bundle?.weather?.utc_offset_seconds;
+  return Number.isFinite(v) ? v : -new Date().getTimezoneOffset() * 60;
+}
+
+// Дата, у которой локальные геттеры показывают стенные часы места.
+export function placeNow(bundle, ms = Date.now()) {
+  return new Date(ms + placeOffsetSec(bundle) * 1000 + new Date().getTimezoneOffset() * 60000);
+}
+
+// Значение из ряда: пропуски заменяем соседним часом, иначе нейтральным запасом.
+function at(arr, i, fallback) {
+  const v = arr?.[i];
+  if (Number.isFinite(v)) return v;
+  for (let k = 1; k <= 3; k++) {
+    if (Number.isFinite(arr?.[i - k])) return arr[i - k];
+    if (Number.isFinite(arr?.[i + k])) return arr[i + k];
+  }
+  return fallback;
+}
+
 export function buildHours(bundle, profile) {
   const H = bundle.weather.hourly;
+  const offMs = placeOffsetSec(bundle) * 1000;
   const air = bundle.air?.hourly;
   const airIdx = new Map();
   if (air) air.time.forEach((t, i) => airIdx.set(t, i));
@@ -170,19 +200,23 @@ export function buildHours(bundle, profile) {
   for (let i = 0; i < H.time.length; i++) {
     const ai = airIdx.has(H.time[i]) ? airIdx.get(H.time[i]) : null;
     const recentMm = (H.precipitation.slice(Math.max(0, i - 4), i + 1) || [])
-      .reduce((a, b) => a + (b || 0), 0);
+      .reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
     const pollen = ai == null ? null : Math.max(
       air.birch_pollen?.[ai] ?? 0, air.grass_pollen?.[ai] ?? 0,
       air.alder_pollen?.[ai] ?? 0, air.mugwort_pollen?.[ai] ?? 0,
       air.ragweed_pollen?.[ai] ?? 0, air.olive_pollen?.[ai] ?? 0
     );
+    const temp = at(H.temperature_2m, i, 12);
     const h = {
-      t: new Date(H.time[i]), iso: H.time[i],
-      temp: H.temperature_2m[i], feels: H.apparent_temperature[i],
-      rh: H.relative_humidity_2m[i], dew: H.dew_point_2m[i],
-      mm: H.precipitation[i] ?? 0, pop: H.precipitation_probability[i] ?? 0,
-      code: H.weather_code[i], wind: H.wind_speed_10m[i], gust: H.wind_gusts_10m?.[i] ?? null,
-      uv: H.uv_index[i] ?? 0, isDay: H.is_day[i], vis: H.visibility?.[i] ?? null,
+      // t — стенные часы места (для подписей), ts — настоящий момент (для сравнений)
+      t: new Date(H.time[i]), ts: Date.parse(H.time[i] + 'Z') - offMs, iso: H.time[i],
+      temp, feels: at(H.apparent_temperature, i, temp),
+      rh: at(H.relative_humidity_2m, i, 60), dew: at(H.dew_point_2m, i, temp - 5),
+      mm: at(H.precipitation, i, 0), pop: at(H.precipitation_probability, i, 0),
+      code: H.weather_code?.[i] ?? 0, wind: at(H.wind_speed_10m, i, 5),
+      gust: Number.isFinite(H.wind_gusts_10m?.[i]) ? H.wind_gusts_10m[i] : null,
+      uv: at(H.uv_index, i, 0), isDay: H.is_day?.[i] ?? 1,
+      vis: Number.isFinite(H.visibility?.[i]) ? H.visibility[i] : null,
       aqi: ai == null ? null : air.european_aqi?.[ai],
       pm25: ai == null ? null : air.pm2_5?.[ai], pm10: ai == null ? null : air.pm10?.[ai],
       no2: ai == null ? null : air.nitrogen_dioxide?.[ai], o3: ai == null ? null : air.ozone?.[ai],
@@ -201,8 +235,8 @@ export function bestWindow(hours, durationMin, fromDate) {
   const from = fromDate ? fromDate.getTime() : Date.now();
   let best = null;
   for (let i = 0; i + len <= hours.length; i++) {
-    if (hours[i].t.getTime() < from - 3600e3) continue;
-    if (hours[i].t.getTime() > from + 24 * 3600e3) break;
+    if (hours[i].ts < from - 3600e3) continue;
+    if (hours[i].ts > from + 24 * 3600e3) break;
     const slice = hours.slice(i, i + len);
     const avg = slice.reduce((a, h) => a + h.score, 0) / len;
     if (!best || avg > best.avg + 0.01) best = { i, avg, slice, score: Math.round(avg) };
@@ -231,8 +265,3 @@ export const aqiBand = (v) => {
   return [k, AQI_COLORS[k]];
 };
 
-export const POLLEN_LEVEL = (v) =>
-  v == null ? ['—', '#8C9CB5'] :
-  v < 10 ? ['Низкая', '#1F9D4D'] :
-  v < 50 ? ['Средняя', '#E9A21B'] :
-  v < 500 ? ['Высокая', '#EF6C2E'] : ['Очень высокая', '#DC4B3E'];

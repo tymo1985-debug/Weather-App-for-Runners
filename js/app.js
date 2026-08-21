@@ -3,7 +3,8 @@ import { LANGS, pickLang, setLang } from './i18n.js';
 import {
   DEFAULT_PLACE, loadProfile, saveProfile, loadCities, saveCities,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, band, bandColor, aqiBand, WEIGHTS
+  buildHours, bestWindow, bestWindowOfDay, band, bandColor, aqiBand, WEIGHTS,
+  placeNow, placeOffsetSec
 } from './engine.js';
 
 // ── Состояние ──────────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', 
 function go(name, push = true) {
   if (name === S.screen) return;
   if (S.screen === 'radar' && name !== 'radar') stopPlay();   // не крутим кадры в фоне
-  if (push) S.stack.push(S.screen);
+  if (push) { S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20); }
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
   $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.go === TAB_OF[name]));
@@ -72,20 +73,41 @@ async function share() {
 }
 
 // ── Данные ─────────────────────────────────────────────────────────────────
+let loading = false;
 async function load() {
+  if (loading) return;                       // защита от двойного запроса
+  loading = true;
   const cached = cachedBundle(S.place);
-  if (cached) { S.bundle = cached; recompute(); paint(); }
-  try { S.bundle = await fetchAll(S.place); recompute(); paint(); }
-  catch { cached ? toast(T.offline) : ($('#heroCond').textContent = T.noData); }
+  if (cached) { S.bundle = cached; recompute(); paint(); dataError(false); }
+  try {
+    S.bundle = await fetchAll(S.place);
+    recompute(); paint(); dataError(false);
+  } catch {
+    if (cached) toast(T.offline);
+    else dataError(true);                    // совсем нечего показать — даём повтор
+  } finally { loading = false; }
+}
+
+// Экран «не загрузилось» с кнопкой повтора: без него первый запуск
+// без сети оставлял пустой интерфейс без объяснения.
+function dataError(on) {
+  const el = $('#dataState');
+  el.hidden = !on;
+  if (!on) return;
+  $('#dataStateMsg').textContent = T.noDataTitle;
+  $('#dataRetry').textContent = T.retry;
 }
 function recompute() { S.hours = buildHours(S.bundle, S.profile); }
 function paint() { staticText(); RENDER[S.screen]?.(); }
 
 const nowIndex = () => {
   const t = Date.now();
-  const i = S.hours.findIndex(h => h.t.getTime() > t - 1800e3);
-  return i < 0 ? 0 : i;
+  const i = S.hours.findIndex(h => h.ts > t - 1800e3);
+  return i < 0 ? Math.max(0, S.hours.length - 1) : i;
 };
+// Момент в стенных часах места: время в шапке и подписи кадров радара.
+const atPlace = (ms) => placeNow(S.bundle, ms);
+const timeOrDash = (v) => (v ? hhmm(new Date(v)) : '—');
 const nowHour = () => S.hours[nowIndex()] || null;
 const nowScore = () => nowHour()?.score ?? 0;
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(new Date(w.slice.at(-1).t.getTime() + 3600e3))}`;
@@ -152,7 +174,7 @@ function staticText() {
 
 // ── 1. ГЛАВНАЯ ─────────────────────────────────────────────────────────────
 function renderHome() {
-  const W = S.bundle.weather, cur = W.current, h = nowHour(), d = new Date();
+  const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
   $('#placeName').textContent = S.place.name;
   $('#heroDate').textContent = `${dowOf(d)}, ${dateOf(d)} • ${hhmm(d)}`;
   $('#heroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);
@@ -175,7 +197,7 @@ function renderHome() {
   $('#factWindow').textContent = w ? windowText(w) : '—';
   $('#factDuration').textContent = T.min(S.profile.duration);
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
-  $('#updatedAt').textContent = T.updatedAt(hhmm(new Date(S.bundle.at)));
+  $('#updatedAt').textContent = T.updatedAt(hhmm(atPlace(S.bundle.at)));
   renderStrip();
 }
 
@@ -215,14 +237,15 @@ $('#btnLocate').addEventListener('click', locate);
 function locate() {
   if (!navigator.geolocation) return toast(T.myLocation + ' —');
   navigator.geolocation.getCurrentPosition(async pos => {
-    const p = await reverseGeocode(+pos.coords.latitude.toFixed(3), +pos.coords.longitude.toFixed(3), S.langCode);
+    const p = await reverseGeocode(+pos.coords.latitude.toFixed(3),
+      +pos.coords.longitude.toFixed(3), S.langCode, T.myLocation);
     S.place = p; const c = loadCities(); c[0] = p; saveCities(c); load();
   }, () => toast(T.searchOffline), { timeout: 8000, maximumAge: 6e5 });
 }
 
 // ── 2. ПОЧАСОВОЙ ───────────────────────────────────────────────────────────
 function renderHourly() {
-  const d = new Date();
+  const d = placeNow(S.bundle);
   $('#hourlyCity').textContent = S.place.name;
   $('#hourlyDate').textContent = `${dowOf(d)}, ${dateOf(d)}`;
   const n = nowIndex(), list = S.hours.slice(n, n + 24);
@@ -831,7 +854,7 @@ function showFrame(i) {
   const f = R.frames[i];
   $('#radarLabel').innerHTML = i === R.nowIdx
     ? `<b>${T.now}</b>`
-    : `<b>${hhmm(new Date(f.time))}</b><small>${f.forecast ? T.forecastWord : T.pastWord}</small>`;
+    : `<b>${hhmm(atPlace(f.time))}</b><small>${f.forecast ? T.forecastWord : T.pastWord}</small>`;
   $('#radarTime').value = i;
   $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
 }
@@ -852,7 +875,7 @@ function renderTicks() {
     const pos = at(i);
     const shift = i === 0 ? 'translateX(-4px)' : i === last ? 'translateX(-100%)' : 'translateX(-50%)';
     return `<span data-i="${i}" style="left:${pos}%;transform:${shift}"
-      class="${i === R.idx ? 'on' : ''}">${i === R.nowIdx ? T.now : hhmm(new Date(R.frames[i].time))}</span>`;
+      class="${i === R.idx ? 'on' : ''}">${i === R.nowIdx ? T.now : hhmm(atPlace(R.frames[i].time))}</span>`;
   }).join('');
 }
 
@@ -904,15 +927,15 @@ function loadLeaflet() {
 // ── 10. ДЕТАЛИ И ПРОФИЛЬ ───────────────────────────────────────────────────
 function renderDetails() {
   const h = nowHour(), D = S.bundle.weather.daily;
-  const sr = new Date(D.sunrise[0]), ss = new Date(D.sunset[0]), dl = D.daylight_duration?.[0];
-  const f = moonFraction(new Date());
+  const dl = D.daylight_duration?.[0];
+  const f = moonFraction(placeNow(S.bundle));
   const mi = Math.round(f * 8) % 8;
 
   $('#detailsList').innerHTML = [
     [glyph.uv, T.uvIndex, `${h.uv.toFixed(0)} (${uvWord(h.uv)})`],
     [glyph.eye, T.visibility, h.vis == null ? '—' : `${(h.vis / 1000).toFixed(0)} km`],
-    [glyph.sunrise, T.sunrise, hhmm(sr)],
-    [glyph.sunset, T.sunset, hhmm(ss)],
+    [glyph.sunrise, T.sunrise, timeOrDash(D.sunrise?.[0])],
+    [glyph.sunset, T.sunset, timeOrDash(D.sunset?.[0])],
     [glyph.moonphase(f), T.moonPhase, T.moonNames[mi]],
     [glyph.clock, T.daylight, dl ? `${Math.floor(dl / 3600)}h ${Math.round(dl % 3600 / 60)}m` : '—']
   ].map(([ic, k, v]) => `<div class="drow" style="grid-template-columns:26px 1fr auto">
@@ -977,7 +1000,7 @@ $('#cityQ').addEventListener('input', e => {
   if (q.length < 2) return ($('#cityRes').innerHTML = '');
   searchTimer = setTimeout(async () => {
     try {
-      const res = await searchCity(q);
+      const res = await searchCity(q, S.langCode);
       $('#cityRes').innerHTML = res.map((r, i) =>
         `<li data-res="${i}"><span>${r.name}</span><small>${r.country}</small></li>`).join('')
         || `<li>${T.nothingFound}</li>`;
@@ -1063,6 +1086,7 @@ let installEvt = null;
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault(); installEvt = e; $('#btnInstall').hidden = false;
 });
+$('#dataRetry').addEventListener('click', () => { dataError(false); load(); });
 $('#btnInstall').addEventListener('click', async () => {
   if (!installEvt) return;
   installEvt.prompt(); await installEvt.userChoice;
@@ -1083,6 +1107,7 @@ function fromHash() {
 }
 window.addEventListener('hashchange', fromHash);
 window.__go = go;
+window.__stackDepth = () => S.stack.length;
 
 staticText();
 load().then(fromHash);
