@@ -39,7 +39,10 @@ input{font:inherit}
 .hero__scene{position:absolute;left:0;right:0;bottom:0;height:150px;z-index:-1;
   background:no-repeat bottom/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 150' preserveAspectRatio='none'%3E%3Cg fill='%23ffffff' opacity='.28'%3E%3Cpath d='M0 118h14V96h10v22h13V84h11v34h15v-16h9v16h12V66h5l3-14 3 14h5v52h14V98h10v20h17V80h11v38h14V104h11v14h13V72h10v46h15V96h10v22h14V86h11v32h16V102h9v16h17V78h11v40h15V100h10v18h20V150H0z'/%3E%3C/g%3E%3Cg fill='%23ffffff' opacity='.3'%3E%3Cellipse cx='36' cy='120' rx='34' ry='24'/%3E%3Cellipse cx='74' cy='126' rx='26' ry='18'/%3E%3Cellipse cx='352' cy='118' rx='36' ry='26'/%3E%3Cellipse cx='316' cy='128' rx='24' ry='17'/%3E%3C/g%3E%3Cpath fill='%23ffffff' opacity='.42' d='M0 138h400v12H0z'/%3E%3C/svg%3E")}
 .hero__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
-.hero__place{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:640;letter-spacing:-.4px}
+.hero__top>div:first-child{min-width:0;flex:1}
+.hero__place{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:640;
+  letter-spacing:-.4px;max-width:100%;min-width:0}
+.hero__place>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .hero__pin{width:17px;height:17px;flex:none}
 .hero__pin svg{width:100%;height:100%}
 .hero__place .chev{opacity:.8}
@@ -398,3 +401,22 @@ input{font:inherit}
 .radar__ticks span{position:absolute;top:0;cursor:pointer;padding:2px 5px;border-radius:6px;white-space:nowrap}
 .radar__ticks span.on{color:var(--ink);background:#EBF1F8}
 .leaflet-control-attribution{font-size:9.5px!important;background:rgba(255,255,255,.7)!important}
+
+/* нет данных: единственное, что можно показать без прогноза */
+.datastate{position:fixed;inset:0;z-index:70;display:grid;place-items:center;padding:28px;
+  background:var(--bg)}
+.datastate__box{background:#fff;border-radius:20px;padding:22px;max-width:320px;text-align:center;
+  box-shadow:var(--shadow)}
+.datastate__box p{margin:0 0 16px;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.datastate__retry{background:var(--blue);color:#fff;padding:12px 26px;border-radius:999px;
+  font-size:15px;font-weight:640}
+
+/* узкие экраны: колонки таблиц не помещались и ломали строку */
+@media (max-width:360px){
+  .thead,.trow{grid-template-columns:44px 40px minmax(56px,1fr) 38px 54px;gap:5px;padding:0 11px}
+  .thead--daily,.trow--daily{grid-template-columns:46px 40px minmax(56px,1fr) 34px 50px 10px}
+  .trow__temp{font-size:14px}.trow__temp .lo{margin-right:4px;font-size:13px}
+  .trow__p{font-size:12.5px}.thead{font-size:10px;letter-spacing:-.2px}
+  .pill{min-width:32px;padding:4px 7px;font-size:12px}
+  .sheet{padding-left:10px;padding-right:10px}
+}
