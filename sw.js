@@ -1,4 +1,4 @@
-const V = 'rw-v2';
+const V = 'rw-v3';
 const SHELL = [
   './', './index.html', './css/styles.css',
   './js/app.js', './js/engine.js', './js/icons.js',
