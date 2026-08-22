@@ -748,6 +748,12 @@ function renderAir() {
 }
 
 // ── 9. РАДАР ───────────────────────────────────────────────────────────────
+// Публичный API RainViewer с 2026 года не отдаёт тайлы выше 7-го зума:
+// вместо осадков приходит серая заглушка «Zoom Level Not Supported» с кодом 200,
+// которую Leaflet принимает за нормальный тайл. Держим карту в этих рамках.
+const RADAR_NATIVE_Z = 7;
+const MAP_MAX_Z = 10;
+
 const BASEMAPS = [
   ['voyager', 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'],
   ['light', 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png'],
@@ -786,8 +792,8 @@ async function initRadar() {
   try {
     await loadLeaflet();
     if (!R.map) {
-      R.map = L.map('map', { zoomControl: false, attributionControl: true })
-        .setView([S.place.lat, S.place.lon], 8);
+      R.map = L.map('map', { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_Z })
+        .setView([S.place.lat, S.place.lon], RADAR_NATIVE_Z);
       R.map.attributionControl.setPrefix('');
       setBasemap(0);
       R.marker = L.circleMarker([S.place.lat, S.place.lon],
@@ -807,8 +813,22 @@ function setBasemap(i) {
   R.baseIdx = i;
   if (R.base) R.map.removeLayer(R.base);
   R.base = L.tileLayer(BASEMAPS[i][1], {
-    attribution: '© OpenStreetMap, © CARTO · © RainViewer', maxZoom: 14, zIndex: 100
+    attribution: '© OpenStreetMap, © CARTO · © RainViewer', maxZoom: MAP_MAX_Z, zIndex: 100
   }).addTo(R.map);
+}
+
+// Пробный тайл: если 512 px недоступны — молча откатываемся на 256.
+let tileSizeCache = null;
+function tileSize(host, path) {
+  if (tileSizeCache) return Promise.resolve(tileSizeCache);
+  return new Promise(res => {
+    const img = new Image();
+    const done = v => { tileSizeCache = v; res(v); };
+    const t = setTimeout(() => done(256), 4000);
+    img.onload = () => { clearTimeout(t); done(img.naturalWidth >= 512 ? 512 : 256); };
+    img.onerror = () => { clearTimeout(t); done(256); };
+    img.src = `${host}${path}/512/1/1/1/4/1_1.png`;
+  });
 }
 
 async function loadFrames() {
@@ -817,9 +837,15 @@ async function loadFrames() {
   });
   const host = j.host || 'https://tilecache.rainviewer.com';
   const past = j.radar?.past || [], soon = j.radar?.nowcast || [];
+  if (!past.length && !soon.length) throw new Error('empty');
+
+  // RainViewer отдаёт максимум 7-й зум, поэтому тайлы всё равно растягиваются.
+  // Берём 512 px там, где они есть, — картинка вдвое плотнее при том же охвате.
+  const size = await tileSize(host, (past[0] || soon[0]).path);
+
   R.frames = [...past, ...soon].map(f => ({
     time: f.time * 1000,
-    url: `${host}${f.path}/256/{z}/{x}/{y}/4/1_1.png`,
+    url: `${host}${f.path}/${size}/{z}/{x}/{y}/4/1_1.png`,
     forecast: f.time * 1000 > Date.now()
   }));
   if (!R.frames.length) throw new Error('empty');
@@ -838,7 +864,14 @@ async function loadFrames() {
 // Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.
 function layerFor(i) {
   if (R.layers.has(i)) return R.layers.get(i);
-  const l = L.tileLayer(R.frames[i].url, { opacity: 0, zIndex: 300 + i, maxZoom: 14 }).addTo(R.map);
+  const l = L.tileLayer(R.frames[i].url, {
+    opacity: 0, zIndex: 300 + i,
+    tileSize: 256,
+    maxZoom: MAP_MAX_Z,
+    maxNativeZoom: RADAR_NATIVE_Z,   // выше RainViewer отдаёт заглушку «Zoom Level Not Supported»
+    updateWhenZooming: false,
+    crossOrigin: true
+  }).addTo(R.map);
   R.layers.set(i, l);
   return l;
 }
@@ -884,7 +917,7 @@ function bindMapControls() {
   $('#radarPlay').addEventListener('click', () => R.timer ? stopPlay() : startPlay());
   $('#btnZoomIn').addEventListener('click', () => R.map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => R.map.zoomOut());
-  $('#btnMapLocate').addEventListener('click', () => R.map.setView([S.place.lat, S.place.lon], 9));
+  $('#btnMapLocate').addEventListener('click', () => R.map.setView([S.place.lat, S.place.lon], 8));
   $('#btnLayers').addEventListener('click', () => {
     setBasemap((R.baseIdx + 1) % BASEMAPS.length);
     toast(T.basemapNames[R.baseIdx]);
