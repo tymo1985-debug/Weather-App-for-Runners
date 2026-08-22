@@ -64,6 +64,8 @@ const EN = {
   // радар
   liveRadar: 'Live radar', radarLoading: 'Loading radar…', retry: 'Try again',
   play: 'Play', pause: 'Pause', forecastWord: 'forecast', pastWord: 'past',
+  modelWord: 'model', modelNote: 'Beyond the next half hour this is a model forecast, not radar: smoother and less precise.',
+  modelLoading: 'Loading the 6-hour forecast…',
   basemapNames: ['Standard map', 'Light map', 'Dark map'],
   legLight: 'Light', legModerate: 'Moderate',
   legHeavy: 'Heavy', legExtreme: 'Extreme', radarOffline: 'The radar needs a connection. Reconnect and open the map again.',
@@ -180,6 +182,8 @@ const RU = {
   noPollen: 'Для этого региона нет данных о пыльце.',
   liveRadar: 'Радар сейчас', radarLoading: 'Загружаем радар…', retry: 'Повторить',
   play: 'Проиграть', pause: 'Пауза', forecastWord: 'прогноз', pastWord: 'было',
+  modelWord: 'по модели', modelNote: 'Дальше получаса это прогноз модели, а не радар: мягче и менее точный.',
+  modelLoading: 'Загружаем прогноз на 6 часов…',
   basemapNames: ['Обычная карта', 'Светлая карта', 'Тёмная карта'],
   legLight: 'Слабые', legModerate: 'Умеренные',
   legHeavy: 'Сильные', legExtreme: 'Ливень',

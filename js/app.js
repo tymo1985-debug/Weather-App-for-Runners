@@ -760,7 +760,7 @@ const BASEMAPS = [
   ['dark', 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png']
 ];
 const R = { map: null, base: null, baseIdx: 0, marker: null, frames: [], layers: new Map(),
-  idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0 };
+  idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false };
 
 const placeKey = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
 
@@ -784,6 +784,8 @@ async function initRadar() {
       R.placeKey = placeKey(S.place);
       R.map.setView([S.place.lat, S.place.lon], R.map.getZoom());
       R.marker.setLatLng([S.place.lat, S.place.lon]);
+      dropModelFrames();                     // прогноз построен вокруг прежней точки
+      loadModel().catch(e => console.warn('precip forecast unavailable:', e));
     }
     return;
   }
@@ -804,6 +806,9 @@ async function initRadar() {
     await loadFrames();
     mapState('hide');
     R.ready = true;
+    // Прогноз тянем отдельно и уже после показа радара: медленный ответ
+    // Open-Meteo не должен задерживать карту, а его сбой — ломать радар.
+    loadModel().catch(e => console.warn('precip forecast unavailable:', e));
   } catch (e) {
     console.error('radar init failed:', e);
     mapState('error', T.radarOffline);
@@ -846,6 +851,7 @@ async function loadFrames() {
 
   R.frames = [...past, ...soon].map(f => ({
     time: f.time * 1000,
+    kind: 'radar',
     url: `${host}${f.path}/${size}/{z}/{x}/{y}/4/1_1.png`,
     forecast: f.time * 1000 > Date.now()
   }));
@@ -862,17 +868,133 @@ async function loadFrames() {
   showFrame(R.idx);
 }
 
+// ── Прогноз осадков на 6 часов вперёд ──────────────────────────────────────
+// RainViewer заглядывает максимум на полчаса. Дальше рисуем уже не радар,
+// а модель: сетка точек Open-Meteo, билинейная интерполяция между узлами
+// и та же цветовая шкала, что в легенде. Разрешение — десятки километров,
+// поэтому слой намеренно полупрозрачнее радарного, а кадр подписан «по модели».
+const MODEL_HOURS = 6;
+const GRID = 16;                       // узлов по стороне
+const GRID_DLON = 3.4;                 // половина ширины области, градусы
+// По вертикали видимая часть карты зависит от широты (проекция Меркатора),
+// поэтому высоту области считаем от неё, иначе прогноз не закрывает экран.
+const gridDLat = lat => Math.min(4.6, Math.max(2, 4.6 * Math.cos(lat * Math.PI / 180)));
+
+const PRECIP_STOPS = [                 // мм/ч → цвет, совпадает с .radar__grad
+  [0.1, [127, 212, 193]], [0.4, [95, 196, 126]], [1, [201, 222, 94]],
+  [2, [242, 209, 76]], [4, [238, 154, 63]], [8, [228, 96, 63]],
+  [16, [195, 58, 107]], [30, [156, 47, 165]]
+];
+
+function precipColor(mm) {
+  if (!(mm > 0.08)) return [0, 0, 0, 0];
+  let col = PRECIP_STOPS[PRECIP_STOPS.length - 1][1];
+  for (let i = 0; i < PRECIP_STOPS.length; i++) {
+    const [lim, c] = PRECIP_STOPS[i];
+    if (mm <= lim) {
+      const [plim, pc] = PRECIP_STOPS[i - 1] || [0, PRECIP_STOPS[0][1]];
+      const t = lim > plim ? (mm - plim) / (lim - plim) : 0;
+      col = c.map((v, k) => Math.round(pc[k] + (v - pc[k]) * t));
+      break;
+    }
+  }
+  return [col[0], col[1], col[2], Math.round(255 * Math.min(1, .3 + mm / 3))];
+}
+
+// Сетка 12×12 растягивается на картинку 128×128 — края получаются мягкими.
+function paintGrid(vals) {
+  const N = 128, cv = document.createElement('canvas');
+  cv.width = cv.height = N;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(N, N);
+  for (let y = 0; y < N; y++) {
+    const gy = y / (N - 1) * (GRID - 1), y0 = Math.floor(gy), y1 = Math.min(GRID - 1, y0 + 1), ty = gy - y0;
+    for (let x = 0; x < N; x++) {
+      const gx = x / (N - 1) * (GRID - 1), x0 = Math.floor(gx), x1 = Math.min(GRID - 1, x0 + 1), tx = gx - x0;
+      const v = vals[y0][x0] * (1 - tx) * (1 - ty) + vals[y0][x1] * tx * (1 - ty)
+              + vals[y1][x0] * (1 - tx) * ty + vals[y1][x1] * tx * ty;
+      const c = precipColor(v), p = (y * N + x) * 4;
+      img.data[p] = c[0]; img.data[p + 1] = c[1]; img.data[p + 2] = c[2]; img.data[p + 3] = c[3];
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv.toDataURL('image/png');
+}
+
+// Модельные кадры всегда лежат в хвосте — их можно отбросить, не трогая радар.
+function dropModelFrames() {
+  const keep = R.frames.filter(f => f.kind !== 'model').length;
+  if (keep === R.frames.length) return;
+  R.layers.forEach((l, k) => { if (k >= keep) { R.map.removeLayer(l); R.layers.delete(k); } });
+  R.frames.length = keep;
+  if (R.idx >= keep) R.idx = R.nowIdx;
+  const sl = $('#radarTime');
+  sl.max = Math.max(0, keep - 1);
+  renderTicks();
+  showFrame(R.idx);
+}
+
+async function loadModel() {
+  const key = placeKey(S.place);
+  const lat0 = S.place.lat, lon0 = S.place.lon, dLat = gridDLat(lat0);
+  const top = Math.min(89.5, lat0 + dLat), bot = Math.max(-89.5, lat0 - dLat);
+  const lats = [], lons = [];
+  for (let r = 0; r < GRID; r++)
+    for (let c = 0; c < GRID; c++) {
+      lats.push((top - r * (top - bot) / (GRID - 1)).toFixed(2));
+      lons.push((lon0 - GRID_DLON + c * (2 * GRID_DLON / (GRID - 1))).toFixed(2));
+    }
+
+  // timeformat=unixtime заметно уменьшает ответ: точек 256, и в каждой своя шкала времени.
+  const res = await fetch('https://api.open-meteo.com/v1/forecast'
+    + `?latitude=${lats.join(',')}&longitude=${lons.join(',')}`
+    + '&hourly=precipitation&forecast_days=2&timezone=UTC&timeformat=unixtime')
+    .then(r => { if (!r.ok) throw new Error('model'); return r.json(); });
+
+  const pts = Array.isArray(res) ? res : [res];
+  if (pts.length !== GRID * GRID) throw new Error('grid');
+  if (key !== placeKey(S.place) || !R.frames.length) return;   // город успели сменить
+
+  const times = pts[0].hourly.time.map(t => t * 1000);
+  const after = R.frames[R.frames.length - 1].time;
+  const limit = Date.now() + MODEL_HOURS * 3600e3;
+  const bounds = [[bot, lon0 - GRID_DLON], [top, lon0 + GRID_DLON]];
+  const add = [];
+
+  for (let h = 0; h < times.length && add.length < MODEL_HOURS; h++) {
+    if (!(times[h] > after) || times[h] > limit) continue;
+    const vals = [];
+    for (let r = 0; r < GRID; r++) {
+      const row = [];
+      for (let c = 0; c < GRID; c++) row.push(pts[r * GRID + c].hourly?.precipitation?.[h] ?? 0);
+      vals.push(row);
+    }
+    add.push({ time: times[h], kind: 'model', forecast: true, img: paintGrid(vals), bounds });
+  }
+  if (!add.length) return;
+
+  R.frames.push(...add);
+  const sl = $('#radarTime');
+  sl.max = R.frames.length - 1;
+  renderTicks();
+  showFrame(R.idx);
+}
+
 // Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.
+const frameOpacity = i => R.frames[i] && R.frames[i].kind === 'model' ? .55 : .78;
+
 function layerFor(i) {
   if (R.layers.has(i)) return R.layers.get(i);
-  const l = L.tileLayer(R.frames[i].url, {
-    opacity: 0, zIndex: 300 + i,
-    tileSize: 256,
-    maxZoom: MAP_MAX_Z,
-    maxNativeZoom: RADAR_NATIVE_Z,   // выше RainViewer отдаёт заглушку «Zoom Level Not Supported»
-    updateWhenZooming: false,
-    crossOrigin: true
-  }).addTo(R.map);
+  const f = R.frames[i];
+  const l = f.kind === 'model'
+    ? L.imageOverlay(f.img, f.bounds, { opacity: 0, zIndex: 300 + i, interactive: false }).addTo(R.map)
+    : L.tileLayer(f.url, {
+        opacity: 0, zIndex: 300 + i,
+        tileSize: 256,
+        maxZoom: MAP_MAX_Z,
+        maxNativeZoom: RADAR_NATIVE_Z,   // выше RainViewer отдаёт заглушку «Zoom Level Not Supported»
+        updateWhenZooming: false,
+        crossOrigin: true
+      }).addTo(R.map);
   R.layers.set(i, l);
   return l;
 }
@@ -881,16 +1003,20 @@ function showFrame(i) {
   if (!R.frames[i]) return;
   R.idx = i;
   const cur = layerFor(i);
-  R.layers.forEach((l, k) => l.setOpacity(k === i ? .78 : 0));
-  cur.setOpacity(.78);
+  R.layers.forEach((l, k) => l.setOpacity(k === i ? frameOpacity(k) : 0));
+  cur.setOpacity(frameOpacity(i));
   layerFor((i + 1) % R.frames.length);            // подгружаем следующий заранее
 
   const f = R.frames[i];
+  const word = f.kind === 'model' ? T.modelWord : f.forecast ? T.forecastWord : T.pastWord;
   $('#radarLabel').innerHTML = i === R.nowIdx
     ? `<b>${T.now}</b>`
-    : `<b>${hhmm(atPlace(f.time))}</b><small>${f.forecast ? T.forecastWord : T.pastWord}</small>`;
+    : `<b>${hhmm(atPlace(f.time))}</b><small>${word}</small>`;
   $('#radarTime').value = i;
   $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
+
+  // Один раз объясняем, что дальше получаса это уже не радар.
+  if (f.kind === 'model' && !R.modelToldOnce) { R.modelToldOnce = true; toast(T.modelNote); }
 }
 
 function renderTicks() {
