@@ -804,7 +804,8 @@ async function initRadar() {
     await loadFrames();
     mapState('hide');
     R.ready = true;
-  } catch {
+  } catch (e) {
+    console.error('radar init failed:', e);
     mapState('error', T.radarOffline);
   }
 }
