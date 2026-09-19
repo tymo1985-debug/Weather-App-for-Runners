@@ -1,7 +1,7 @@
 import { weatherIcon, glyph, plant, moonFraction } from './icons.js';
 import { LANGS, pickLang, setLang } from './i18n.js';
 import {
-  DEFAULT_PLACE, loadProfile, saveProfile, loadCities, saveCities,
+  DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
   buildHours, bestWindow, bestWindowOfDay, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
@@ -12,7 +12,7 @@ const S = {
   place: loadCities()[0] || DEFAULT_PLACE,
   profile: loadProfile(),
   langCode: pickLang(),
-  bundle: null, hours: [],
+  bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score',
   factor: 'temp',
   screen: 'home', stack: []
@@ -21,6 +21,7 @@ let T = LANGS[S.langCode];
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const syncPressed = selector => $$(selector).forEach(b => b.setAttribute('aria-pressed', String(b.classList.contains('is-on'))));
 const pad = n => String(n).padStart(2, '0');
 const hhmm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const round = v => (v == null || Number.isNaN(v) ? '—' : Math.round(v));
@@ -47,13 +48,20 @@ const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', 
 
 function go(name, push = true) {
   if (name === S.screen) return;
+  const oldFocus = document.activeElement;
   if (S.screen === 'radar' && name !== 'radar') stopPlay();   // не крутим кадры в фоне
   if (push) { S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20); }
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
   $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.go === TAB_OF[name]));
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === TAB_OF[name] ? 'page' : 'false'));
   window.scrollTo(0, 0);
   if (S.bundle) RENDER[name]?.();
+  if (oldFocus.closest?.('.screen')) {
+    const screen = $(`.screen[data-screen="${name}"]`);
+    const target = screen.querySelector('#cityQ, h1, [data-back], button');
+    if (target) { if (target.tagName === 'H1') target.tabIndex = -1; target.focus(); }
+  }
 }
 function back() { go(S.stack.pop() || 'home', false); }
 
@@ -73,19 +81,25 @@ async function share() {
 }
 
 // ── Данные ─────────────────────────────────────────────────────────────────
-let loading = false;
+let requestId = 0, controller;
 async function load() {
-  if (loading) return;                       // защита от двойного запроса
-  loading = true;
-  const cached = cachedBundle(S.place);
-  if (cached) { S.bundle = cached; recompute(); paint(); dataError(false); }
+  const id = ++requestId, place = S.place;
+  controller?.abort();
+  controller = new AbortController();
+  const cached = cachedBundle(place);
+  S.bundle = null; S.hours = [];
+  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); }
+  else dataError('loading');
   try {
-    S.bundle = await fetchAll(S.place);
+    const bundle = await fetchAll(place, controller.signal);
+    if (id !== requestId) return;
+    S.bundle = bundle; S.cached = false;
     recompute(); paint(); dataError(false);
   } catch {
-    if (cached) toast(T.offline);
+    if (id !== requestId) return;
+    if (cached && !expireDisplayedBundle()) { paint(); toast(T.offline); }
     else dataError(true);                    // совсем нечего показать — даём повтор
-  } finally { loading = false; }
+  }
 }
 
 // Экран «не загрузилось» с кнопкой повтора: без него первый запуск
@@ -94,8 +108,15 @@ function dataError(on) {
   const el = $('#dataState');
   el.hidden = !on;
   if (!on) return;
-  $('#dataStateMsg').textContent = T.noDataTitle;
+  $('#dataStateMsg').textContent = on === 'loading' ? T.loading : T.noDataTitle;
+  $('#dataRetry').hidden = on === 'loading';
   $('#dataRetry').textContent = T.retry;
+}
+function expireDisplayedBundle() {
+  if (!S.bundle || Date.now() - S.bundle.at <= CACHE_TTL_MS) return false;
+  S.bundle = null; S.hours = [];
+  dataError(true);
+  return true;
 }
 function recompute() { S.hours = buildHours(S.bundle, S.profile); }
 function paint() { staticText(); RENDER[S.screen]?.(); }
@@ -103,14 +124,14 @@ function paint() { staticText(); RENDER[S.screen]?.(); }
 const nowIndex = () => {
   const t = Date.now();
   const i = S.hours.findIndex(h => h.ts > t - 1800e3);
-  return i < 0 ? Math.max(0, S.hours.length - 1) : i;
+  return i;
 };
 // Момент в стенных часах места: время в шапке и подписи кадров радара.
 const atPlace = (ms) => placeNow(S.bundle, ms);
 const timeOrDash = (v) => (v ? hhmm(new Date(v)) : '—');
 const nowHour = () => S.hours[nowIndex()] || null;
 const nowScore = () => nowHour()?.score ?? 0;
-const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(new Date(w.slice.at(-1).t.getTime() + 3600e3))}`;
+const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
 function staticText() {
@@ -118,6 +139,10 @@ function staticText() {
   $('#pinIcon').innerHTML = glyph.pin;
   $('#btnLocate').innerHTML = glyph.navigate.replace('#2C3E56', 'currentColor');
   $('#btnAddCity').innerHTML = glyph.plus;
+  $('#btnLocate').setAttribute('aria-label', T.myLocation);
+  $('#btnAddCity').setAttribute('aria-label', T.addCity);
+  $$('[data-back]').forEach(b => b.setAttribute('aria-label', T.back));
+  $$('[data-share]').forEach(b => b.setAttribute('aria-label', T.share));
   $('#scoreRunIc').innerHTML = glyph.runner;
   $('#icBest').innerHTML = glyph.alarm;
   $('#icDur').innerHTML = glyph.target;
@@ -153,6 +178,11 @@ function staticText() {
   $('#btnMapLocate').innerHTML = glyph.navigate;
   $('#btnZoomIn').innerHTML = glyph.plus;
   $('#btnZoomOut').innerHTML = glyph.minus;
+  $('#btnLayers').setAttribute('aria-label', T.layers);
+  $('#btnMapLocate').setAttribute('aria-label', T.myLocation);
+  $('#btnZoomIn').setAttribute('aria-label', T.zoomIn);
+  $('#btnZoomOut').setAttribute('aria-label', T.zoomOut);
+  $('#radarTime').setAttribute('aria-label', T.radarTime);
   $('#radarLegend').innerHTML = [T.legLight, T.legModerate, T.legHeavy, T.legExtreme]
     .map(x => `<span>${x}</span>`).join('');
   if (!R.timer) stopPlay();
@@ -165,11 +195,14 @@ function staticText() {
   $('#tagline').textContent = T.tagline;
   $('#fineprint').textContent = T.dataNote;
   $('#citiesTitle').textContent = T.cities;
+  $('#cityQLabel').textContent = T.searchCityLabel;
   $('#cityQ').placeholder = T.searchCity;
   $$('.tab').forEach(b => {
     b.querySelector('.tab__ic').innerHTML = glyph[b.querySelector('.tab__ic').dataset.ic];
     b.querySelector('[data-t]').textContent = T[b.querySelector('[data-t]').dataset.t];
   });
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === TAB_OF[S.screen] ? 'page' : 'false'));
+  ['.seg', '.utab[data-dcol]', '.utab[data-btab]'].forEach(syncPressed);
 }
 
 // ── 1. ГЛАВНАЯ ─────────────────────────────────────────────────────────────
@@ -197,12 +230,14 @@ function renderHome() {
   $('#factWindow').textContent = w ? windowText(w) : '—';
   $('#factDuration').textContent = T.min(S.profile.duration);
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
-  $('#updatedAt').textContent = T.updatedAt(hhmm(atPlace(S.bundle.at)));
+  $('#updatedAt').textContent = T.updatedAt(hhmm(atPlace(S.bundle.at))) +
+    (S.cached ? ` · ${T.savedForecast}` : '') +
+    (Date.now() - S.bundle.at > 12 * 60e3 ? ` · ${T.staleForecast}` : '');
   renderStrip();
 }
 
 function renderStrip() {
-  const box = $('#strip'), n = nowIndex();
+  const box = $('#strip'), n = Math.max(0, nowIndex());
   if (S.range === 'days') {
     const D = S.bundle.weather.daily;
     box.innerHTML = D.time.map((t, i) => {
@@ -226,6 +261,7 @@ function renderStrip() {
 $$('.seg[data-range]').forEach(b => b.addEventListener('click', () => {
   $$('.seg[data-range]').forEach(x => x.classList.remove('is-on'));
   b.classList.add('is-on'); S.range = b.dataset.range;
+  syncPressed('.seg');
   if (S.range === 'days') { go('daily'); } else renderStrip();
 }));
 $('#cardScore').addEventListener('click', () => go('analysis'));
@@ -239,6 +275,7 @@ function locate() {
   navigator.geolocation.getCurrentPosition(async pos => {
     const p = await reverseGeocode(+pos.coords.latitude.toFixed(3),
       +pos.coords.longitude.toFixed(3), S.langCode, T.myLocation);
+    if (!validPlace(p)) return;
     S.place = p; const c = loadCities(); c[0] = p; saveCities(c); load();
   }, () => toast(T.searchOffline), { timeout: 8000, maximumAge: 6e5 });
 }
@@ -296,6 +333,7 @@ $('#hourlyRows').addEventListener('click', e => {
 $$('.utab[data-dcol]').forEach(b => b.addEventListener('click', () => {
   $$('.utab[data-dcol]').forEach(x => x.classList.remove('is-on'));
   b.classList.add('is-on'); S.dcol = b.dataset.dcol; renderDaily();
+  syncPressed('.utab[data-dcol]');
 }));
 
 function renderDaily() {
@@ -460,6 +498,7 @@ function drawDayChart() {
 $$('.utab[data-btab]').forEach(b => b.addEventListener('click', () => {
   $$('.utab[data-btab]').forEach(x => x.classList.remove('is-on'));
   b.classList.add('is-on'); S.btab = b.dataset.btab; renderBreakdown();
+  syncPressed('.utab[data-btab]');
 }));
 
 function renderWhy() {
@@ -1141,38 +1180,62 @@ $('#langChooser').addEventListener('click', e => {
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
 function renderCities() {
   const cities = loadCities();
-  $('#cityList').innerHTML = cities.map((c, i) => `
-    <div class="cityrow">
-      <button data-city="${i}"><b>${c.name}</b><small>${c.country || ''}</small></button>
-      ${cities.length > 1 ? `<button class="del" data-delcity="${i}">${T.remove}</button>` : ''}
-    </div>`).join('');
+  const list = $('#cityList'); list.replaceChildren();
+  cities.forEach((c, i) => {
+    const row = document.createElement('div'); row.className = 'cityrow';
+    const button = document.createElement('button'); button.dataset.city = i;
+    const name = document.createElement('b'); name.textContent = c.name;
+    const country = document.createElement('small'); country.textContent = c.country || '';
+    button.append(name, country); row.append(button);
+    if (cities.length > 1) {
+      const remove = document.createElement('button'); remove.className = 'del';
+      remove.dataset.delcity = i; remove.textContent = T.remove; row.append(remove);
+    }
+    list.append(row);
+  });
 }
 $('#cityList').addEventListener('click', e => {
   const d = e.target.closest('[data-delcity]');
   if (d) { const c = loadCities(); c.splice(+d.dataset.delcity, 1); saveCities(c); renderCities(); return; }
   const c = e.target.closest('[data-city]');
-  if (c) { S.place = loadCities()[+c.dataset.city]; go('home'); load(); }
+  if (c) { S.place = loadCities()[+c.dataset.city]; load(); go('home'); }
 });
-let searchTimer;
+let searchTimer, searchRequestId = 0, searchController;
 $('#cityQ').addEventListener('input', e => {
   clearTimeout(searchTimer);
+  const id = ++searchRequestId;
+  searchController?.abort();
   const q = e.target.value.trim();
-  if (q.length < 2) return ($('#cityRes').innerHTML = '');
+  $('#cityRes').replaceChildren(); $('#cityRes').onclick = null;
+  if (q.length < 2) return;
   searchTimer = setTimeout(async () => {
     try {
-      const res = await searchCity(q, S.langCode);
-      $('#cityRes').innerHTML = res.map((r, i) =>
-        `<li data-res="${i}"><span>${r.name}</span><small>${r.country}</small></li>`).join('')
-        || `<li>${T.nothingFound}</li>`;
+      searchController = new AbortController();
+      const res = await searchCity(q, S.langCode, searchController.signal);
+      if (id !== searchRequestId || $('#cityQ').value.trim() !== q) return;
+      const list = $('#cityRes'); list.replaceChildren();
+      res.forEach((r, i) => {
+        const li = document.createElement('li'); li.dataset.res = i;
+        const name = document.createElement('span'); name.textContent = r.name;
+        const country = document.createElement('small'); country.textContent = r.country;
+        li.append(name, country); list.append(li);
+      });
+      if (!res.length) { const li = document.createElement('li'); li.textContent = T.nothingFound; list.append(li); }
       $('#cityRes').onclick = ev => {
         const li = ev.target.closest('[data-res]'); if (!li) return;
         const city = res[+li.dataset.res], cities = loadCities();
+        if (!validPlace(city)) return;
         if (!cities.some(x => x.name === city.name && Math.abs(x.lat - city.lat) < .01)) cities.push(city);
         saveCities(cities); S.place = city;
-        $('#cityQ').value = ''; $('#cityRes').innerHTML = '';
-        go('home'); load();
+        ++searchRequestId; searchController?.abort();
+        $('#cityQ').value = ''; $('#cityRes').replaceChildren();
+        load(); go('home');
       };
-    } catch { $('#cityRes').innerHTML = `<li>${T.searchOffline}</li>`; }
+    } catch {
+      if (id !== searchRequestId || $('#cityQ').value.trim() !== q) return;
+      const li = document.createElement('li'); li.textContent = T.searchOffline;
+      $('#cityRes').replaceChildren(li); $('#cityRes').onclick = null;
+    }
   }, 320);
 });
 
@@ -1206,7 +1269,7 @@ function openDaySheet(iso) {
   const day = S.hours.filter(h => h.iso.slice(0, 10) === iso);
   const bw = bestWindowOfDay(S.hours, iso, S.profile.duration);
   openSheet(`<h3>${dowOf(dt)}, ${dateOf(dt)}</h3>
-    ${bw ? `<p>${T.bestWindow}: ${hhmm(bw.slice[0].t)} – ${hhmm(new Date(bw.slice.at(-1).t.getTime() + 3600e3))} · ${bw.score}</p>` : ''}
+    ${bw ? `<p>${T.bestWindow}: ${windowText(bw)} · ${bw.score}</p>` : ''}
     <div class="table">
       <div class="thead">${[T.colTime, T.colWeather, T.colTemp, T.colPrecip, T.colScore].map(x => `<span>${x}</span>`).join('')}</div>
       ${day.filter((_, i) => i % 2 === 0).map(h => `<div class="trow">
@@ -1258,7 +1321,11 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && S.bundle && Date.now() - S.bundle.at > 12 * 60e3) load();
 });
-setInterval(() => { if (S.bundle && !document.hidden && S.screen === 'home') renderHome(); }, 60e3);
+setInterval(() => {
+  if (!S.bundle || document.hidden) return;
+  if (expireDisplayedBundle()) return;
+  if (S.screen === 'home') renderHome();
+}, 60e3);
 
 const SCREENS = ['home', 'hourly', 'daily', 'analysis', 'why', 'factor', 'timeline', 'air', 'radar', 'details', 'cities'];
 function fromHash() {

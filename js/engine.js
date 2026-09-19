@@ -5,6 +5,14 @@ const GEO = 'https://geocoding-api.open-meteo.com/v1/search';
 const REVGEO = 'https://api.bigdatacloud.net/data/reverse-geocode-client';
 
 export const DEFAULT_PLACE = { name: 'Berlin', lat: 52.52, lon: 13.405, country: 'Germany' };
+export const CACHE_TTL_MS = 30 * 60e3;
+
+export function validPlace(p) {
+  return p && typeof p.name === 'string' && p.name.trim().length > 0 && p.name.length <= 120 &&
+    (p.country == null || typeof p.country === 'string' && p.country.length <= 160) &&
+    typeof p.lat === 'number' && Number.isFinite(p.lat) && p.lat >= -90 && p.lat <= 90 &&
+    typeof p.lon === 'number' && Number.isFinite(p.lon) && p.lon >= -180 && p.lon <= 180;
+}
 
 export const DEFAULT_PROFILE = {
   heat: 'normal',      // low | normal | high  — переносимость жары
@@ -24,15 +32,16 @@ export function saveProfile(p) { localStorage.setItem('rw.profile', JSON.stringi
 export function loadCities() {
   try {
     const c = JSON.parse(localStorage.getItem('rw.cities') || 'null');
-    return Array.isArray(c) && c.length ? c : [DEFAULT_PLACE];
+    const cities = Array.isArray(c) ? c.filter(validPlace) : [];
+    return cities.length ? cities : [DEFAULT_PLACE];
   } catch { return [DEFAULT_PLACE]; }
 }
-export function saveCities(c) { localStorage.setItem('rw.cities', JSON.stringify(c)); }
+export function saveCities(c) { localStorage.setItem('rw.cities', JSON.stringify(c.filter(validPlace))); }
 
 // ── Загрузка ───────────────────────────────────────────────────────────────
 const cacheKey = (p) => `rw.data.${p.lat.toFixed(2)},${p.lon.toFixed(2)}`;
 
-export async function fetchAll(place) {
+export async function fetchAll(place, signal) {
   const q = `latitude=${place.lat}&longitude=${place.lon}&timezone=auto`;
   const fUrl = `${FORECAST}?${q}&forecast_days=10&current=temperature_2m,relative_humidity_2m,` +
     `apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day,cloud_cover` +
@@ -44,8 +53,8 @@ export async function fetchAll(place) {
     `alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,ragweed_pollen,olive_pollen`;
 
   const [w, a] = await Promise.all([
-    fetch(fUrl).then(r => { if (!r.ok) throw new Error('forecast'); return r.json(); }),
-    fetch(aUrl).then(r => r.ok ? r.json() : null).catch(() => null)
+    fetch(fUrl, { signal }).then(r => { if (!r.ok) throw new Error('forecast'); return r.json(); }),
+    fetch(aUrl, { signal }).then(r => r.ok ? r.json() : null).catch(() => null)
   ]);
   const bundle = { weather: w, air: a, place, at: Date.now() };
   try { localStorage.setItem(cacheKey(place), JSON.stringify(bundle)); }
@@ -62,16 +71,22 @@ export async function fetchAll(place) {
 }
 
 export function cachedBundle(place) {
-  try { return JSON.parse(localStorage.getItem(cacheKey(place)) || 'null'); } catch { return null; }
+  try {
+    const b = JSON.parse(localStorage.getItem(cacheKey(place)) || 'null');
+    return b && Number.isFinite(b.at) && Date.now() - b.at >= 0 &&
+      Date.now() - b.at <= CACHE_TTL_MS && b.weather?.hourly?.time?.length &&
+      Date.parse(b.weather.hourly.time.at(-1) + 'Z') - (b.weather.utc_offset_seconds || 0) * 1000 > Date.now() - 1800e3
+      ? b : null;
+  } catch { return null; }
 }
 
-export async function searchCity(name, lang = 'en') {
-  const r = await fetch(`${GEO}?name=${encodeURIComponent(name)}&count=8&language=${lang}&format=json`);
+export async function searchCity(name, lang = 'en', signal) {
+  const r = await fetch(`${GEO}?name=${encodeURIComponent(name)}&count=8&language=${lang}&format=json`, { signal });
   const j = await r.json();
   return (j.results || []).map(x => ({
     name: x.name, lat: x.latitude, lon: x.longitude,
     country: [x.admin1, x.country].filter(Boolean).join(', ')
-  }));
+  })).filter(validPlace);
 }
 
 export async function reverseGeocode(lat, lon, lang = 'en', fallback = 'My location') {
@@ -230,28 +245,34 @@ export function buildHours(bundle, profile) {
 }
 
 // Лучшее окно длиной duration внутри интервала часов
+function windowAt(hours, i, durationMin) {
+  const len = Math.ceil(durationMin / 60);
+  if (!(durationMin > 0) || i + len > hours.length) return null;
+  const slice = hours.slice(i, i + len);
+  if (slice.some((h, k) => k && h.ts - slice[k - 1].ts !== 3600e3)) return null;
+  const avg = slice.reduce((sum, h, k) =>
+    sum + h.score * Math.min(60, durationMin - k * 60), 0) / durationMin;
+  return { avg, slice, score: Math.round(avg), end: new Date(slice[0].t.getTime() + durationMin * 6e4) };
+}
+
 export function bestWindow(hours, durationMin, fromDate) {
-  const len = Math.max(1, Math.round(durationMin / 60));
   const from = fromDate ? fromDate.getTime() : Date.now();
   let best = null;
-  for (let i = 0; i + len <= hours.length; i++) {
+  for (let i = 0; i < hours.length; i++) {
     if (hours[i].ts < from - 3600e3) continue;
     if (hours[i].ts > from + 24 * 3600e3) break;
-    const slice = hours.slice(i, i + len);
-    const avg = slice.reduce((a, h) => a + h.score, 0) / len;
-    if (!best || avg > best.avg + 0.01) best = { i, avg, slice, score: Math.round(avg) };
+    const candidate = windowAt(hours, i, durationMin);
+    if (candidate && (!best || candidate.avg > best.avg + 0.01)) best = { i, ...candidate };
   }
   return best;
 }
 
 export function bestWindowOfDay(hours, dayISO, durationMin) {
-  const len = Math.max(1, Math.round(durationMin / 60));
   const day = hours.filter(h => h.iso.slice(0, 10) === dayISO);
   let best = null;
-  for (let i = 0; i + len <= day.length; i++) {
-    const slice = day.slice(i, i + len);
-    const avg = slice.reduce((a, h) => a + h.score, 0) / len;
-    if (!best || avg > best.avg + 0.01) best = { avg, slice, score: Math.round(avg) };
+  for (let i = 0; i < day.length; i++) {
+    const candidate = windowAt(day, i, durationMin);
+    if (candidate && (!best || candidate.avg > best.avg + 0.01)) best = candidate;
   }
   return best;
 }
@@ -264,4 +285,3 @@ export const aqiBand = (v) => {
   const k = i < 0 ? 5 : i;
   return [k, AQI_COLORS[k]];
 };
-

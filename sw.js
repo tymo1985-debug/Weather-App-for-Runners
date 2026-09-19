@@ -1,4 +1,8 @@
-const V = 'rw-v4';
+const PREFIX = 'weather-runner-';
+const SHELL_CACHE = `${PREFIX}shell-v6`;
+const API_CACHE = `${PREFIX}api-v6`;
+const API_TTL_MS = 5 * 60 * 1000;
+const API_MAX_ENTRIES = 20;
 const SHELL = [
   './', './index.html', './css/styles.css',
   './js/app.js', './js/engine.js', './js/icons.js',
@@ -7,14 +11,53 @@ const SHELL = [
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css'
 ];
 
+const isApi = host => host === 'api.rainviewer.com' ||
+  host === 'api.open-meteo.com' || host === 'air-quality-api.open-meteo.com' ||
+  host === 'geocoding-api.open-meteo.com' || host === 'api.bigdatacloud.net';
+
+async function trimApi(cache) {
+  const keys = await cache.keys();
+  for (const key of keys.slice(0, Math.max(0, keys.length - API_MAX_ENTRIES))) {
+    await cache.delete(key);
+  }
+}
+
+async function apiResponse(req) {
+  const cache = await caches.open(API_CACHE);
+  try {
+    const response = await fetch(req);
+    if (response.ok) {
+      const headers = new Headers(response.headers);
+      headers.set('x-weather-runner-cached-at', String(Date.now()));
+      const stored = new Response(await response.clone().blob(), {
+        status: response.status, statusText: response.statusText, headers
+      });
+      await cache.delete(req); // Move updated entries to the end for deterministic eviction.
+      await cache.put(req, stored);
+      await trimApi(cache);
+    }
+    return response;
+  } catch (error) {
+    const hit = await cache.match(req);
+    const savedAt = Number(hit?.headers.get('x-weather-runner-cached-at'));
+    if (hit && savedAt > 0 && Date.now() - savedAt >= 0 && Date.now() - savedAt <= API_TTL_MS) {
+      return hit;
+    }
+    if (hit) await cache.delete(req);
+    throw error;
+  }
+}
+
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(V).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== V).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k === 'rw-v4' || k === 'rw-v5' ||
+        (k.startsWith(PREFIX) && k !== SHELL_CACHE && k !== API_CACHE))
+        .map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -24,29 +67,29 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Тайлы карты и радара — только из сети, без кеша.
-  if (/tilecache\.rainviewer|basemaps\.cartocdn/.test(url.host)) return;
-
-  // Погодные API — сеть вперёд, кеш как запасной вариант.
-  if (/open-meteo\.com|bigdatacloud\.net/.test(url.host)) {
-    e.respondWith(
-      fetch(req).then(r => {
-        const copy = r.clone();
-        caches.open(V).then(c => c.put(req, copy));
-        return r;
-      }).catch(() => caches.match(req))
-    );
+  // Map tiles are network only; the radar metadata API has its own short cache.
+  if (url.host === 'tilecache.rainviewer.com' || url.host === 'basemaps.cartocdn.com') return;
+  if (isApi(url.host)) {
+    e.respondWith(apiResponse(req));
     return;
   }
+  if (url.origin !== location.origin) return;
 
-  // Оболочка приложения — кеш вперёд.
   e.respondWith(
-    caches.match(req).then(hit => hit || fetch(req).then(r => {
-      if (r.ok && url.origin === location.origin) {
-        const copy = r.clone();
-        caches.open(V).then(c => c.put(req, copy));
+    caches.open(SHELL_CACHE).then(async cache => {
+      const hit = await cache.match(req);
+      if (hit) return hit;
+      try {
+        const response = await fetch(req);
+        if (response.ok) await cache.put(req, response.clone());
+        return response;
+      } catch (error) {
+        if (req.mode === 'navigate') {
+          const index = await cache.match('./index.html');
+          if (index) return index;
+        }
+        throw error;
       }
-      return r;
-    }).catch(() => caches.match('./index.html')))
+    })
   );
 });

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Run Weather</title>
 <meta name="description" content="Weather with a running score: the best window of the day, factor breakdown, air quality and pollen.">
 <meta name="theme-color" content="#4A9FE8">
@@ -68,10 +68,10 @@
       </div>
     </div>
 
-    <div class="segmented" role="tablist">
-      <button class="seg is-on" data-range="hours" role="tab"></button>
-      <button class="seg" data-range="today" role="tab"></button>
-      <button class="seg" data-range="days" role="tab"></button>
+    <div class="segmented">
+      <button class="seg is-on" data-range="hours"></button>
+      <button class="seg" data-range="today"></button>
+      <button class="seg" data-range="days"></button>
     </div>
 
     <div class="hstrip" id="strip"></div>
@@ -250,6 +250,7 @@
 <section class="screen" data-screen="cities">
   <div class="sheet sheet--flat safe-top">
     <h1 class="bigtitle" id="citiesTitle"></h1>
+    <label class="visually-hidden" for="cityQ" id="cityQLabel">Search city</label>
     <input class="searchbox" id="cityQ" autocomplete="off">
     <ul class="reslist" id="cityRes"></ul>
     <div class="card" id="cityList"></div>
