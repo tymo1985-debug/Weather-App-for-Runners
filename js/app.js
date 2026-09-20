@@ -4,7 +4,7 @@ import { freshness, selectDuration } from './home-ui.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, runRecommendation, nearTermRecommendation, band, bandColor, aqiBand, WEIGHTS,
+  buildHours, bestWindow, bestWindowOfDay, runRecommendation, nearTermRecommendation, runAdvice, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
 } from './engine.js';
 
@@ -249,6 +249,9 @@ function renderHome() {
   $('#nearTermAdvice').textContent = !near ? T.nearTermUnavailable : near.later
     ? T.nearTermWait(near.nowScore, near.later.score,
       T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
+  const tips = runAdvice(near?.later || near?.current, S.profile.duration);
+  $('#runAdvice').textContent = tips.map(key => T.runTips[key]).join(' ');
+  $('#runAdvice').hidden = tips.length === 0;
   $$('[data-horizon]').forEach(b => {
     const active = Number(b.dataset.horizon) === S.horizon;
     b.classList.toggle('is-on', active);

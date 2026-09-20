@@ -93,6 +93,8 @@ input{font:inherit}
 .near-term__choices button{min-width:44px;padding:5px 8px;border-radius:7px;font-size:12px}
 .near-term__choices button.is-on{background:#fff;color:var(--blue);box-shadow:0 1px 3px rgba(20,33,58,.1)}
 .near-term__advice{font-size:13px;line-height:1.4;margin-top:6px;overflow-wrap:anywhere}
+.near-term__tip{font-size:12px;line-height:1.4;margin:7px 0 0;color:var(--ink-2);overflow-wrap:anywhere}
+.near-term__tip[hidden]{display:none}
 
 .factcard{background:var(--card);border-radius:18px;padding:12px 13px 11px;box-shadow:var(--shadow);
   display:flex;flex-direction:column;gap:10px}

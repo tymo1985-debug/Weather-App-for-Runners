@@ -328,7 +328,26 @@ export function nearTermRecommendation(hours, durationMin, horizonHours, now = D
     if (gain < (waitMin <= 60 ? 7 : 10)) continue;
     if (!best || candidate.score > best.score) best = { ...candidate, waitMin };
   }
-  return { nowScore: current.score, later: best, gain: best ? best.score - current.score : 0 };
+  return { nowScore: current.score, current, later: best, gain: best ? best.score - current.score : 0 };
+}
+
+// Advice uses only the complete window already selected by the near-term scorer.
+// The order is fixed, and no condition can add more than one tip.
+export function runAdvice(window, durationMin) {
+  if (!window?.slice || !Number.isFinite(durationMin) || durationMin <= 0) return [];
+  const slice = window.slice.slice(0, Math.ceil(durationMin / 60));
+  if (slice.length !== Math.ceil(durationMin / 60)) return [];
+  const active = slice.map((h, k) => ({ ...h, later: k > 0 }));
+  const any = (predicate) => active.some(predicate);
+  const tips = [];
+  if (any(h => [95, 96, 99].includes(h.code))) tips.push('thunder');
+  const rain = active.filter(h => (Number.isFinite(h.mm) && h.mm >= 1) ||
+    (Number.isFinite(h.pop) && h.pop >= 70 && Number.isFinite(h.mm) && h.mm >= 0.2));
+  if (rain.length && !tips.includes('thunder')) tips.push(rain.every(h => h.later) ? 'rainLater' : 'rain');
+  if (any(h => Number.isFinite(h.wind) && h.wind >= 30)) tips.push('wind');
+  if (any(h => Number.isFinite(h.feels) && h.feels >= 30)) tips.push('heat');
+  if (any(h => Number.isFinite(h.feels) && h.feels <= 2)) tips.push('cold');
+  return tips.slice(0, 2);
 }
 
 export function bestWindowOfDay(hours, dayISO, durationMin) {

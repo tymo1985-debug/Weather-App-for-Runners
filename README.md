@@ -78,3 +78,11 @@ score rises by at least 7 points for a wait of up to 60 minutes, or 10 points
 for a longer wait. Equal-scoring candidates prefer the earlier start. Hazardous
 future windows and incomplete run windows are not suggested. With insufficient
 data for a comparison, the existing full-day information remains available.
+
+# Practical run advice (Part C)
+
+The home screen shows up to two short tips for the selected near-term run
+window and duration, using the forecast already loaded for scoring. Ordinary
+conditions show no tip. Priority is thunder, meaningful rain, strong wind,
+heat, then cold; thunder suppresses a duplicate rain tip. The advice does not
+change scores or request additional weather data.

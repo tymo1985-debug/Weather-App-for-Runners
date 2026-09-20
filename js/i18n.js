@@ -13,6 +13,14 @@ const EN = {
   nearTermNow: 'Go now — waiting is unlikely to help.',
   nearTermWait: (now, later, wait) => `Better in about ${wait}: ${now} → ${later}/100`,
   nearTermUnavailable: 'Not enough forecast data for a near-term comparison.',
+  runTips: {
+    thunder: 'Thunderstorms are forecast during the run; consider another time.',
+    rainLater: 'Rain is more likely later in the run; a light rain layer may help.',
+    rain: 'Rain is likely during the run; a light rain layer may help.',
+    wind: 'Strong wind is forecast; a light wind layer may help.',
+    heat: 'It may feel hot during the run; consider a cooler time.',
+    cold: 'It may feel cold during the run; an extra light layer may help.'
+  },
   updatedHours: (n) => `Updated ${n} h ago`,
   runNow: 'Run now', conditionsNow: 'Conditions now', betterLater: 'Better later', overnightWindow: 'overnight',
   waitDuration: (minutes) => minutes < 60 ? `${minutes} min` : `${Math.floor(minutes / 60)} h${minutes % 60 ? ` ${minutes % 60} min` : ''}`,
@@ -152,6 +160,14 @@ const RU = {
   nearTermNow: 'Можно бежать сейчас — ждать особого смысла нет.',
   nearTermWait: (now, later, wait) => `Лучше выйти примерно через ${wait}: ${now} → ${later}/100`,
   nearTermUnavailable: 'Не хватает прогноза для сравнения ближайших часов.',
+  runTips: {
+    thunder: 'Во время пробежки возможна гроза; лучше выбрать другое время.',
+    rainLater: 'Ближе к концу пробежки вероятен дождь; лёгкая защита от дождя может пригодиться.',
+    rain: 'Во время пробежки вероятен дождь; лёгкая защита от дождя может пригодиться.',
+    wind: 'Ожидается сильный ветер; лёгкая ветрозащитная куртка может пригодиться.',
+    heat: 'Во время пробежки может быть жарко; можно выбрать более прохладное время.',
+    cold: 'Во время пробежки может быть холодно; дополнительный лёгкий слой может пригодиться.'
+  },
   updatedHours: (n) => `Обновлено ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'час' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'часа' : 'часов'} назад`,
   runNow: 'Бежать сейчас', conditionsNow: 'Условия сейчас', betterLater: 'Лучше позже', overnightWindow: 'ночью',
   waitDuration: (minutes) => minutes < 60 ? `${minutes} мин` : `${Math.floor(minutes / 60)} ч${minutes % 60 ? ` ${minutes % 60} мин` : ''}`,
