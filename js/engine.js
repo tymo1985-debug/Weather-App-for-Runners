@@ -269,7 +269,7 @@ function windowAt(hours, i, durationMin) {
   const factor = worst.factors && Object.entries(worst.factors).sort((a, b) => a[1].v - b[1].v)[0]?.[0];
   const limiting = { hour: worst, reason: hazard?.reason ?? factor ?? 'conditions' };
   const score = Math.min(Math.round(avg), hazard?.cap ?? 100);
-  return { avg: score, rawAvg: avg, slice, score, limiting,
+  return { avg: score, rawAvg: avg, slice, score, limiting, hazard: !!hazard,
     end: new Date(slice[0].t.getTime() + durationMin * 6e4) };
 }
 
@@ -306,6 +306,29 @@ export function runRecommendation(hours, durationMin, now = Date.now()) {
   return { nowScore, current, later: gain >= 5 ? later : null, gain: Math.max(0, gain),
     waitMin: later ? Math.max(0, Math.ceil((later.slice[0].ts - now) / 60000)) : 0,
     overnight: !!later && !daylight };
+}
+
+// Hourly starts only: compare complete run windows using the same scorer/caps.
+// A gain of 7 points pays for a short wait; after an hour require 10 points.
+// Ties favour the earlier start. Forecast hours are not minute-level predictions.
+export function nearTermRecommendation(hours, durationMin, horizonHours, now = Date.now()) {
+  if (![1, 2].includes(horizonHours)) return null;
+  const i = hours.findIndex(h => h.ts > now - 1800e3);
+  if (i < 0) return null;
+  const current = windowAt(hours, i, durationMin);
+  if (!current) return null;
+  let best = null;
+  for (let j = i + 1; j < hours.length; j++) {
+    const waitMin = (hours[j].ts - now) / 60000;
+    if (waitMin > horizonHours * 60) break;
+    if (waitMin <= 0) continue;
+    const candidate = windowAt(hours, j, durationMin);
+    if (!candidate || candidate.hazard) continue;
+    const gain = candidate.score - current.score;
+    if (gain < (waitMin <= 60 ? 7 : 10)) continue;
+    if (!best || candidate.score > best.score) best = { ...candidate, waitMin };
+  }
+  return { nowScore: current.score, later: best, gain: best ? best.score - current.score : 0 };
 }
 
 export function bestWindowOfDay(hours, dayISO, durationMin) {

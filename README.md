@@ -67,3 +67,14 @@ Vercel или Cloudflare Pages. Сборка не требуется.
 - Экран сравнения нескольких городов.
 - Учёт маршрута: тень, набор высоты, близость к дорогам.
 - Обучение оценки на реальных пробежках из трекера.
+# Near-term start advice (Part B)
+
+The home screen compares a complete run starting now with hourly forecast starts
+within the selected 1- or 2-hour availability horizon. It uses the selected
+30/45/60/90/120-minute duration and the existing whole-window scorer and
+safety caps. Forecast hours are treated as approximate starts, not precise
+minute-level predictions. A later start is worth recommending only if its
+score rises by at least 7 points for a wait of up to 60 minutes, or 10 points
+for a longer wait. Equal-scoring candidates prefer the earlier start. Hazardous
+future windows and incomplete run windows are not suggested. With insufficient
+data for a comparison, the existing full-day information remains available.

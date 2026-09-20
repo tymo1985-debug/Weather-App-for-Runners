@@ -4,7 +4,7 @@ import { freshness, selectDuration } from './home-ui.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, runRecommendation, band, bandColor, aqiBand, WEIGHTS,
+  buildHours, bestWindow, bestWindowOfDay, runRecommendation, nearTermRecommendation, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
 } from './engine.js';
 
@@ -14,7 +14,7 @@ const S = {
   profile: loadProfile(),
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
-  range: 'hours', dcol: 'score', btab: 'score',
+  range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
   factor: 'temp',
   screen: 'home', stack: []
 };
@@ -153,6 +153,8 @@ function staticText() {
   $('#lblBestTime').textContent = T.bestTime;
   $('#lblDuration').textContent = T.duration;
   $('#quickDurationLabel').textContent = T.runDuration;
+  $('#nearTermLabel').textContent = T.nearTermLabel;
+  $$('[data-horizon]').forEach(b => { b.textContent = T.horizonHour(Number(b.dataset.horizon)); b.setAttribute('aria-label', `${T.nearTermLabel} ${b.textContent}`); });
   $$('[data-quick-duration]').forEach(b => b.setAttribute('aria-label', T.minutes(Number(b.dataset.quickDuration))));
   $('#lblUv').textContent = T.uvIndex;
   $('#lblViewDetails').textContent = T.viewDetails;
@@ -243,6 +245,15 @@ function renderHome() {
     ? `${windowText(w)} · ${w.score}/100${recommendation.overnight ? ` · ${T.overnightWindow}` : ''}`
     : recommendation.nowScore == null ? '—' : T.now;
   $('#factDuration').textContent = T.min(S.profile.duration);
+  const near = nearTermRecommendation(S.hours, S.profile.duration, S.horizon);
+  $('#nearTermAdvice').textContent = !near ? T.nearTermUnavailable : near.later
+    ? T.nearTermWait(near.nowScore, near.later.score,
+      T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
+  $$('[data-horizon]').forEach(b => {
+    const active = Number(b.dataset.horizon) === S.horizon;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
   $$('[data-quick-duration]').forEach(b => {
     const active = Number(b.dataset.quickDuration) === S.profile.duration;
     b.classList.toggle('is-on', active);
@@ -291,6 +302,12 @@ $('.duration-quick').addEventListener('click', e => {
   if (b && selectDuration(S.profile, b.dataset.quickDuration, saveProfile) && S.bundle) {
     recompute(); paint();
   }
+});
+$('.near-term__choices').addEventListener('click', e => {
+  const b = e.target.closest('[data-horizon]');
+  if (!b) return;
+  S.horizon = Number(b.dataset.horizon);
+  if (S.bundle) renderHome();
 });
 
 function locate() {
