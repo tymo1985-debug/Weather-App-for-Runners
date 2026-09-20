@@ -13,7 +13,7 @@ test('live forecast remains actionable while fresh, but not after a failed refre
   let now = 1_000_000, saved = null, resolveFetch, rejectFetch;
   const bundle = { at: now };
   const state = { place: {}, profile: {}, bundle: null, hours: [], cached: false, screen: 'home' };
-  const data = { hidden: true }, retry = { hidden: false }, message = {};
+  const data = { hidden: true, setAttribute(name, value) { this[name] = value; } }, retry = { hidden: false }, message = {};
   let paints = 0;
   const api = new Function('S', '$', 'T', 'Date', 'CACHE_TTL_MS', 'cachedBundle', 'fetchAll',
     'buildHours', 'paint', 'toast', 'AbortController', `${source}; return { load, expireDisplayedBundle };`)(

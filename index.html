@@ -12,7 +12,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=phase4">
 </head>
 <body>
 <div id="app">
@@ -68,6 +68,19 @@
       </div>
     </div>
 
+    <div class="duration-quick" role="group" aria-labelledby="quickDurationLabel">
+      <span id="quickDurationLabel"></span>
+      <div class="duration-quick__choices">
+        <button type="button" data-quick-duration="30">30</button>
+        <button type="button" data-quick-duration="45">45</button>
+        <button type="button" data-quick-duration="60">60</button>
+        <button type="button" data-quick-duration="90">90</button>
+        <button type="button" data-quick-duration="120">120</button>
+      </div>
+    </div>
+    <div class="updated" id="updatedAt"></div>
+    <div class="visually-hidden" id="recommendationStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+
     <div class="segmented">
       <button class="seg is-on" data-range="hours"></button>
       <button class="seg" data-range="today"></button>
@@ -75,7 +88,6 @@
     </div>
 
     <div class="hstrip" id="strip"></div>
-    <div class="updated" id="updatedAt"></div>
   </div>
 </section>
 
@@ -201,7 +213,8 @@
 <!-- 9 - РАДАР -->
 <section class="screen screen--map" data-screen="radar">
   <div id="map"></div>
-  <div class="mapstate" id="mapState" hidden></div>
+  <div class="mapstate" id="mapState" role="status" aria-live="polite" hidden></div>
+  <div class="visually-hidden" id="radarStatus" role="status" aria-live="polite"></div>
   <div class="mapchip safe-top">
     <span class="mapchip__pin" id="mapPin"></span>
     <span class="mapchip__city" id="mapCity">—</span>
@@ -214,9 +227,9 @@
   </div>
   <div class="radarpanel safe-bottom">
     <div class="radarpanel__row">
-      <button class="radar__play" id="radarPlay"></button>
+      <button class="radar__play" id="radarPlay" disabled></button>
       <span class="radar__now" id="radarLabel">—</span>
-      <input type="range" id="radarTime" min="0" max="0" value="0">
+      <input type="range" id="radarTime" min="0" max="0" value="0" disabled>
     </div>
     <div class="radar__ticks" id="radarTicks"></div>
     <div class="radar__grad"></div>
@@ -265,7 +278,7 @@
 </nav>
 </div>
 
-<div class="datastate" id="dataState" hidden>
+<div class="datastate" id="dataState" role="status" aria-live="polite" hidden>
   <div class="datastate__box">
     <p id="dataStateMsg"></p>
     <button class="datastate__retry" id="dataRetry"></button>
@@ -274,7 +287,7 @@
 
 <div class="sheetover" id="sheetover" hidden>
   <div class="sheetover__back" data-close-sheet></div>
-  <div class="sheetover__panel safe-bottom"><div class="sheetover__grab"></div><div id="sheetoverBody"></div></div>
+  <div class="sheetover__panel safe-bottom" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="sheetover__grab"></div><div id="sheetoverBody"></div></div>
 </div>
 <div class="toast" id="toast" hidden></div>
 

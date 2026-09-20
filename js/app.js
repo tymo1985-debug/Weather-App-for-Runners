@@ -1,9 +1,10 @@
 import { weatherIcon, glyph, plant, moonFraction } from './icons.js';
 import { LANGS, pickLang, setLang } from './i18n.js';
+import { freshness, selectDuration } from './home-ui.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, band, bandColor, aqiBand, WEIGHTS,
+  buildHours, bestWindow, bestWindowOfDay, runRecommendation, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
 } from './engine.js';
 
@@ -108,6 +109,7 @@ function dataError(on) {
   const el = $('#dataState');
   el.hidden = !on;
   if (!on) return;
+  el.setAttribute('role', on === 'loading' ? 'status' : 'alert');
   $('#dataStateMsg').textContent = on === 'loading' ? T.loading : T.noDataTitle;
   $('#dataRetry').hidden = on === 'loading';
   $('#dataRetry').textContent = T.retry;
@@ -150,6 +152,8 @@ function staticText() {
   $('#scoreHeadLbl').textContent = T.runningConditions;
   $('#lblBestTime').textContent = T.bestTime;
   $('#lblDuration').textContent = T.duration;
+  $('#quickDurationLabel').textContent = T.runDuration;
+  $$('[data-quick-duration]').forEach(b => b.setAttribute('aria-label', T.minutes(Number(b.dataset.quickDuration))));
   $('#lblUv').textContent = T.uvIndex;
   $('#lblViewDetails').textContent = T.viewDetails;
   const segs = [T.nextHours, T.today, T.tenDays];
@@ -220,19 +224,32 @@ function renderHome() {
      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
        stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>${round(W.daily.temperature_2m_min[0])}°</span>`;
 
-  const sc = nowScore(), b = band(sc);
+  const recommendation = runRecommendation(S.hours, S.profile.duration);
+  const sc = recommendation.nowScore ?? nowScore(), b = band(sc);
   $('#cardScore').className = 'scorecard' + (b === 'good' ? '' : ' is-' + b);
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
-  $('#scoreSub').textContent = subFor(sc);
-
-  const w = bestWindow(S.hours, S.profile.duration);
-  $('#factWindow').textContent = w ? windowText(w) : '—';
+  const w = recommendation.later;
+  $('#scoreSub').textContent = w
+    ? T.laterGain(recommendation.gain, T.waitDuration(recommendation.waitMin), sc >= 65)
+    : subFor(sc);
+  const shown = w || recommendation.current;
+  if (shown?.limiting && (shown.rawAvg > shown.score || shown.limiting.reason === 'thunder'))
+    $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(shown.limiting.hour.t), T.limitReasons[shown.limiting.reason])}`;
+  const announcement = `${T.runningConditions}: ${sc} ${T.of100}, ${bandText(sc)}. ${$('#scoreSub').textContent}`;
+  if ($('#recommendationStatus').textContent !== announcement) $('#recommendationStatus').textContent = announcement;
+  $('#lblBestTime').textContent = w ? T.betterLater : sc >= 65 ? T.runNow : T.conditionsNow;
+  $('#factWindow').textContent = w
+    ? `${windowText(w)} · ${w.score}/100${recommendation.overnight ? ` · ${T.overnightWindow}` : ''}`
+    : recommendation.nowScore == null ? '—' : T.now;
   $('#factDuration').textContent = T.min(S.profile.duration);
+  $$('[data-quick-duration]').forEach(b => {
+    const active = Number(b.dataset.quickDuration) === S.profile.duration;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
-  $('#updatedAt').textContent = T.updatedAt(hhmm(atPlace(S.bundle.at))) +
-    (S.cached ? ` · ${T.savedForecast}` : '') +
-    (Date.now() - S.bundle.at > 12 * 60e3 ? ` · ${T.staleForecast}` : '');
+  $('#updatedAt').textContent = freshness(S.bundle.at, Date.now(), S.cached, T);
   renderStrip();
 }
 
@@ -269,6 +286,12 @@ $('#strip').addEventListener('click', () => go(S.range === 'days' ? 'daily' : 'h
 $('#btnPlace').addEventListener('click', () => go('cities'));
 $('#btnAddCity').addEventListener('click', () => go('cities'));
 $('#btnLocate').addEventListener('click', locate);
+$('.duration-quick').addEventListener('click', e => {
+  const b = e.target.closest('[data-quick-duration]');
+  if (b && selectDuration(S.profile, b.dataset.quickDuration, saveProfile) && S.bundle) {
+    recompute(); paint();
+  }
+});
 
 function locate() {
   if (!navigator.geolocation) return toast(T.myLocation + ' —');
@@ -317,6 +340,7 @@ function renderHourly() {
     <div class="windowcard__when">${windowText(w)}</div>
     <div class="windowcard__head">${glyph.checkCircle.replace('#1F9D4D', bandColor(w.score))}
       <b style="color:${bandColor(w.score)}">${w.score >= 88 ? T.excellentWindow : w.score >= 80 ? T.goodWindow : T.bestWindow}</b></div>
+    <p class="windowcard__when">${T.windowLimit(hhmm(w.limiting.hour.t), T.limitReasons[w.limiting.reason])}</p>
     <ul class="checks">${items.map(([ok, txt]) =>
       `<li class="${ok ? '' : 'warn'}"><svg viewBox="0 0 24 24">${ok
         ? '<path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/>'
@@ -474,7 +498,7 @@ function drawDayChart() {
   }
 
   $('#dayChart').innerHTML = `
-    <svg class="chart" viewBox="0 0 ${W} ${H}">
+    <svg class="chart" role="img" aria-label="${T.chartSummary(list[0].score, list.at(-1).score, w ? windowText(w) : null)}" viewBox="0 0 ${W} ${H}">
       ${bracket}
       ${pts.map(p => `<line x1="${p[0]}" y1="${p[1] + 7}" x2="${p[0]}" y2="${ROW - 12}"
           stroke="#D8E1EB" stroke-width="1" stroke-dasharray="2 3"/>`).join('')}
@@ -712,7 +736,7 @@ function drawTimelineChart(list) {
   }).join('');
 
   $('#tlChart').innerHTML = `
-    <svg class="chart" viewBox="0 0 ${W} ${H}">
+    <svg class="chart" role="img" aria-label="${T.chartSummary(pick[0].score, pick.at(-1).score, w ? windowText(w) : null)}" viewBox="0 0 ${W} ${H}">
       <defs><linearGradient id="tla" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#2E9E4F" stop-opacity=".2"/>
         <stop offset="100%" stop-color="#2E9E4F" stop-opacity=".02"/></linearGradient></defs>
@@ -805,7 +829,8 @@ const placeKey = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
 
 function mapState(kind, msg) {
   const el = $('#mapState');
-  if (kind === 'hide') { el.hidden = true; return; }
+  if (kind === 'hide') { el.hidden = true; $('#radarStatus').textContent = msg || T.layerReady; return; }
+  el.setAttribute('role', kind === 'error' ? 'alert' : 'status');
   el.hidden = false;
   el.innerHTML = kind === 'loading'
     ? `<div class="mapstate__box"><span class="spinner"></span><span>${msg}</span></div>`
@@ -829,6 +854,7 @@ async function initRadar() {
     return;
   }
 
+  $('#radarPlay').disabled = true; $('#radarTime').disabled = true;
   mapState('loading', T.radarLoading);
   try {
     await loadLeaflet();
@@ -842,8 +868,11 @@ async function initRadar() {
       bindMapControls();
     }
     R.placeKey = placeKey(S.place);
+    mapState('loading', T.mapReady);
     await loadFrames();
-    mapState('hide');
+    await firstLayerReady();
+    mapState('hide', T.layerReady);
+    $('#radarPlay').disabled = false; $('#radarTime').disabled = false;
     R.ready = true;
     // Прогноз тянем отдельно и уже после показа радара: медленный ответ
     // Open-Meteo не должен задерживать карту, а его сбой — ломать радар.
@@ -851,7 +880,25 @@ async function initRadar() {
   } catch (e) {
     console.error('radar init failed:', e);
     mapState('error', T.radarOffline);
+    $('#radarPlay').disabled = true; $('#radarTime').disabled = true;
   }
+}
+
+function firstLayerReady() {
+  const layer = R.layers.get(R.idx);
+  if (!layer || R.frames[R.idx]?.kind === 'model') return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    let loaded = false;
+    const timeout = setTimeout(() => finish(new Error('precipitation timeout')), 12000);
+    function finish(error) {
+      clearTimeout(timeout);
+      layer.off('tileload', onLoad);
+      error && !loaded ? reject(error) : resolve();
+    }
+    function onLoad() { loaded = true; finish(); }
+    layer.on('tileload', onLoad);
+    if (layer._precipLoaded) finish();
+  });
 }
 
 function setBasemap(i) {
@@ -1025,7 +1072,7 @@ function layerFor(i) {
   if (R.layers.has(i)) return R.layers.get(i);
   const f = R.frames[i];
   const l = f.kind === 'model'
-    ? L.imageOverlay(f.img, f.bounds, { opacity: 0, zIndex: 300 + i, interactive: false }).addTo(R.map)
+    ? L.imageOverlay(f.img, f.bounds, { opacity: 0, zIndex: 300 + i, interactive: false })
     : L.tileLayer(f.url, {
         opacity: 0, zIndex: 300 + i,
         tileSize: 256,
@@ -1033,7 +1080,9 @@ function layerFor(i) {
         maxNativeZoom: RADAR_NATIVE_Z,   // выше RainViewer отдаёт заглушку «Zoom Level Not Supported»
         updateWhenZooming: false,
         crossOrigin: true
-      }).addTo(R.map);
+      });
+  if (f.kind === 'radar') l.on('tileload', () => { l._precipLoaded = true; });
+  l.addTo(R.map);
   R.layers.set(i, l);
   return l;
 }
@@ -1095,7 +1144,7 @@ function bindMapControls() {
 }
 
 function startPlay() {
-  if (!R.frames.length) return;
+  if (!R.ready || $('#radarPlay').disabled || !R.frames.length) return;
   $('#radarPlay').innerHTML = '<svg viewBox="0 0 24 24"><path d="M7 5h4v14H7zm6 0h4v14h-4z"/></svg>';
   $('#radarPlay').setAttribute('aria-label', T.pause);
   const tick = () => {
@@ -1241,12 +1290,31 @@ $('#cityQ').addEventListener('input', e => {
 
 // ── ШТОРКИ ─────────────────────────────────────────────────────────────────
 function openSheet(html) {
+  sheetReturnFocus = document.activeElement;
   const old = $('#sheetoverBody'), fresh = document.createElement('div');
   fresh.id = 'sheetoverBody'; old.replaceWith(fresh); fresh.innerHTML = html;
+  fresh.querySelector('h3').id = 'sheetTitle';
   $('#sheetover').hidden = false; document.body.style.overflow = 'hidden';
+  $('#app').inert = true;
+  fresh.querySelector('h3').tabIndex = -1;
+  fresh.querySelector('h3').focus();
   return fresh;
 }
-function closeSheet() { $('#sheetover').hidden = true; document.body.style.overflow = ''; }
+let sheetReturnFocus;
+function closeSheet() {
+  $('#sheetover').hidden = true; document.body.style.overflow = '';
+  $('#app').inert = false;
+  if (sheetReturnFocus?.isConnected) sheetReturnFocus.focus();
+}
+document.addEventListener('keydown', e => {
+  if ($('#sheetover').hidden) return;
+  if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
+  if (e.key !== 'Tab') return;
+  const items = $$('button, input, [tabindex="-1"]', $('#sheetover')).filter(x => !x.disabled);
+  const first = items[0], last = items.at(-1);
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+});
 
 function openHourSheet(h) {
   const M = FMETA();
@@ -1299,8 +1367,9 @@ function openProfileSheet(key) {
     `<button class="chip ${String(S.profile[key]) === String(v) ? 'is-on' : ''}" data-set="${v}">${l}</button>`).join('')}</div>`);
   body.addEventListener('click', e => {
     const b = e.target.closest('[data-set]'); if (!b) return;
-    S.profile[key] = key === 'duration' ? Number(b.dataset.set) : b.dataset.set;
-    saveProfile(S.profile); recompute(); closeSheet(); paint(); toast(T.saved);
+    if (key === 'duration') selectDuration(S.profile, b.dataset.set, saveProfile);
+    else { S.profile[key] = b.dataset.set; saveProfile(S.profile); }
+    recompute(); closeSheet(); paint(); toast(T.saved);
   });
 }
 

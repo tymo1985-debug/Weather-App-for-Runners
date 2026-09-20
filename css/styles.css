@@ -72,6 +72,7 @@ input{font:inherit}
 .card__h{margin:0 0 10px;font-size:15px;font-weight:680;letter-spacing:-.2px}
 .card__h--lg{font-size:17px;margin-bottom:8px}
 .grid2{display:grid;grid-template-columns:1fr 1.08fr;gap:11px;margin-bottom:14px}
+.grid2>*{min-width:0}
 
 .scorecard{background:linear-gradient(158deg,#3FA45F,#1F7C42);color:#fff;text-align:left;
   border-radius:18px;padding:13px 14px 15px;display:flex;flex-direction:column;
@@ -118,7 +119,13 @@ input{font:inherit}
 .pill--soft.s-mid{background:var(--amber-soft);color:var(--amber-ink)}
 .pill--soft.s-low{background:var(--orange-soft);color:var(--orange-ink)}
 .pill--soft.s-bad{background:var(--red-soft);color:var(--red-ink)}
-.updated{text-align:center;font-size:11px;color:var(--muted);padding:4px 0 8px}
+.duration-quick{margin:0 0 8px}
+.duration-quick>span{display:block;font-size:12px;font-weight:650;color:var(--ink-2);margin:0 2px 6px}
+.duration-quick__choices{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.duration-quick__choices button{min-width:0;min-height:44px;border-radius:11px;background:#fff;
+  color:var(--ink-2);font-size:14px;font-weight:680;box-shadow:0 1px 3px rgba(20,33,58,.08)}
+.duration-quick__choices button.is-on{background:var(--blue);color:#fff}
+.updated{font-size:12.5px;font-weight:600;color:var(--ink-2);padding:4px 2px 14px;line-height:1.4}
 
 /* ── ТОПБАРЫ ──────────────────────────────────────── */
 .topbar{display:flex;align-items:center;gap:12px;padding:0 16px 14px;position:sticky;top:0;z-index:6;background:var(--bg)}
@@ -321,6 +328,7 @@ input{font:inherit}
 .radarpanel__row{display:flex;align-items:center;gap:12px}
 .radar__play{width:32px;height:32px;display:grid;place-items:center;color:#14213A;flex:none}
 .radar__play svg{width:24px;height:24px}
+.radar__play:disabled{opacity:.45;cursor:not-allowed}
 .radarpanel input[type=range]{flex:1;min-width:0;accent-color:var(--blue)}
 .radar__ticks{position:relative;height:20px;margin:10px 2px 8px;font-size:12.5px;
   color:var(--muted);font-variant-numeric:tabular-nums;font-weight:600}
@@ -328,6 +336,7 @@ input{font:inherit}
 .radar__grad{height:7px;border-radius:999px;
   background:linear-gradient(90deg,#7FD4C1,#5FC47E,#C9DE5E,#F2D14C,#EE9A3F,#E4603F,#C33A6B,#9C2FA5)}
 .radar__legend{display:flex;justify-content:space-between;font-size:12.5px;font-weight:620;margin-top:7px}
+@media(max-width:360px){.radar__legend{font-size:11px;gap:4px}.radar__now{min-width:0;overflow-wrap:anywhere}}
 
 /* ── 10. ДЕТАЛИ ───────────────────────────────────── */
 .linkgroup{margin-top:8px;border-top:1px solid var(--hair);padding-top:2px}
@@ -388,6 +397,20 @@ input{font:inherit}
   .hero__deg{font-size:60px}.hero__icon{width:88px;height:88px}
   .scorecard__value{font-size:46px}.overview{grid-template-columns:118px 1fr}
 }
+@media (max-width:390px){
+  .grid2{grid-template-columns:minmax(0,1fr)}
+  .scorecard{min-height:0}
+  .factcard{gap:12px}
+  .factcard .linkrow{min-height:44px;align-items:center}
+  .hero__top{flex-wrap:wrap}
+  .hero__actions{margin-left:auto}
+}
+@media (max-width:300px){
+  .duration-quick__choices{display:flex;overflow-x:auto;padding-bottom:4px}
+  .duration-quick__choices button{flex:0 0 44px}
+  .hero{padding-left:12px;padding-right:12px}
+  .hero__now{flex-wrap:wrap}
+}
 
 /* состояние карты: загрузка и ошибка */
 /* Тот же прямоугольник, что и у карты: иначе оверлей накрывает таббар
@@ -398,6 +421,7 @@ input{font:inherit}
 .mapstate__box{background:#fff;border-radius:18px;padding:18px 22px;max-width:280px;text-align:center;
   font-size:14px;color:var(--ink-2);line-height:1.45;box-shadow:0 8px 26px rgba(0,0,0,.25);
   display:flex;flex-direction:column;align-items:center;gap:12px}
+@media(max-width:360px){.mapstate__box{max-width:calc(100vw - 32px);overflow-wrap:anywhere}}
 .mapstate__retry{background:var(--blue);color:#fff;padding:10px 22px;border-radius:999px;
   font-size:14px;font-weight:640}
 .spinner{width:26px;height:26px;border-radius:50%;border:3px solid #DCE4EE;border-top-color:var(--blue);

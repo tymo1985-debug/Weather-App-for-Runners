@@ -252,7 +252,25 @@ function windowAt(hours, i, durationMin) {
   if (slice.some((h, k) => k && h.ts - slice[k - 1].ts !== 3600e3)) return null;
   const avg = slice.reduce((sum, h, k) =>
     sum + h.score * Math.min(60, durationMin - k * 60), 0) / durationMin;
-  return { avg, slice, score: Math.round(avg), end: new Date(slice[0].t.getTime() + durationMin * 6e4) };
+  // An hourly hazard applies to the whole run, even when its overlap is only
+  // part of the duration. These are forecast warnings, not safety guarantees.
+  const hazards = slice.flatMap((h, k) => {
+    const found = [];
+    if ([95, 96, 99].includes(h.code)) found.push({ cap: 30, reason: 'thunder', k });
+    if (Number.isFinite(h.mm) && h.mm >= 7) found.push({ cap: 55, reason: 'rain', k });
+    if (Number.isFinite(h.wind) && h.wind >= 45) found.push({ cap: 60, reason: 'wind', k });
+    if (Number.isFinite(h.feels) && h.feels >= 35) found.push({ cap: 60, reason: 'heat', k });
+    return found;
+  });
+  hazards.sort((a, b) => a.cap - b.cap || a.k - b.k);
+  const hazard = hazards[0];
+  const worstIndex = hazard?.k ?? slice.reduce((min, h, k) => h.score < slice[min].score ? k : min, 0);
+  const worst = slice[worstIndex];
+  const factor = worst.factors && Object.entries(worst.factors).sort((a, b) => a[1].v - b[1].v)[0]?.[0];
+  const limiting = { hour: worst, reason: hazard?.reason ?? factor ?? 'conditions' };
+  const score = Math.min(Math.round(avg), hazard?.cap ?? 100);
+  return { avg: score, rawAvg: avg, slice, score, limiting,
+    end: new Date(slice[0].t.getTime() + durationMin * 6e4) };
 }
 
 export function bestWindow(hours, durationMin, fromDate) {
@@ -265,6 +283,29 @@ export function bestWindow(hours, durationMin, fromDate) {
     if (candidate && (!best || candidate.avg > best.avg + 0.01)) best = { i, ...candidate };
   }
   return best;
+}
+
+// Recommendation for the home screen; scoring and the absolute best window stay unchanged.
+export function runRecommendation(hours, durationMin, now = Date.now()) {
+  const i = hours.findIndex(h => h.ts > now - 1800e3);
+  if (i < 0) return { nowScore: null, later: null, gain: 0, waitMin: 0, overnight: false };
+  const current = windowAt(hours, i, durationMin);
+  const nowScore = current?.score ?? hours[i].score;
+  let daylight = null, fallback = null;
+  for (let j = i + 1; j < hours.length && hours[j].ts <= now + 24 * 3600e3; j++) {
+    if (hours[j].ts <= now + 30 * 60e3) continue;
+    const candidate = windowAt(hours, j, durationMin);
+    if (!candidate) continue;
+    const w = { i: j, ...candidate };
+    if (!fallback || w.avg > fallback.avg + 0.01) fallback = w;
+    if (candidate.slice.every(h => h.isDay === 1) &&
+        (!daylight || w.avg > daylight.avg + 0.01)) daylight = w;
+  }
+  const later = daylight || fallback;
+  const gain = later ? later.score - nowScore : 0;
+  return { nowScore, current, later: gain >= 5 ? later : null, gain: Math.max(0, gain),
+    waitMin: later ? Math.max(0, Math.ceil((later.slice[0].ts - now) / 60000)) : 0,
+    overnight: !!later && !daylight };
 }
 
 export function bestWindowOfDay(hours, dayISO, durationMin) {
