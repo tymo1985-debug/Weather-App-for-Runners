@@ -4,7 +4,7 @@ import { freshness, selectDuration } from './home-ui.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, runRecommendation, nearTermRecommendation, runAdvice, band, bandColor, aqiBand, WEIGHTS,
+  buildHours, bestWindow, bestWindowOfDay, currentRunSummary, nearTermRecommendation, runAdvice, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
 } from './engine.js';
 
@@ -75,8 +75,8 @@ document.addEventListener('click', e => {
 
 async function share() {
   const w = bestWindow(S.hours, S.profile.duration);
-  const txt = `${S.place.name} — ${T.runningConditions.toLowerCase()}: ${nowScore()}/100. ` +
-    `${T.bestTime}: ${w ? windowText(w) : '—'}.`;
+  const txt = T.shareRun(S.place.name, S.profile.duration,
+    currentRun().score ?? 0, w ? windowText(w) : '—');
   if (navigator.share) { try { await navigator.share({ text: txt }); return; } catch {} }
   try { await navigator.clipboard.writeText(txt); toast(T.copied); } catch { toast(txt); }
 }
@@ -132,7 +132,7 @@ const nowIndex = () => {
 const atPlace = (ms) => placeNow(S.bundle, ms);
 const timeOrDash = (v) => (v ? hhmm(new Date(v)) : '—');
 const nowHour = () => S.hours[nowIndex()] || null;
-const nowScore = () => nowHour()?.score ?? 0;
+const currentRun = () => currentRunSummary(S.hours, S.profile.duration);
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
@@ -228,8 +228,8 @@ function renderHome() {
      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
        stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>${round(W.daily.temperature_2m_min[0])}°</span>`;
 
-  const recommendation = runRecommendation(S.hours, S.profile.duration);
-  const sc = recommendation.nowScore ?? nowScore(), b = band(sc);
+  const recommendation = currentRun();
+  const sc = recommendation.score ?? 0, b = band(sc);
   $('#cardScore').className = 'scorecard' + (b === 'good' ? '' : ' is-' + b);
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
@@ -238,9 +238,8 @@ function renderHome() {
   $('#scoreSub').textContent = w
     ? T.laterGain(recommendation.gain, T.waitDuration(recommendation.waitMin), sc >= 65)
     : subFor(sc);
-  const shown = w || recommendation.current;
-  if (shown?.limiting && (shown.rawAvg > shown.score || shown.limiting.reason === 'thunder'))
-    $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(shown.limiting.hour.t), T.limitReasons[shown.limiting.reason])}`;
+  if (recommendation.limiting)
+    $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(recommendation.limiting.hour.t), T.limitReasons[recommendation.limiting.reason])}`;
   const announcement = `${T.runningConditions}: ${sc} ${T.of100}, ${bandText(sc)}. ${$('#scoreSub').textContent}`;
   if ($('#recommendationStatus').textContent !== announcement) $('#recommendationStatus').textContent = announcement;
   $('#lblBestTime').textContent = w ? T.betterLater : sc >= 65 ? T.runNow : T.conditionsNow;
@@ -444,7 +443,8 @@ function ring(score, size = 112) {
 
 // ── 4. ОБЗОР ───────────────────────────────────────────────────────────────
 function renderAnalysis() {
-  const sc = nowScore(), h = nowHour();
+  const run = currentRun(), sc = run.score ?? 0;
+  const h = run.window?.limiting.hour || run.window?.slice[0] || nowHour();
   const w = bestWindow(S.hours, S.profile.duration);
   $('#ringWrap').innerHTML = ring(sc) +
     `<div class="ringcap" style="color:${bandColor(sc)}">${subFor(sc)}</div>`;
@@ -452,7 +452,7 @@ function renderAnalysis() {
   const rows = [
     [T.bestTime, w ? windowText(w) : '—', ''],
     [T.duration, T.min(S.profile.duration), S.profile.duration === 60 ? `<em>(${T.defaultWord})</em>` : ''],
-    [T.mainConditions, mainConditions(h), '']
+    [T.mainConditions, run.limiting ? T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason]) : mainConditions(h), '']
   ];
   $('#analysisChecks').innerHTML = rows.map(([k, v, extra]) =>
     `<li>${glyph.checkCircle}<span><b>${k}</b><span class="v">${v}${extra}</span></span></li>`).join('');
@@ -462,7 +462,7 @@ function renderAnalysis() {
   const title = sc >= 80 ? T.thingsGreat : sc >= 65 ? T.thingsOk : T.thingsPoor;
   $('#analysisNote').innerHTML = `
     <div class="notecard__top">${weatherIcon(h?.code ?? 0, h?.isDay ?? 1).replace('viewBox="0 0 64 72"', 'viewBox="6 6 52 52"')}
-      <div><b>${title}</b><p>${explain(h, sc)}</p></div></div>
+      <div><b>${title}</b><p>${explainRun(run)}</p></div></div>
     <button class="btnwide" data-go="why">${T.whyScore}
       <svg viewBox="0 0 24 24"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>`;
 }
@@ -479,20 +479,10 @@ function mainConditions(h) {
 const F_NAME = () => ({ temp: T.fTemp, rain: T.fRain, wind: T.fWind, humid: T.fHumid,
   air: T.fAir, uv: T.fUv, surface: T.fSurface, pollen: T.fPollen });
 
-function explain(h, sc) {
-  if (!h) return '';
-  const N = F_NAME();
-  const es = Object.entries(h.factors);
-  const meaningful = es.filter(([k]) => k !== 'surface');
-  const worst = es.slice().sort((a, b) => a[1].v - b[1].v)[0];
-  const best = meaningful.sort((a, b) => b[1].w * b[1].v - a[1].w * a[1].v)[0];
-  return S.langCode === 'ru'
-    ? (sc >= 80
-      ? `Больше всего помогает: ${N[best[0]].toLowerCase()}. Самое слабое место — ${N[worst[0]].toLowerCase()}, но на итог оно почти не влияет.`
-      : `Сильнее всего оценку снижает ${N[worst[0]].toLowerCase()}. Лучше всего сейчас ${N[best[0]].toLowerCase()}.`)
-    : (sc >= 80
-      ? `${N[best[0]]} helps the most right now. The weakest link is ${N[worst[0]].toLowerCase()}, but it barely moves the total.`
-      : `${N[worst[0]]} costs you the most points. ${N[best[0]]} is the strongest part right now.`);
+function explainRun(run) {
+  if (run.limiting) return T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason]);
+  const weakest = Object.entries(run.factors).sort((a, b) => a[1].value.v - b[1].value.v)[0];
+  return weakest ? T.runWeakest(F_NAME()[weakest[0]], hhmm(weakest[1].hour.t)) : '';
 }
 
 // График «как меняется в течение дня» — точки через 2 часа, скобка лучшего окна
@@ -549,10 +539,10 @@ $$('.utab[data-btab]').forEach(b => b.addEventListener('click', () => {
 }));
 
 function renderWhy() {
-  const sc = nowScore();
-  $('#whyTitle').textContent = sc >= 80 ? T.whyGreat : T.whyOk;
+  const run = currentRun(), sc = run.score ?? 0;
+  $('#whyTitle').textContent = T.whyRun(S.profile.duration);
   $('#whyRing').innerHTML = ring(sc, 120);
-  $('#whyCap').textContent = sc >= 80 ? T.optimal : subFor(sc);
+  $('#whyCap').textContent = `${subFor(sc)} · ${run.window ? windowText(run.window) : '—'}${run.limiting ? ` · ${T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason])}` : ''}`;
   renderBreakdown();
 }
 
@@ -574,27 +564,25 @@ const FMETA = () => ({
 });
 
 function renderBreakdown() {
-  const h = nowHour(); if (!h) return;
-  const M = FMETA(), box = $('#breakdown'), es = Object.entries(h.factors);
+  const run = currentRun(); if (!run.window) return;
+  const M = FMETA(), box = $('#breakdown'), es = Object.entries(run.factors);
 
   if (S.btab === 'good') {
-    const good = es.filter(([, v]) => v.v >= 78).sort((a, b) => b[1].v - a[1].v);
+    const good = es.filter(([, v]) => v.value.v >= 78).sort((a, b) => b[1].value.v - a[1].value.v);
     box.innerHTML = good.length
       ? `<ul class="checks" style="padding:8px 4px">${good.map(([k, v]) =>
           `<li><svg viewBox="0 0 24 24"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg>
-            <span><b style="color:var(--ink)">${M[k][0]}</b> — ${M[k][2](h)} <em style="color:var(--muted);font-style:normal">(${M[k][3](h)})</em></span></li>`).join('')}</ul>`
+            <span><b style="color:var(--ink)">${M[k][0]}</b> — ${M[k][2](v.hour)} <em style="color:var(--muted);font-style:normal">(${M[k][3](v.hour)})</em></span></li>`).join('')}</ul>`
       : `<p style="padding:12px 4px;font-size:13.5px;color:var(--muted);margin:0">${T.nothingGood}</p>`;
     return;
   }
 
-  box.innerHTML = es.sort((a, b) => b[1].w - a[1].w).map(([k, v]) => {
-    const contrib = Math.round((v.v - 60) * v.w / 100);
+  box.innerHTML = `<p class="whycap">${T.runFactorsNote}</p>` + es.sort((a, b) => b[1].value.w - a[1].value.w).map(([k, { value: v, hour: h }]) => {
     const q = M[k][3](h);
     return `<button class="frow" data-factor="${k}">
       <span class="frow__ic">${M[k][1]}</span>
-      <span class="frow__k">${M[k][0]}<small>${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''}</small></span>
+      <span class="frow__k">${M[k][0]}<small>${hhmm(h.t)} · ${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''}</small></span>
       <span class="frow__n" style="color:${bandColor(v.v)}">${Math.round(v.v)}</span>
-      <span class="frow__w ${contrib >= 0 ? 'up' : 'down'}">${contrib >= 0 ? '+' : '−'}${Math.abs(contrib)}</span>
       <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg>
     </button>`;
   }).join('');
@@ -661,7 +649,7 @@ const SUBROWS = (key, h) => {
 };
 
 function renderFactor() {
-  const h = nowHour(), key = S.factor, f = h.factors[key];
+  const key = S.factor, h = currentRun().factors[key]?.hour || nowHour(), f = h?.factors[key];
   if (!f) return back();
   const M = FMETA()[key];
   const [lo, hi, val, ticks, l1, l2, l3, l4] = SCALE(key, h);

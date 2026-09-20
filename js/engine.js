@@ -308,6 +308,23 @@ export function runRecommendation(hours, durationMin, now = Date.now()) {
     overnight: !!later && !daylight };
 }
 
+// A current run uses the exact window and caps of the home recommendation.
+// For explanations, show each factor at its lowest forecast value within the
+// run (earliest hour breaks ties), so a late deterioration cannot be hidden.
+export function currentRunSummary(hours, durationMin, now = Date.now()) {
+  const recommendation = runRecommendation(hours, durationMin, now);
+  const window = recommendation.current;
+  const factors = {};
+  for (const hour of window?.slice || []) {
+    for (const [key, value] of Object.entries(hour.factors || {})) {
+      if (!factors[key] || value.v < factors[key].value.v)
+        factors[key] = { value, hour };
+    }
+  }
+  return { ...recommendation, score: recommendation.nowScore, window, factors,
+    limiting: window?.hazard ? window.limiting : null };
+}
+
 // Hourly starts only: compare complete run windows using the same scorer/caps.
 // A gain of 7 points pays for a short wait; after an hour require 10 points.
 // Ties favour the earlier start. Forecast hours are not minute-level predictions.
