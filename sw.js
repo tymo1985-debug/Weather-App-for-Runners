@@ -1,5 +1,5 @@
 const PREFIX = 'weather-runner-';
-const SHELL_CACHE = `${PREFIX}shell-v9`;
+const SHELL_CACHE = `${PREFIX}shell-v10`;
 const API_CACHE = `${PREFIX}api-v6`;
 const API_TTL_MS = 5 * 60 * 1000;
 const API_MAX_ENTRIES = 20;
@@ -49,7 +49,10 @@ async function apiResponse(req) {
 }
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(SHELL_CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // An upgrade must not seed the new cache from an old HTTP-cached app shell.
+  e.waitUntil(caches.open(SHELL_CACHE)
+    .then(c => c.addAll(SHELL.map(path => new Request(path, { cache: 'reload' }))))
+    .then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', e => {
