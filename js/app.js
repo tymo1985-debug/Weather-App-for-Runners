@@ -157,7 +157,9 @@ function staticText() {
   $$('[data-horizon]').forEach(b => { b.textContent = T.horizonHour(Number(b.dataset.horizon)); b.setAttribute('aria-label', `${T.nearTermLabel} ${b.textContent}`); });
   $$('[data-quick-duration]').forEach(b => b.setAttribute('aria-label', T.minutes(Number(b.dataset.quickDuration))));
   $('#lblUv').textContent = T.uvIndex;
-  $('#lblViewDetails').textContent = T.viewDetails;
+  $('#lblViewDetails').textContent = T.dayOverview;
+  $('#scoreWhy').textContent = T.whyShort;
+  $('#cardScore').setAttribute('aria-label', T.whyScore);
   const segs = [T.nextHours, T.today, T.tenDays];
   $$('.seg').forEach((b, i) => (b.textContent = segs[i]));
   $$('[data-back]').forEach(b => { b.innerHTML = `<svg viewBox="0 0 24 24"><path d="M11 4 4 12l7 8 1.5-1.3L7.2 13H20v-2H7.2l5.3-5.7z"/></svg>`; b.title = T.back; });
@@ -231,6 +233,7 @@ function renderHome() {
   $('#cardScore').className = 'scorecard' + (b === 'good' ? '' : ' is-' + b);
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
+  $('#cardScore').setAttribute('aria-label', T.scoreExplanation(sc, bandText(sc)));
   const w = recommendation.later;
   $('#scoreSub').textContent = w
     ? T.laterGain(recommendation.gain, T.waitDuration(recommendation.waitMin), sc >= 65)
@@ -295,7 +298,7 @@ $$('.seg[data-range]').forEach(b => b.addEventListener('click', () => {
   syncPressed('.seg');
   if (S.range === 'days') { go('daily'); } else renderStrip();
 }));
-$('#cardScore').addEventListener('click', () => go('analysis'));
+$('#cardScore').addEventListener('click', () => go('why'));
 $('#strip').addEventListener('click', () => go(S.range === 'days' ? 'daily' : 'hourly'));
 $('#btnPlace').addEventListener('click', () => go('cities'));
 $('#btnAddCity').addEventListener('click', () => go('cities'));
@@ -460,7 +463,7 @@ function renderAnalysis() {
   $('#analysisNote').innerHTML = `
     <div class="notecard__top">${weatherIcon(h?.code ?? 0, h?.isDay ?? 1).replace('viewBox="0 0 64 72"', 'viewBox="6 6 52 52"')}
       <div><b>${title}</b><p>${explain(h, sc)}</p></div></div>
-    <button class="btnwide" data-go="why">${T.detailedAnalysis}
+    <button class="btnwide" data-go="why">${T.whyScore}
       <svg viewBox="0 0 24 24"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>`;
 }
 

@@ -2,9 +2,10 @@
 const EN = {
   lang: 'en-GB',
   // общее
-  runningConditions: 'Running conditions', viewDetails: 'View details',
+  runningConditions: 'Running conditions', dayOverview: 'Day overview', whyShort: 'Why?', whyScore: 'Why this score?',
+  scoreExplanation: (score, band) => `${score} out of 100, ${band}. Why this score?`,
   chartSummary: (first, last, best) => `Running score: ${first} at the start, ${last} at the end. ${best ? `Best window ${best}.` : ''}`,
-  detailedAnalysis: 'Detailed analysis', best: 'Best', now: 'Now',
+  best: 'Best', now: 'Now',
   share: 'Share', back: 'Back', of100: '/100',
   // главная
   bestTime: 'Best time', duration: 'Duration', uvIndex: 'UV index',
@@ -150,9 +151,10 @@ const EN = {
 const RU = {
   ...EN,
   lang: 'ru-RU',
-  runningConditions: 'Условия для бега', viewDetails: 'Подробный разбор',
+  runningConditions: 'Условия для бега', dayOverview: 'Обзор дня', whyShort: 'Почему?', whyScore: 'Почему такая оценка?',
+  scoreExplanation: (score, band) => `${score} из 100, ${band}. Почему такая оценка?`,
   chartSummary: (first, last, best) => `Оценка для бега: ${first} в начале, ${last} в конце. ${best ? `Лучшее окно: ${best}.` : ''}`,
-  detailedAnalysis: 'Подробный разбор', best: 'Лучший', now: 'Сейчас',
+  best: 'Лучший', now: 'Сейчас',
   share: 'Поделиться', back: 'Назад', of100: 'из 100',
   bestTime: 'Лучшее время', duration: 'Длительность', uvIndex: 'УФ-индекс',
   runDuration: 'Длительность пробежки (минуты)', updatedMinutes: (n) => `Обновлено ${n} ${n % 10 === 1 && n % 100 !== 11 ? 'минуту' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'минуты' : 'минут'} назад`,
