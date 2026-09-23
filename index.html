@@ -70,6 +70,16 @@
           <div><span class="fact__k" id="lblUv"></span><span class="fact__v" id="factUv">—</span></div></div>
       </div>
 
+      <div class="run-mini" id="runMiniTimeline" aria-live="polite"></div>
+
+      <div class="run-mode" role="group" aria-labelledby="runModeLabel">
+        <span id="runModeLabel"></span>
+        <div class="run-mode__choices">
+          <button type="button" data-run-mode="duration"></button>
+          <button type="button" data-run-mode="distance"></button>
+        </div>
+      </div>
+
       <div class="near-term" aria-labelledby="nearTermLabel">
         <div class="near-term__top"><span id="nearTermLabel"></span>
           <div class="near-term__choices" role="group" aria-labelledby="nearTermLabel">
@@ -90,6 +100,30 @@
           <button type="button" data-quick-duration="90">90</button>
           <button type="button" data-quick-duration="120">120</button>
         </div>
+      </div>
+
+      <div class="distance-plan" id="distancePlan" hidden>
+        <div class="distance-plan__presets" role="group" aria-label="Distance">
+          <button type="button" data-distance="3">3 km</button>
+          <button type="button" data-distance="5">5 km</button>
+          <button type="button" data-distance="10">10 km</button>
+          <button type="button" data-distance="15">15 km</button>
+          <button type="button" data-distance="20">20 km</button>
+        </div>
+        <div class="distance-plan__inputs">
+          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5" inputmode="decimal"></label>
+          <label><span id="paceLabel"></span><input id="paceInput" type="text" inputmode="numeric" placeholder="6:00"></label>
+        </div>
+        <div class="distance-plan__summary" id="distanceSummary"></div>
+      </div>
+
+      <div class="availability">
+        <div class="availability__head"><span id="availabilityLabel"></span><button type="button" id="clearAvailability"></button></div>
+        <div class="availability__inputs">
+          <label><span id="availabilityFromLabel"></span><input id="availableFrom" type="time"></label>
+          <label><span id="availabilityToLabel"></span><input id="availableTo" type="time"></label>
+        </div>
+        <div class="start-compare" id="startCompare"></div>
       </div>
 
       <button class="linkrow run-card__details" data-go="analysis"><span id="lblViewDetails"></span>
