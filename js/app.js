@@ -157,8 +157,8 @@ function staticText() {
   $('#lblDuration').textContent = T.duration;
   $('#quickDurationLabel').textContent = T.runDuration;
   $('#runModeLabel').textContent = T.runModeLabel;
-  $('[data-run-mode]')[0].textContent = T.runModeDuration;
-  $('[data-run-mode]')[1].textContent = T.runModeDistance;
+  $$('[data-run-mode]')[0].textContent = T.runModeDuration;
+  $$('[data-run-mode]')[1].textContent = T.runModeDistance;
   $('#distanceLabel').textContent = T.distanceLabel;
   $('#paceLabel').textContent = T.paceLabel;
   $('#availabilityLabel').textContent = T.availabilityLabel;
@@ -285,7 +285,7 @@ function renderHome() {
 }
 
 function renderPlanControls() {
-  $('[data-run-mode]').forEach(b => {
+  $$('[data-run-mode]').forEach(b => {
     const active = b.dataset.runMode === S.plan.mode;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-pressed', String(active));
