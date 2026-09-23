@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { LANGS } from '../js/i18n.js';
+import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from '../js/version.js';
 
 const [html, css, app, sw] = await Promise.all([
   readFile(new URL('../index.html', import.meta.url), 'utf8'),
@@ -46,7 +47,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v28/);
+  assert.match(sw, /shell-v29/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -90,10 +91,52 @@ test('radar basemap no longer depends on keyed CARTO tiles', () => {
   assert.match(app, /© OpenStreetMap contributors · © RainViewer/);
 });
 
-test('Weather Hub uses a more compact hero, run score pill and radar preview', () => {
-  assert.match(css, /\.weather-hero\{[^}]*min-height:204px/);
-  assert.match(css, /\.weather-run-score\{[^}]*width:min\(100%,252px\)[^}]*min-height:58px/);
+test('Weather Hub attaches Run Score under the hero and keeps a compact radar preview', () => {
+  assert.match(css, /\.weather-hero\{[^}]*min-height:204px[^}]*border-radius:0/);
+  assert.match(css, /\.weather-run-score\{[^}]*width:100%[^}]*min-height:52px[^}]*border-radius:0 0 18px 18px/);
   assert.match(css, /\.weather-run-score__action\{display:none\}/);
   assert.match(css, /\.weather-radar__map\{[^}]*height:clamp\(255px,64vw,310px\)/);
   assert.match(css, /\.weather-radar-card\.is-expanded \.weather-radar__map\{height:100dvh/);
+  const heroEnd = html.indexOf('</header>', html.indexOf('id="weatherHero"'));
+  const score = html.indexOf('id="weatherRunScore"');
+  const body = html.indexOf('class="weather-hub__body"');
+  assert.ok(heroEnd < score && score < body);
+});
+
+
+test('radar map styles use an explicit layer picker', () => {
+  assert.equal((html.match(/data-map-layer=/g) || []).length, 3);
+  assert.match(html, /id="mapLayerMenu"/);
+  assert.match(app, /function setLayerMenuOpen\(on\)/);
+  assert.match(app, /function syncLayerMenu\(\)/);
+  assert.ok(app.includes("$('[data-map-layer]').forEach"));
+  assert.doesNotMatch(app, /(^|\n)\s*\$\('\[data-map-layer\]'\)\.forEach/m);
+  assert.match(app, /setBasemap\(Number\(b\.dataset\.mapLayer\)\)/);
+  assert.doesNotMatch(app, /setBasemap\(\(R\.baseIdx \+ 1\) % BASEMAPS\.length\)/);
+});
+
+test('regional precipitation forecast uses small batches and can retry after failure', () => {
+  assert.match(app, /const GRID = 8/);
+  assert.match(app, /const MODEL_BATCH = 32/);
+  assert.match(app, /Promise\.all\(batches\.map\(fetchModelBatch\)\)/);
+  assert.match(app, /function ensureModelForecast\(\)/);
+  assert.match(app, /const retryDelay = 30000/);
+  assert.match(app, /modelRetryAt = Date\.now\(\) \+ retryDelay/);
+  assert.doesNotMatch(app, /точек 256/);
+});
+
+test('normal radar timeline is compact while full-screen restores full controls', () => {
+  assert.match(css, /\.weather-radar__map \.radarpanel\{[^}]*width:min\(calc\(100% - 20px\),310px\)/);
+  assert.match(css, /\.weather-radar-card\.is-expanded \.radarpanel\{[^}]*width:auto[^}]*transform:none/);
+  assert.match(app, /const candidates = S\.radarExpanded/);
+});
+
+test('Profile exposes current app version and release notes', () => {
+  assert.equal(APP_VERSION, '0.29.0');
+  assert.equal(RELEASE_DATE, '2026-09-23');
+  assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
+  assert.match(html, /id="appVersionMeta"/);
+  assert.match(html, /id="whatsNewList"/);
+  assert.match(app, /RELEASE_NOTES\[S\.langCode\]/);
+  assert.match(sw, /\.\/js\/version\.js/);
 });

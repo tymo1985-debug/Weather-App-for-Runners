@@ -293,14 +293,14 @@
       <div class="weather-hero__minmax" id="weatherHeroMinMax"></div>
     </header>
 
-    <div class="weather-hub__body">
-      <button class="weather-run-score" id="weatherRunScore" type="button" data-go="home">
-        <span class="weather-run-score__ic" id="weatherRunIcon"></span>
-        <span class="weather-run-score__copy"><small id="weatherRunTitle"></small><b><span id="weatherRunValue">—</span><em>/100</em></b><span id="weatherRunBand"></span></span>
-        <span class="weather-run-score__action" id="weatherRunAction"></span>
-        <svg viewBox="0 0 24 24" class="i18" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
-      </button>
+    <button class="weather-run-score" id="weatherRunScore" type="button" data-go="home">
+      <span class="weather-run-score__ic" id="weatherRunIcon"></span>
+      <span class="weather-run-score__copy"><small id="weatherRunTitle"></small><b><span id="weatherRunValue">—</span><em>/100</em></b><span id="weatherRunBand"></span></span>
+      <span class="weather-run-score__action" id="weatherRunAction"></span>
+      <svg viewBox="0 0 24 24" class="i18" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
+    </button>
 
+    <div class="weather-hub__body">
       <section class="weather-card weather-radar-card" id="weatherRadarCard">
         <div class="weather-card__head weather-radar-card__head">
           <div><b id="weatherRadarTitle"></b><small id="weatherRadarSubtitle"></small></div>
@@ -316,9 +316,15 @@
             <button class="mapchip__live" id="mapLive"></button>
           </div>
           <div class="mapctl">
-            <button class="mapbtn" id="btnLayers"></button>
+            <button class="mapbtn" id="btnLayers" aria-expanded="false"></button>
             <button class="mapbtn" id="btnMapLocate"></button>
             <div class="mapzoom"><button id="btnZoomIn"></button><button id="btnZoomOut"></button></div>
+          </div>
+          <div class="map-layer-menu" id="mapLayerMenu" hidden>
+            <div class="map-layer-menu__title" id="mapLayerTitle"></div>
+            <button type="button" data-map-layer="0"><span class="map-layer-swatch is-standard"></span><span id="mapLayerStandard"></span></button>
+            <button type="button" data-map-layer="1"><span class="map-layer-swatch is-light"></span><span id="mapLayerLight"></span></button>
+            <button type="button" data-map-layer="2"><span class="map-layer-swatch is-dark"></span><span id="mapLayerDark"></span></button>
           </div>
           <div class="radarpanel">
             <div class="radarpanel__row">
@@ -393,6 +399,16 @@
     <div class="card">
       <h3 class="card__h card__h--lg" id="langTitle"></h3>
       <div class="chooser" id="langChooser"></div>
+    </div>
+    <div class="card app-update-card">
+      <div class="app-update-card__head">
+        <div><h3 class="card__h card__h--lg" id="appVersionTitle"></h3><p id="appVersionMeta"></p></div>
+        <span class="app-update-card__badge" id="appVersionBadge"></span>
+      </div>
+      <div class="app-update-card__notes">
+        <b id="whatsNewTitle"></b>
+        <ul id="whatsNewList"></ul>
+      </div>
     </div>
     <button class="btn btn--ghost" id="btnInstall" hidden></button>
     <p class="tagline" id="tagline"></p>
