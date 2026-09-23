@@ -2,7 +2,7 @@
 const EN = {
   lang: 'en-GB',
   // общее
-  runningConditions: 'Running conditions', dayOverview: 'Day overview', whyShort: 'Why?', whyScore: 'Why this score?',
+  runningConditions: 'Running conditions', dayOverview: 'Day overview', whyShort: 'Why?', whyScoreShort: score => `Why ${score}?`, whyScore: 'Why this score?',
   scoreExplanation: (score, band) => `${score} out of 100, ${band}. Why this score?`,
   chartSummary: (first, last, best) => `Running score: ${first} at the start, ${last} at the end. ${best ? `Best window ${best}.` : ''}`,
   best: 'Best', now: 'Now',
@@ -187,7 +187,7 @@ const EN = {
 const RU = {
   ...EN,
   lang: 'ru-RU',
-  runningConditions: 'Условия для бега', dayOverview: 'Обзор дня', whyShort: 'Почему?', whyScore: 'Почему такая оценка?',
+  runningConditions: 'Условия для бега', dayOverview: 'Обзор дня', whyShort: 'Почему?', whyScoreShort: score => `Почему ${score}?`, whyScore: 'Почему такая оценка?',
   scoreExplanation: (score, band) => `${score} из 100, ${band}. Почему такая оценка?`,
   chartSummary: (first, last, best) => `Оценка для бега: ${first} в начале, ${last} в конце. ${best ? `Лучшее окно: ${best}.` : ''}`,
   best: 'Лучший', now: 'Сейчас',
