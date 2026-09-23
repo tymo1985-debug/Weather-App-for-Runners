@@ -581,6 +581,35 @@ input{font:inherit}
 .route-clear{background:#F2F5F8;color:var(--ink-2)}
 .route-summary{font-size:13px;color:var(--ink-2);font-weight:620;line-height:1.45}
 
+.routewx{margin:0 0 11px;padding:11px 0;border-top:1px solid var(--hair);border-bottom:1px solid var(--hair)}
+.routewx--details{margin:12px 0 0;padding:12px 0 0;border-bottom:0}
+.routewx__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.routewx__head b{font-size:12.5px;font-weight:720}
+.routewx__head span{font-size:10.5px;color:var(--muted);font-weight:650;text-align:right}
+.routewx__summary{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.routewx__summary span{display:inline-flex;align-items:center;min-height:28px;padding:5px 8px;border-radius:999px;
+  background:#F1F5FA;color:var(--ink-2);font-size:10.5px;font-weight:680}
+.routewx__alerts{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px}
+.routewx__alerts span{display:inline-flex;align-items:center;min-height:26px;padding:4px 8px;border-radius:999px;
+  background:var(--amber-soft);color:var(--amber-ink);font-size:10px;font-weight:700}
+.routewx__alerts span.is-clear{background:var(--green-soft);color:var(--green-ink)}
+.routewx__track{display:flex;gap:6px;overflow-x:auto;padding:1px 1px 4px;scrollbar-width:none;overscroll-behavior-x:contain}
+.routewx__track::-webkit-scrollbar{display:none}
+.routewx__point{flex:0 0 112px;min-width:0;border:1px solid #E4EAF1;border-radius:12px;background:#FAFBFD;padding:8px 9px;
+  display:grid;gap:2px}
+.routewx__point.is-worst{border-color:#EDC59C;background:#FFF8EF}
+.routewx__point.is-missing{opacity:.62}
+.routewx__point b{font-size:11px;font-weight:720;font-variant-numeric:tabular-nums}
+.routewx__point span{font-size:11.5px;font-weight:680;font-variant-numeric:tabular-nums}
+.routewx__point small{font-size:9.5px;color:var(--muted);font-weight:620;line-height:1.25}
+.routewx__note{margin:7px 1px 0;font-size:10.5px;line-height:1.4;color:var(--muted)}
+
+@media (max-width:360px){
+  .routewx__point{flex-basis:104px;padding:7px 8px}
+  .routewx__summary{gap:4px}
+  .routewx__summary span{padding-left:7px;padding-right:7px}
+}
+
 .history-list{display:grid;gap:0}
 .history-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
 .history-row:first-child{border-top:0}

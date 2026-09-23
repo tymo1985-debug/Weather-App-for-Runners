@@ -4,6 +4,7 @@ import { freshness, selectDuration } from './home-ui.js';
 import { loadRunPlan, saveRunPlan, plannedDuration, paceText, parsePace, timeToMinutes, hasAvailability } from './run-plan.js';
 import { loadWatch, saveWatch, makeWatch, watchChange } from './weather-watch.js';
 import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.js';
+import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
@@ -19,6 +20,7 @@ const S = {
   plan: loadRunPlan(),
   watch: loadWatch(),
   route: loadRoute(),
+  routeForecast: null, routeWeather: null, routeWeatherLoading: false, routeWeatherError: false,
   history: loadHistory(),
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
@@ -95,6 +97,7 @@ async function load() {
   const id = ++requestId, place = S.place;
   controller?.abort();
   controller = new AbortController();
+  if (S.route && !S.routeForecast && !S.routeWeatherLoading) refreshRouteForecast();
   const cached = cachedBundle(place);
   S.bundle = null; S.hours = [];
   if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); if (typeof checkWatch === 'function') checkWatch(); }
@@ -128,7 +131,7 @@ function expireDisplayedBundle() {
   dataError(true);
   return true;
 }
-function recompute() { S.hours = buildHours(S.bundle, S.profile); }
+function recompute() { S.hours = buildHours(S.bundle, S.profile); if (typeof updateRouteWeather === 'function') updateRouteWeather(); }
 function paint() { staticText(); RENDER[S.screen]?.(); }
 
 const nowIndex = () => {
@@ -290,6 +293,7 @@ function renderHome() {
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
   renderPlanControls();
   renderRunMiniTimeline();
+  renderRouteWeatherHome();
   renderStartCompare();
   renderWatchControl();
   $('#updatedAt').textContent = freshness(S.bundle.at, Date.now(), S.cached, T);
@@ -387,10 +391,130 @@ function checkWatch() {
   saveWatch(S.watch);
 }
 
+let routeRequestId = 0, routeController;
+
+function routeStartWindow() {
+  if (!S.hours.length) return null;
+  if (hasAvailability(S.plan)) return bestStartOption(plannerStartOptions()) || currentRun().window;
+  return currentRun().window;
+}
+
+function routeStartMs() {
+  return routeStartWindow()?.slice?.[0]?.ts ?? Date.now();
+}
+
+function updateRouteWeather() {
+  if (!S.route || !S.routeForecast) { S.routeWeather = null; return; }
+  S.routeWeather = routeWeatherAt(S.routeForecast, S.route, routeStartMs(), runDuration());
+}
+
+function renderRouteWeatherViews() {
+  if (!S.bundle) return;
+  renderRouteWeatherHome();
+  if (S.screen === 'details') renderRouteWeatherDetails();
+}
+
+async function refreshRouteForecast() {
+  if (!S.route) {
+    routeController?.abort();
+    S.routeForecast = null; S.routeWeather = null;
+    S.routeWeatherLoading = false; S.routeWeatherError = false;
+    renderRouteWeatherViews(); return;
+  }
+  const id = ++routeRequestId;
+  routeController?.abort();
+  routeController = new AbortController();
+  S.routeWeatherLoading = true; S.routeWeatherError = false;
+  renderRouteWeatherViews();
+  try {
+    const forecast = await fetchRouteForecast(S.route, { signal: routeController.signal });
+    if (id !== routeRequestId) return;
+    S.routeForecast = forecast;
+    updateRouteWeather();
+  } catch (error) {
+    if (id !== routeRequestId || error?.name === 'AbortError') return;
+    S.routeForecast = null; S.routeWeather = null; S.routeWeatherError = true;
+  } finally {
+    if (id === routeRequestId) {
+      S.routeWeatherLoading = false;
+      renderRouteWeatherViews();
+    }
+  }
+}
+
 function routeWindLabel() {
+  updateRouteWeather();
+  if (S.routeWeather?.availableCount) {
+    return T.routeWindSampled(round(S.routeWeather.maxHeadwind ?? 0), round(S.routeWeather.maxCrosswind ?? 0));
+  }
   const first = currentRun().window?.slice?.[0];
   const kind = routeWindContext(S.route, first?.windDir);
   return kind ? T[kind] : T.windUnknown;
+}
+
+function routeAlertText(key) {
+  return T.routeAlerts?.[key] || key;
+}
+
+function routeWeatherSummaryBits(rw) {
+  if (!rw) return [];
+  const temp = rw.tempMin == null || rw.tempMax == null ? null
+    : T.routeTempRange(round(rw.tempMin), round(rw.tempMax));
+  const rain = rw.maxPop == null ? null : T.routeRainMax(round(rw.maxPop));
+  const wind = rw.maxHeadwind == null ? null : T.routeHeadwindMax(round(rw.maxHeadwind));
+  return [temp, rain, wind].filter(Boolean);
+}
+
+function routeWeatherPanel({ detailed = false } = {}) {
+  if (!S.route) return '';
+  if (S.routeWeatherLoading && !S.routeWeather) {
+    return `<div class="routewx__head"><b>${T.routeWeatherTitle}</b><span>${T.routeWeatherLoading}</span></div>`;
+  }
+  if (S.routeWeatherError && !S.routeWeather) {
+    return `<div class="routewx__head"><b>${T.routeWeatherTitle}</b></div>
+      <p class="routewx__note">${T.routeWeatherUnavailable}</p>`;
+  }
+  updateRouteWeather();
+  const rw = S.routeWeather;
+  if (!rw) return `<div class="routewx__head"><b>${T.routeWeatherTitle}</b><span>${T.routeWeatherLoading}</span></div>`;
+  const start = routeStartWindow()?.slice?.[0];
+  const coverage = Math.round(rw.coverage * 100);
+  const alerts = rw.alerts?.length
+    ? `<div class="routewx__alerts">${rw.alerts.map(a => `<span>${routeAlertText(a)}</span>`).join('')}</div>`
+    : `<div class="routewx__alerts"><span class="is-clear">${T.routeNoAlerts}</span></div>`;
+  const points = rw.points.map((p, i) => {
+    const w = p.weather;
+    if (!w) return `<div class="routewx__point is-missing"><b>${p.distanceKm.toFixed(1)} km</b><small>—</small></div>`;
+    const kind = w.kind ? T[w.kind] : T.windUnknown;
+    return `<div class="routewx__point${i === rw.worstIndex ? ' is-worst' : ''}">
+      <b>${p.distanceKm.toFixed(1)} km</b>
+      <span>${hhmm(new Date(p.etaMs))} · ${round(w.temp)}°</span>
+      <small>${round(w.pop ?? 0)}% · ${kind}</small>
+    </div>`;
+  }).join('');
+  const source = rw.stale ? T.routeForecastStale : rw.cached ? T.routeForecastCached : '';
+  return `<div class="routewx__head"><b>${T.routeWeatherTitle}</b>
+      <span>${start ? T.routeStartAt(hhmm(start.t)) : ''}</span></div>
+    <div class="routewx__summary">${routeWeatherSummaryBits(rw).map(x => `<span>${x}</span>`).join('')}</div>
+    ${alerts}
+    <div class="routewx__track">${points}</div>
+    ${coverage < 100 ? `<p class="routewx__note">${T.routeCoverage(rw.availableCount, rw.totalCount)}</p>` : ''}
+    ${source ? `<p class="routewx__note">${source}</p>` : ''}
+    ${detailed ? `<p class="routewx__note">${T.routeSeparateScore}</p>` : ''}`;
+}
+
+function renderRouteWeatherHome() {
+  const box = $('#routeWeatherHome');
+  if (!box) return;
+  box.hidden = !S.route;
+  box.innerHTML = S.route ? routeWeatherPanel() : '';
+}
+
+function renderRouteWeatherDetails() {
+  const box = $('#routeWeatherDetails');
+  if (!box) return;
+  box.hidden = !S.route;
+  box.innerHTML = S.route ? routeWeatherPanel({ detailed: true }) : '';
 }
 
 function renderStrip() {
@@ -1432,6 +1556,7 @@ function renderDetails() {
   $('#routeSummary').textContent = S.route
     ? T.routeSummary(S.route.distanceKm.toFixed(1), S.route.ascentM, routeWindLabel())
     : '';
+  renderRouteWeatherDetails();
   $('#historyTitle').textContent = T.historyTitle;
   const effortName = e => e < 0 ? T.feedbackEasier : e > 0 ? T.feedbackHarder : T.feedbackExpected;
   $('#historyList').innerHTML = S.history.length ? S.history.slice(0, 8).map(item => {
@@ -1458,13 +1583,18 @@ $('#gpxFile').addEventListener('change', async e => {
     if (!route) return toast(T.routeInvalid);
     route.name = file.name.replace(/\.gpx$/i, '') || T.routeTitle;
     S.route = route; saveRoute(route);
+    S.routeForecast = null; S.routeWeather = null; S.routeWeatherError = false;
     S.plan.mode = 'distance'; S.plan.distanceKm = route.distanceKm; saveRunPlan(S.plan);
+    refreshRouteForecast();
     toast(T.routeLoaded); if (S.bundle) paint();
   } catch { toast(T.routeInvalid); }
   finally { e.target.value = ''; }
 });
 $('#routeClear').addEventListener('click', () => {
-  S.route = null; saveRoute(null); if (S.bundle) paint();
+  ++routeRequestId; routeController?.abort();
+  S.route = null; S.routeForecast = null; S.routeWeather = null;
+  S.routeWeatherLoading = false; S.routeWeatherError = false;
+  saveRoute(null); if (S.bundle) paint();
 });
 
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
