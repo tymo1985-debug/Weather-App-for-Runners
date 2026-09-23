@@ -1351,9 +1351,9 @@ const RADAR_NATIVE_Z = 7;
 const MAP_MAX_Z = 10;
 
 const BASEMAPS = [
-  ['voyager', 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'],
-  ['light', 'https://{s}.basemaps.cartocdn.com/rastertiles/light_all/{z}/{x}/{y}{r}.png'],
-  ['dark', 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png']
+  ['standard', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--standard'],
+  ['light', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--light'],
+  ['dark', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--dark']
 ];
 const R = { map: null, base: null, baseIdx: 0, marker: null, frames: [], layers: new Map(),
   idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false };
@@ -1438,7 +1438,10 @@ function setBasemap(i) {
   R.baseIdx = i;
   if (R.base) R.map.removeLayer(R.base);
   R.base = L.tileLayer(BASEMAPS[i][1], {
-    attribution: '© OpenStreetMap, © CARTO · © RainViewer', maxZoom: MAP_MAX_Z, zIndex: 100
+    attribution: '© OpenStreetMap contributors · © RainViewer',
+    maxZoom: MAP_MAX_Z,
+    zIndex: 100,
+    className: BASEMAPS[i][2]
   }).addTo(R.map);
 }
 
