@@ -5,6 +5,7 @@ import {
   routeForecastSamples, routeEtaSamples, windComponents, aggregateRouteWeather,
   fetchRouteForecast, routeWeatherAt
 } from '../js/route-weather.js';
+import fs from 'node:fs';
 
 const route = {
   distanceKm: 10,
@@ -105,4 +106,10 @@ test('route weather interpolates conditions at each ETA', () => {
   assert.equal(summary.totalCount,samples.length);
   assert.ok(summary.tempMin>=10&&summary.tempMax<=14);
   assert.ok(summary.maxHeadwind>=10);
+});
+
+test('route ETA labels use the selected place wall clock', () => {
+  const source = fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
+  assert.match(source, /hhmm\(atPlace\(p\.etaMs\)\)/);
+  assert.doesNotMatch(source, /hhmm\(new Date\(p\.etaMs\)\)/);
 });

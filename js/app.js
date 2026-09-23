@@ -511,7 +511,7 @@ function routeWeatherPanel({ detailed = false } = {}) {
     const kind = w.kind ? T[w.kind] : T.windUnknown;
     return `<div class="routewx__point${i === rw.worstIndex ? ' is-worst' : ''}">
       <b>${p.distanceKm.toFixed(1)} km</b>
-      <span>${hhmm(new Date(p.etaMs))} · ${round(w.temp)}°</span>
+      <span>${hhmm(atPlace(p.etaMs))} · ${round(w.temp)}°</span>
       <small>${round(w.pop ?? 0)}% · ${kind}</small>
     </div>`;
   }).join('');
