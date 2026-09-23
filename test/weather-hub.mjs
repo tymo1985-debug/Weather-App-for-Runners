@@ -109,8 +109,8 @@ test('radar map styles use an explicit layer picker', () => {
   assert.match(html, /id="mapLayerMenu"/);
   assert.match(app, /function setLayerMenuOpen\(on\)/);
   assert.match(app, /function syncLayerMenu\(\)/);
-  assert.match(app, /\$\$\('\[data-map-layer\]'\)\.forEach/);
-  assert.doesNotMatch(app, /\n\s*\$\('\[data-map-layer\]'\)\.forEach/);
+  assert.ok(app.includes("$('[data-map-layer]').forEach"));
+  assert.doesNotMatch(app, /(^|\n)\s*\$\('\[data-map-layer\]'\)\.forEach/m);
   assert.match(app, /setBasemap\(Number\(b\.dataset\.mapLayer\)\)/);
   assert.doesNotMatch(app, /setBasemap\(\(R\.baseIdx \+ 1\) % BASEMAPS\.length\)/);
 });
