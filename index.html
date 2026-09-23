@@ -124,10 +124,13 @@
           <label><span id="availabilityToLabel"></span><input id="availableTo" type="time"></label>
         </div>
         <div class="start-compare" id="startCompare"></div>
+        <button class="watch-btn" id="watchBest" type="button"></button>
+        <p class="watch-status" id="watchStatus" hidden></p>
       </div>
 
-      <button class="linkrow run-card__details" data-go="analysis"><span id="lblViewDetails"></span>
+      <button class="linkrow" data-go="analysis"><span id="lblViewDetails"></span>
         <svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+      <button class="run-log" id="logRunFeedback" type="button"></button>
     </section>
     <div class="updated" id="updatedAt"></div>
     <div class="visually-hidden" id="recommendationStatus" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -299,6 +302,19 @@
     <div class="card">
       <h3 class="card__h card__h--lg" id="profileTitle"></h3>
       <div id="profileList"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="routeTitle"></h3>
+      <div class="route-tools">
+        <label class="route-import" for="gpxFile" id="routeImportLabel"></label>
+        <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+        <button type="button" class="route-clear" id="routeClear"></button>
+      </div>
+      <div id="routeSummary" class="route-summary"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="historyTitle"></h3>
+      <div id="historyList" class="history-list"></div>
     </div>
     <div class="card">
       <h3 class="card__h card__h--lg" id="langTitle"></h3>
