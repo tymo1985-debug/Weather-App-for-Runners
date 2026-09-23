@@ -2,6 +2,9 @@ import { weatherIcon, glyph, plant, moonFraction } from './icons.js';
 import { LANGS, pickLang, setLang } from './i18n.js';
 import { freshness, selectDuration } from './home-ui.js';
 import { loadRunPlan, saveRunPlan, plannedDuration, paceText, parsePace, timeToMinutes, hasAvailability } from './run-plan.js';
+import { loadWatch, saveWatch, makeWatch, watchChange } from './weather-watch.js';
+import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.js';
+import { loadHistory, addRun, effortHint } from './run-history.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
@@ -14,6 +17,9 @@ const S = {
   place: loadCities()[0] || DEFAULT_PLACE,
   profile: loadProfile(),
   plan: loadRunPlan(),
+  watch: loadWatch(),
+  route: loadRoute(),
+  history: loadHistory(),
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
@@ -91,13 +97,13 @@ async function load() {
   controller = new AbortController();
   const cached = cachedBundle(place);
   S.bundle = null; S.hours = [];
-  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); }
+  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); checkWatch(); }
   else dataError('loading');
   try {
     const bundle = await fetchAll(place, controller.signal);
     if (id !== requestId) return;
     S.bundle = bundle; S.cached = false;
-    recompute(); paint(); dataError(false);
+    recompute(); paint(); dataError(false); checkWatch();
   } catch {
     if (id !== requestId) return;
     if (cached && !expireDisplayedBundle()) { paint(); toast(T.offline); }
@@ -165,6 +171,7 @@ function staticText() {
   $('#availabilityFromLabel').textContent = T.availabilityFrom;
   $('#availabilityToLabel').textContent = T.availabilityTo;
   $('#clearAvailability').textContent = T.clearAvailability;
+  $('#logRunFeedback').textContent = T.logRun;
   $('#nearTermLabel').textContent = T.nearTermLabel;
   $$('[data-horizon]').forEach(b => { b.textContent = T.horizonHour(Number(b.dataset.horizon)); b.setAttribute('aria-label', `${T.nearTermLabel} ${b.textContent}`); });
   $$('[data-quick-duration]').forEach(b => b.setAttribute('aria-label', T.minutes(Number(b.dataset.quickDuration))));
@@ -264,8 +271,12 @@ function renderHome() {
     ? T.nearTermWait(near.nowScore, near.later.score,
       T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
   const tips = runAdvice(near?.later || near?.current, runDuration());
-  $('#runAdvice').textContent = tips.map(key => T.runTips[key]).join(' ');
-  $('#runAdvice').hidden = tips.length === 0;
+  const personal = effortHint(S.history, sc);
+  const personalText = personal ? T.personalEffort(personal.count,
+    personal.tendency === 'harder' ? T.tendencyHarder : personal.tendency === 'easier' ? T.tendencyEasier : T.tendencyExpected) : '';
+  const adviceText = [...tips.map(key => T.runTips[key]), personalText].filter(Boolean).join(' ');
+  $('#runAdvice').textContent = adviceText;
+  $('#runAdvice').hidden = !adviceText;
   $$('[data-horizon]').forEach(b => {
     const active = Number(b.dataset.horizon) === S.horizon;
     b.classList.toggle('is-on', active);
@@ -280,6 +291,7 @@ function renderHome() {
   renderPlanControls();
   renderRunMiniTimeline();
   renderStartCompare();
+  renderWatchControl();
   $('#updatedAt').textContent = freshness(S.bundle.at, Date.now(), S.cached, T);
   renderStrip();
 }
@@ -336,6 +348,49 @@ function renderStartCompare() {
         <small>${isBest ? T.startBest : windowText(o)}</small>
       </div>`;
     }).join('')}</div>` : `<p class="start-compare__empty">${T.noStartOptions}</p>`);
+}
+
+function renderWatchControl() {
+  const button = $('#watchBest'), status = $('#watchStatus');
+  const active = !!S.watch?.enabled;
+  button.textContent = active ? T.stopWatch : T.watchBest;
+  button.classList.toggle('is-on', active);
+  status.hidden = !active;
+  status.textContent = active ? T.watchActive : '';
+  if (active && 'Notification' in window && Notification.permission === 'denied') {
+    status.hidden = false; status.textContent = T.watchPermission;
+  }
+}
+
+async function sendWatchNotification(option) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !option) return;
+  const title = T.watchChangedTitle, body = T.watchChangedBody(windowText(option), option.score);
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, { body, tag: 'run-weather-watch', renotify: true });
+    } else {
+      new Notification(title, { body, tag: 'run-weather-watch' });
+    }
+  } catch {}
+}
+
+function checkWatch() {
+  if (!S.watch?.enabled || !S.bundle) return;
+  const key = `${S.place.lat.toFixed(2)},${S.place.lon.toFixed(2)}`;
+  if (S.watch.placeKey !== key) return;
+  const option = bestStartOption(plannerStartOptions());
+  const change = watchChange(S.watch, option);
+  if (!change || !option) return;
+  sendWatchNotification(option);
+  S.watch = makeWatch(option, S.place, runDuration());
+  saveWatch(S.watch);
+}
+
+function routeWindLabel() {
+  const first = currentRun().window?.slice?.[0];
+  const kind = routeWindContext(S.route, first?.windDir);
+  return kind ? T[kind] : T.windUnknown;
 }
 
 function renderStrip() {
@@ -416,6 +471,20 @@ $('#clearAvailability').addEventListener('click', () => {
   S.plan.availableFrom = ''; S.plan.availableTo = ''; saveRunPlan(S.plan);
   if (S.bundle) paint();
 });
+
+$('#watchBest').addEventListener('click', async () => {
+  if (S.watch?.enabled) {
+    S.watch = null; saveWatch(null); if (S.bundle) renderHome(); return;
+  }
+  const option = bestStartOption(plannerStartOptions()) || currentRun().window;
+  if (!option) return;
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch {}
+  }
+  S.watch = makeWatch(option, S.place, runDuration()); saveWatch(S.watch);
+  if (S.bundle) renderHome();
+});
+$('#logRunFeedback').addEventListener('click', () => openFeedbackSheet());
 
 function locate() {
   if (!navigator.geolocation) return toast(T.myLocation + ' —');
@@ -1356,6 +1425,21 @@ function renderDetails() {
       <span class="drow__v" style="font-weight:560;color:var(--ink-2)">${V[k]}</span>
       <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg></button>`).join('');
 
+  $('#routeTitle').textContent = T.routeTitle;
+  $('#routeImportLabel').textContent = T.routeImport;
+  $('#routeClear').textContent = T.routeClear;
+  $('#routeClear').hidden = !S.route;
+  $('#routeSummary').textContent = S.route
+    ? T.routeSummary(S.route.distanceKm.toFixed(1), S.route.ascentM, routeWindLabel())
+    : '';
+  $('#historyTitle').textContent = T.historyTitle;
+  const effortName = e => e < 0 ? T.feedbackEasier : e > 0 ? T.feedbackHarder : T.feedbackExpected;
+  $('#historyList').innerHTML = S.history.length ? S.history.slice(0, 8).map(item => {
+    const d = new Date(item.savedAt);
+    return `<div class="history-row"><span><b>${item.place || '—'}</b><small>${d.toLocaleDateString(T.lang)} · ${item.duration} min</small></span>
+      <strong style="color:${bandColor(item.score)}">${item.score}</strong><em>${effortName(item.effort)}</em></div>`;
+  }).join('') : `<p class="history-empty">${T.historyEmpty}</p>`;
+
   $('#langChooser').innerHTML = [['en', 'English'], ['ru', 'Русский']]
     .map(([c, n]) => `<button class="chip ${S.langCode === c ? 'is-on' : ''}" data-lang="${c}">${n}</button>`).join('');
 }
@@ -1365,6 +1449,22 @@ $('#profileList').addEventListener('click', e => {
 $('#langChooser').addEventListener('click', e => {
   const b = e.target.closest('[data-lang]'); if (!b) return;
   S.langCode = b.dataset.lang; T = LANGS[S.langCode]; setLang(S.langCode); paint();
+});
+
+$('#gpxFile').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  try {
+    const route = parseGpx(await file.text());
+    if (!route) return toast(T.routeInvalid);
+    route.name = file.name.replace(/\.gpx$/i, '') || T.routeTitle;
+    S.route = route; saveRoute(route);
+    S.plan.mode = 'distance'; S.plan.distanceKm = route.distanceKm; saveRunPlan(S.plan);
+    toast(T.routeLoaded); if (S.bundle) paint();
+  } catch { toast(T.routeInvalid); }
+  finally { e.target.value = ''; }
+});
+$('#routeClear').addEventListener('click', () => {
+  S.route = null; saveRoute(null); if (S.bundle) paint();
 });
 
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
@@ -1511,6 +1611,28 @@ function openProfileSheet(key) {
     if (key === 'duration') selectDuration(S.profile, b.dataset.set, saveProfile);
     else { S.profile[key] = b.dataset.set; saveProfile(S.profile); }
     recompute(); closeSheet(); paint(); toast(T.saved);
+  });
+}
+
+function openFeedbackSheet() {
+  const run = currentRun();
+  const body = openSheet(`<h3>${T.feedbackTitle}</h3>
+    <div class="chooser">
+      <button class="chip" data-effort="-1">${T.feedbackEasier}</button>
+      <button class="chip" data-effort="0">${T.feedbackExpected}</button>
+      <button class="chip" data-effort="1">${T.feedbackHarder}</button>
+    </div>`);
+  body.addEventListener('click', e => {
+    const b = e.target.closest('[data-effort]'); if (!b) return;
+    S.history = addRun({
+      place: S.place.name,
+      score: run.score ?? 0,
+      duration: runDuration(),
+      distanceKm: S.plan.mode === 'distance' ? S.plan.distanceKm : null,
+      effort: Number(b.dataset.effort),
+      startIso: run.window?.slice?.[0]?.iso || null
+    });
+    closeSheet(); paint(); toast(T.feedbackSaved);
   });
 }
 
