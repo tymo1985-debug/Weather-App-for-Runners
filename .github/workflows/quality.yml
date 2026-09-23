@@ -19,7 +19,13 @@ jobs:
       - run: npm test
       - name: Check JavaScript syntax
         run: |
-          for file in js/*.js sw.js; do node --check "$file"; done
+          for file in js/*.js sw.js worker/src/*.js; do node --check "$file"; done
+      - name: Install Worker dependencies
+        working-directory: worker
+        run: npm install --no-audit --no-fund
+      - name: Dry-run Cloudflare Worker bundle
+        working-directory: worker
+        run: npm run dry-run
       - name: Validate web manifest
         run: node -e "JSON.parse(require('node:fs').readFileSync('manifest.webmanifest', 'utf8'))"
       - name: Check whitespace in commit

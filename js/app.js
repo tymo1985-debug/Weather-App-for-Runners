@@ -3,6 +3,7 @@ import { LANGS, pickLang, setLang } from './i18n.js';
 import { freshness, selectDuration } from './home-ui.js';
 import { loadRunPlan, saveRunPlan, plannedDuration, paceText, parsePace, timeToMinutes, hasAvailability } from './run-plan.js';
 import { loadWatch, saveWatch, makeWatch, watchChange } from './weather-watch.js';
+import { loadBackgroundWatch, enableBackgroundWatch, disableBackgroundWatch } from './background-watch.js';
 import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.js';
 import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
@@ -19,6 +20,7 @@ const S = {
   profile: loadProfile(),
   plan: loadRunPlan(),
   watch: loadWatch(),
+  backgroundWatch: loadBackgroundWatch(), backgroundWatchSyncing: false, backgroundWatchReason: null,
   route: loadRoute(),
   routeForecast: null, routeWeather: null, routeWeatherLoading: false, routeWeatherError: false,
   history: loadHistory(),
@@ -356,14 +358,35 @@ function renderStartCompare() {
 
 function renderWatchControl() {
   const button = $('#watchBest'), status = $('#watchStatus');
-  const active = !!S.watch?.enabled;
+  const active = !!S.watch?.enabled || !!S.backgroundWatch?.active;
   button.textContent = active ? T.stopWatch : T.watchBest;
   button.classList.toggle('is-on', active);
   status.hidden = !active;
-  status.textContent = active ? T.watchActive : '';
-  if (active && 'Notification' in window && Notification.permission === 'denied') {
-    status.hidden = false; status.textContent = T.watchPermission;
+  if (!active) { status.textContent = ''; return; }
+  if ('Notification' in window && Notification.permission === 'denied') {
+    status.textContent = T.watchPermission; return;
   }
+  if (S.backgroundWatchSyncing) { status.textContent = T.watchBackgroundConnecting; return; }
+  if (S.backgroundWatch?.active) { status.textContent = T.watchBackgroundActive; return; }
+  if (S.backgroundWatchReason === 'unsupported') { status.textContent = T.watchBackgroundUnsupported; return; }
+  if (S.backgroundWatchReason === 'backend') { status.textContent = T.watchBackgroundUnavailable; return; }
+  status.textContent = T.watchLocalOnly;
+}
+
+async function syncBackgroundWatch() {
+  if (!S.watch?.enabled) return;
+  S.backgroundWatchSyncing = true; S.backgroundWatchReason = null;
+  if (S.bundle) renderWatchControl();
+  const result = await enableBackgroundWatch({
+    place: S.place, profile: S.profile, plan: S.plan, lang: S.langCode
+  });
+  S.backgroundWatchSyncing = false;
+  if (result.ok) {
+    S.backgroundWatch = result.state; S.backgroundWatchReason = null;
+  } else {
+    S.backgroundWatch = null; S.backgroundWatchReason = result.reason;
+  }
+  if (S.bundle) renderWatchControl();
 }
 
 async function sendWatchNotification(option) {
@@ -597,8 +620,12 @@ $('#clearAvailability').addEventListener('click', () => {
 });
 
 $('#watchBest').addEventListener('click', async () => {
-  if (S.watch?.enabled) {
-    S.watch = null; saveWatch(null); if (S.bundle) renderHome(); return;
+  if (S.watch?.enabled || S.backgroundWatch?.active) {
+    S.watch = null; saveWatch(null);
+    S.backgroundWatch = null; S.backgroundWatchReason = null; S.backgroundWatchSyncing = false;
+    if (S.bundle) renderHome();
+    await disableBackgroundWatch();
+    return;
   }
   const option = bestStartOption(plannerStartOptions()) || currentRun().window;
   if (!option) return;
@@ -607,6 +634,7 @@ $('#watchBest').addEventListener('click', async () => {
   }
   S.watch = makeWatch(option, S.place, runDuration()); saveWatch(S.watch);
   if (S.bundle) renderHome();
+  await syncBackgroundWatch();
 });
 $('#logRunFeedback').addEventListener('click', () => openFeedbackSheet());
 
@@ -1778,7 +1806,12 @@ $('#btnInstall').addEventListener('click', async () => {
   installEvt = null; $('#btnInstall').hidden = true;
 });
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+  window.addEventListener('load', async () => {
+    try {
+      await navigator.serviceWorker.register('sw.js');
+      if (S.watch?.enabled && S.backgroundWatch?.active) await syncBackgroundWatch();
+    } catch {}
+  });
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && S.bundle && Date.now() - S.bundle.at > 12 * 60e3) load();
