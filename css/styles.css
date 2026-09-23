@@ -464,3 +464,133 @@ input{font:inherit}
   .pill{min-width:32px;padding:4px 7px;font-size:12px}
   .sheet{padding-left:10px;padding-right:10px}
 }
+
+
+/* ── RUN PLANNER ROADMAP · PHASE A ─────────────────────────────── */
+.hero{padding-bottom:16px}
+.hero__now{margin-top:10px}
+.hero__icon{width:82px;height:82px}
+.hero__deg{font-size:58px;letter-spacing:-2.5px}
+.hero__cond{font-size:19px;margin-top:5px}
+.hero__minmax{margin-top:6px}
+
+.run-card{background:var(--card);border-radius:22px;padding:5px 14px 12px;margin:0 0 12px;
+  box-shadow:var(--shadow);overflow:hidden}
+.run-card .scorecard{background:transparent;color:var(--ink);border-radius:0;padding:12px 2px 11px;
+  box-shadow:none;border-bottom:1px solid var(--hair)}
+.run-card .scorecard__head{color:var(--muted);font-size:12px;font-weight:650;opacity:1}
+.run-card__scoreline{display:grid;grid-template-columns:auto 1fr;gap:15px;align-items:center;margin-top:4px}
+.run-card .scorecard__value{margin:0;font-size:60px;color:var(--green-d);min-width:78px}
+.run-card .scorecard.is-mid .scorecard__value{color:#B97900}
+.run-card .scorecard.is-low .scorecard__value{color:var(--orange)}
+.run-card .scorecard.is-bad .scorecard__value{color:var(--red)}
+.run-card .scorecard__label{margin:0;font-size:18px}
+.run-card .scorecard__label svg{display:none}
+.run-card .scorecard__sub{margin-top:4px;color:var(--ink-2);font-size:12.5px;opacity:1}
+.run-card .scorecard__why{color:var(--blue);opacity:1;margin-top:7px;padding-top:0;font-size:12px}
+
+.run-card__facts{display:grid;grid-template-columns:1.35fr .8fr .8fr;gap:8px;padding:12px 2px 11px}
+.run-card__facts .fact{align-items:flex-start;gap:7px;min-width:0}
+.run-card__facts .fact__ic{width:18px;height:18px;margin-top:1px}
+.run-card__facts .fact>div{min-width:0}
+.run-card__facts .fact__k{font-size:10.5px}
+.run-card__facts .fact__v{font-size:13px;white-space:normal;overflow-wrap:anywhere}
+
+.run-card .near-term{box-shadow:none;background:var(--blue-soft);border-radius:14px;margin:0 0 11px;padding:10px 11px}
+.run-card .duration-quick{margin:0 0 10px}
+.run-card .duration-quick>span{margin-left:0}
+.run-card .duration-quick__choices button{box-shadow:none;background:#F2F5F9;border:1px solid #E5EAF1}
+.run-card .duration-quick__choices button.is-on{background:var(--blue);border-color:var(--blue)}
+.run-card__details{width:100%;display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:42px;border-radius:12px;background:#F5F8FC;color:var(--blue);font-size:13.5px;font-weight:680}
+.run-card__details svg{fill:currentColor}
+
+@media (max-width:360px){
+  .run-card__facts{grid-template-columns:1fr 1fr}
+  .run-card__facts .fact:first-child{grid-column:1/-1}
+  .run-card__scoreline{gap:10px}
+  .run-card .scorecard__value{font-size:54px}
+}
+
+
+/* ── RUN PLANNER ROADMAP · PHASE B-G ───────────────────────────── */
+.run-mini{padding:11px 2px 12px;border-bottom:1px solid var(--hair)}
+.run-mini__head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.run-mini__head b{font-size:13px;font-weight:700}
+.run-mini__head span{font-size:12px;color:var(--muted);font-weight:650}
+.run-mini__track{display:flex;align-items:flex-start;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 2px 2px}
+.run-mini__track::-webkit-scrollbar{display:none}
+.run-mini__point{position:relative;min-width:86px;padding-left:13px;display:grid;gap:1px}
+.run-mini__point:not(:last-child)::after{content:"";position:absolute;left:9px;right:-4px;top:5px;height:2px;background:#DDE6EF;z-index:0}
+.run-mini__dot{position:absolute;left:2px;top:1px;width:10px;height:10px;border-radius:50%;z-index:1;box-shadow:0 0 0 3px #fff}
+.run-mini__point b{font-size:12.5px;font-variant-numeric:tabular-nums}
+.run-mini__point small{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap}
+.run-mini__point.is-end small{color:var(--ink-2)}
+
+.run-mode{padding:11px 0 9px}
+.run-mode>span{display:block;font-size:11.5px;color:var(--muted);font-weight:650;margin-bottom:6px}
+.run-mode__choices{display:grid;grid-template-columns:1fr 1fr;background:#EEF2F7;border-radius:11px;padding:3px}
+.run-mode__choices button{min-height:36px;border-radius:9px;font-size:12.5px;font-weight:680;color:var(--ink-2)}
+.run-mode__choices button.is-on{background:#fff;color:var(--blue);box-shadow:0 1px 4px rgba(20,33,58,.1)}
+
+.distance-plan{margin:0 0 11px}
+.distance-plan__presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-bottom:8px}
+.distance-plan__presets button{min-height:36px;border-radius:10px;background:#F3F6FA;border:1px solid #E5EAF1;font-size:11.5px;font-weight:680}
+.distance-plan__inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.distance-plan__inputs label,.availability__inputs label{display:grid;gap:4px;font-size:10.5px;color:var(--muted);font-weight:650}
+.distance-plan__inputs input,.availability__inputs input{width:100%;min-height:40px;border:1px solid #DDE5EE;border-radius:10px;background:#fff;
+  color:var(--ink);padding:8px 10px;font:inherit;font-size:13px;outline:none}
+.distance-plan__inputs input:focus,.availability__inputs input:focus{border-color:#8AB5F5;box-shadow:0 0 0 3px rgba(47,111,235,.1)}
+.distance-plan__summary{margin-top:7px;font-size:11.5px;color:var(--ink-2);font-weight:600}
+
+.availability{border-top:1px solid var(--hair);padding:11px 0 10px}
+.availability__head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+.availability__head>span{font-size:12px;font-weight:700}
+.availability__head button{font-size:11.5px;color:var(--blue);font-weight:650}
+.availability__inputs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+
+.start-compare__head{font-size:11.5px;color:var(--muted);font-weight:650;margin:2px 0 6px}
+.start-compare__grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.start-option{border:1px solid #E3E9F1;border-radius:12px;padding:8px 7px;background:#FAFBFD;display:grid;gap:1px;text-align:center}
+.start-option.is-best{border-color:#9CCFB0;background:#F0F9F3}
+.start-option span{font-size:11px;color:var(--ink-2);font-weight:650}
+.start-option b{font-size:20px;line-height:1.05;font-variant-numeric:tabular-nums}
+.start-option small{font-size:9.5px;color:var(--muted);font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.start-option.is-best small{color:var(--green-ink)}
+.start-compare__empty{margin:0;font-size:11.5px;color:var(--muted)}
+
+@media (max-width:360px){
+  .start-compare__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .distance-plan__presets{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+
+/* ── RUN PLANNER ROADMAP · PHASE H-J ───────────────────────────── */
+.watch-btn,.run-log{width:100%;min-height:40px;border-radius:11px;font-size:12.5px;font-weight:680}
+.watch-btn{margin-top:9px;background:#EEF4FE;color:var(--blue);border:1px solid #D9E7FC}
+.watch-btn.is-on{background:#EAF7EE;color:var(--green-ink);border-color:#CDE8D6}
+.watch-status{margin:7px 2px 0;font-size:11px;line-height:1.35;color:var(--muted)}
+.run-card>.linkrow{width:100%;min-height:42px;margin:0;padding:0;justify-content:center;border-radius:12px;
+  background:#F5F8FC;color:var(--blue);font-size:13.5px;font-weight:680}
+.run-log{margin-top:7px;background:transparent;color:var(--ink-2);border:1px solid #E2E8F0}
+
+.route-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.route-import,.route-clear{min-height:40px;border-radius:11px;padding:9px 12px;font-size:12.5px;font-weight:680;display:inline-flex;align-items:center}
+.route-import{background:var(--blue);color:#fff;cursor:pointer}
+.route-clear{background:#F2F5F8;color:var(--ink-2)}
+.route-summary{font-size:13px;color:var(--ink-2);font-weight:620;line-height:1.45}
+
+.history-list{display:grid;gap:0}
+.history-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
+.history-row:first-child{border-top:0}
+.history-row span{min-width:0}
+.history-row b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history-row small{display:block;margin-top:2px;color:var(--muted);font-size:10.5px}
+.history-row strong{font-size:17px;font-variant-numeric:tabular-nums}
+.history-row em{font-size:10.5px;font-style:normal;color:var(--ink-2);font-weight:650;text-align:right}
+.history-empty{margin:0;color:var(--muted);font-size:12.5px}
+
+@media (max-width:360px){
+  .history-row{grid-template-columns:1fr auto}
+  .history-row em{grid-column:1/-1;text-align:left;margin-top:-5px}
+}

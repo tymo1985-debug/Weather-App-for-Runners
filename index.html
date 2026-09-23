@@ -48,47 +48,90 @@
   </header>
 
   <div class="sheet">
-    <div class="grid2">
+    <section class="run-card" aria-labelledby="scoreHeadLbl">
       <button class="scorecard" id="cardScore">
         <div class="scorecard__head"><span class="scorecard__ic" id="scoreRunIc"></span><span id="scoreHeadLbl"></span></div>
-        <div class="scorecard__value" id="scoreBig">—</div>
-        <div class="scorecard__label"><svg viewBox="0 0 24 24" class="i16"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg><span id="scoreLabel"></span></div>
-        <div class="scorecard__sub" id="scoreSub"></div>
+        <div class="run-card__scoreline">
+          <div class="scorecard__value" id="scoreBig">—</div>
+          <div>
+            <div class="scorecard__label"><svg viewBox="0 0 24 24" class="i16"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg><span id="scoreLabel"></span></div>
+            <div class="scorecard__sub" id="scoreSub"></div>
+          </div>
+        </div>
         <div class="scorecard__why"><span id="scoreWhy"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>
       </button>
 
-      <div class="factcard">
+      <div class="run-card__facts">
         <div class="fact"><span class="fact__ic" id="icBest"></span>
           <div><span class="fact__k" id="lblBestTime"></span><span class="fact__v" id="factWindow">—</span></div></div>
         <div class="fact"><span class="fact__ic" id="icDur"></span>
           <div><span class="fact__k" id="lblDuration"></span><span class="fact__v" id="factDuration">—</span></div></div>
         <div class="fact"><span class="fact__ic" id="icUv"></span>
           <div><span class="fact__k" id="lblUv"></span><span class="fact__v" id="factUv">—</span></div></div>
-        <button class="linkrow" data-go="analysis"><span id="lblViewDetails"></span>
-          <svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
       </div>
-    </div>
 
-    <div class="near-term" aria-labelledby="nearTermLabel">
-      <div class="near-term__top"><span id="nearTermLabel"></span>
-        <div class="near-term__choices" role="group" aria-labelledby="nearTermLabel">
-          <button type="button" data-horizon="1">1 h</button>
-          <button type="button" data-horizon="2">2 h</button>
+      <div class="run-mini" id="runMiniTimeline" aria-live="polite"></div>
+
+      <div class="run-mode" role="group" aria-labelledby="runModeLabel">
+        <span id="runModeLabel"></span>
+        <div class="run-mode__choices">
+          <button type="button" data-run-mode="duration"></button>
+          <button type="button" data-run-mode="distance"></button>
         </div>
       </div>
-      <div id="nearTermAdvice" class="near-term__advice" role="status" aria-live="polite"></div>
-      <p id="runAdvice" class="near-term__tip" role="status" aria-live="polite" aria-atomic="true" hidden></p>
-    </div>
-    <div class="duration-quick" role="group" aria-labelledby="quickDurationLabel">
-      <span id="quickDurationLabel"></span>
-      <div class="duration-quick__choices">
-        <button type="button" data-quick-duration="30">30</button>
-        <button type="button" data-quick-duration="45">45</button>
-        <button type="button" data-quick-duration="60">60</button>
-        <button type="button" data-quick-duration="90">90</button>
-        <button type="button" data-quick-duration="120">120</button>
+
+      <div class="near-term" aria-labelledby="nearTermLabel">
+        <div class="near-term__top"><span id="nearTermLabel"></span>
+          <div class="near-term__choices" role="group" aria-labelledby="nearTermLabel">
+            <button type="button" data-horizon="1">1 h</button>
+            <button type="button" data-horizon="2">2 h</button>
+          </div>
+        </div>
+        <div id="nearTermAdvice" class="near-term__advice" role="status" aria-live="polite"></div>
+        <p id="runAdvice" class="near-term__tip" role="status" aria-live="polite" aria-atomic="true" hidden></p>
       </div>
-    </div>
+
+      <div class="duration-quick" role="group" aria-labelledby="quickDurationLabel">
+        <span id="quickDurationLabel"></span>
+        <div class="duration-quick__choices">
+          <button type="button" data-quick-duration="30">30</button>
+          <button type="button" data-quick-duration="45">45</button>
+          <button type="button" data-quick-duration="60">60</button>
+          <button type="button" data-quick-duration="90">90</button>
+          <button type="button" data-quick-duration="120">120</button>
+        </div>
+      </div>
+
+      <div class="distance-plan" id="distancePlan" hidden>
+        <div class="distance-plan__presets" role="group" aria-label="Distance">
+          <button type="button" data-distance="3">3 km</button>
+          <button type="button" data-distance="5">5 km</button>
+          <button type="button" data-distance="10">10 km</button>
+          <button type="button" data-distance="15">15 km</button>
+          <button type="button" data-distance="20">20 km</button>
+        </div>
+        <div class="distance-plan__inputs">
+          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5" inputmode="decimal"></label>
+          <label><span id="paceLabel"></span><input id="paceInput" type="text" inputmode="numeric" placeholder="6:00"></label>
+        </div>
+        <div class="distance-plan__summary" id="distanceSummary"></div>
+      </div>
+
+      <div class="availability">
+        <div class="availability__head"><span id="availabilityLabel"></span><button type="button" id="clearAvailability"></button></div>
+        <div class="availability__inputs">
+          <label><span id="availabilityFromLabel"></span><input id="availableFrom" type="time"></label>
+          <label><span id="availabilityToLabel"></span><input id="availableTo" type="time"></label>
+        </div>
+        <div class="start-compare" id="startCompare"></div>
+        <button class="watch-btn" id="watchBest" type="button"></button>
+        <p class="watch-status" id="watchStatus" hidden></p>
+      </div>
+
+      <button class="linkrow" data-go="analysis"><span id="lblViewDetails"></span>
+        <svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+      <button class="run-log" id="logRunFeedback" type="button"></button>
+    </section>
     <div class="updated" id="updatedAt"></div>
     <div class="visually-hidden" id="recommendationStatus" role="status" aria-live="polite" aria-atomic="true"></div>
 
@@ -259,6 +302,19 @@
     <div class="card">
       <h3 class="card__h card__h--lg" id="profileTitle"></h3>
       <div id="profileList"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="routeTitle"></h3>
+      <div class="route-tools">
+        <label class="route-import" for="gpxFile" id="routeImportLabel"></label>
+        <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
+        <button type="button" class="route-clear" id="routeClear"></button>
+      </div>
+      <div id="routeSummary" class="route-summary"></div>
+    </div>
+    <div class="card">
+      <h3 class="card__h card__h--lg" id="historyTitle"></h3>
+      <div id="historyList" class="history-list"></div>
     </div>
     <div class="card">
       <h3 class="card__h card__h--lg" id="langTitle"></h3>

@@ -1,10 +1,14 @@
 import { weatherIcon, glyph, plant, moonFraction } from './icons.js';
 import { LANGS, pickLang, setLang } from './i18n.js';
 import { freshness, selectDuration } from './home-ui.js';
+import { loadRunPlan, saveRunPlan, plannedDuration, paceText, parsePace, timeToMinutes, hasAvailability } from './run-plan.js';
+import { loadWatch, saveWatch, makeWatch, watchChange } from './weather-watch.js';
+import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.js';
+import { loadHistory, addRun, effortHint } from './run-history.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
-  buildHours, bestWindow, bestWindowOfDay, currentRunSummary, nearTermRecommendation, runAdvice, band, bandColor, aqiBand, WEIGHTS,
+  buildHours, bestWindow, bestWindowOfDay, currentRunSummary, nearTermRecommendation, runAdvice, runStartOptions, bestStartOption, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
 } from './engine.js';
 
@@ -12,6 +16,10 @@ import {
 const S = {
   place: loadCities()[0] || DEFAULT_PLACE,
   profile: loadProfile(),
+  plan: loadRunPlan(),
+  watch: loadWatch(),
+  route: loadRoute(),
+  history: loadHistory(),
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
@@ -74,8 +82,8 @@ document.addEventListener('click', e => {
 });
 
 async function share() {
-  const w = bestWindow(S.hours, S.profile.duration);
-  const txt = T.shareRun(S.place.name, S.profile.duration,
+  const w = bestWindow(S.hours, runDuration());
+  const txt = T.shareRun(S.place.name, runDuration(),
     currentRun().score ?? 0, w ? windowText(w) : '—');
   if (navigator.share) { try { await navigator.share({ text: txt }); return; } catch {} }
   try { await navigator.clipboard.writeText(txt); toast(T.copied); } catch { toast(txt); }
@@ -89,13 +97,13 @@ async function load() {
   controller = new AbortController();
   const cached = cachedBundle(place);
   S.bundle = null; S.hours = [];
-  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); }
+  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); if (typeof checkWatch === 'function') checkWatch(); }
   else dataError('loading');
   try {
     const bundle = await fetchAll(place, controller.signal);
     if (id !== requestId) return;
     S.bundle = bundle; S.cached = false;
-    recompute(); paint(); dataError(false);
+    recompute(); paint(); dataError(false); if (typeof checkWatch === 'function') checkWatch();
   } catch {
     if (id !== requestId) return;
     if (cached && !expireDisplayedBundle()) { paint(); toast(T.offline); }
@@ -132,7 +140,8 @@ const nowIndex = () => {
 const atPlace = (ms) => placeNow(S.bundle, ms);
 const timeOrDash = (v) => (v ? hhmm(new Date(v)) : '—');
 const nowHour = () => S.hours[nowIndex()] || null;
-const currentRun = () => currentRunSummary(S.hours, S.profile.duration);
+const runDuration = () => plannedDuration(S.profile.duration, S.plan);
+const currentRun = () => currentRunSummary(S.hours, runDuration());
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
@@ -153,6 +162,16 @@ function staticText() {
   $('#lblBestTime').textContent = T.bestTime;
   $('#lblDuration').textContent = T.duration;
   $('#quickDurationLabel').textContent = T.runDuration;
+  $('#runModeLabel').textContent = T.runModeLabel;
+  $$('[data-run-mode]')[0].textContent = T.runModeDuration;
+  $$('[data-run-mode]')[1].textContent = T.runModeDistance;
+  $('#distanceLabel').textContent = T.distanceLabel;
+  $('#paceLabel').textContent = T.paceLabel;
+  $('#availabilityLabel').textContent = T.availabilityLabel;
+  $('#availabilityFromLabel').textContent = T.availabilityFrom;
+  $('#availabilityToLabel').textContent = T.availabilityTo;
+  $('#clearAvailability').textContent = T.clearAvailability;
+  $('#logRunFeedback').textContent = T.logRun;
   $('#nearTermLabel').textContent = T.nearTermLabel;
   $$('[data-horizon]').forEach(b => { b.textContent = T.horizonHour(Number(b.dataset.horizon)); b.setAttribute('aria-label', `${T.nearTermLabel} ${b.textContent}`); });
   $$('[data-quick-duration]').forEach(b => b.setAttribute('aria-label', T.minutes(Number(b.dataset.quickDuration))));
@@ -246,27 +265,132 @@ function renderHome() {
   $('#factWindow').textContent = w
     ? `${windowText(w)} · ${w.score}/100${recommendation.overnight ? ` · ${T.overnightWindow}` : ''}`
     : recommendation.nowScore == null ? '—' : T.now;
-  $('#factDuration').textContent = T.min(S.profile.duration);
-  const near = nearTermRecommendation(S.hours, S.profile.duration, S.horizon);
+  $('#factDuration').textContent = T.min(runDuration());
+  const near = nearTermRecommendation(S.hours, runDuration(), S.horizon);
   $('#nearTermAdvice').textContent = !near ? T.nearTermUnavailable : near.later
     ? T.nearTermWait(near.nowScore, near.later.score,
       T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
-  const tips = runAdvice(near?.later || near?.current, S.profile.duration);
-  $('#runAdvice').textContent = tips.map(key => T.runTips[key]).join(' ');
-  $('#runAdvice').hidden = tips.length === 0;
+  const tips = runAdvice(near?.later || near?.current, runDuration());
+  const personal = effortHint(S.history, sc);
+  const personalText = personal ? T.personalEffort(personal.count,
+    personal.tendency === 'harder' ? T.tendencyHarder : personal.tendency === 'easier' ? T.tendencyEasier : T.tendencyExpected) : '';
+  const adviceText = [...tips.map(key => T.runTips[key]), personalText].filter(Boolean).join(' ');
+  $('#runAdvice').textContent = adviceText;
+  $('#runAdvice').hidden = !adviceText;
   $$('[data-horizon]').forEach(b => {
     const active = Number(b.dataset.horizon) === S.horizon;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-pressed', String(active));
   });
   $$('[data-quick-duration]').forEach(b => {
-    const active = Number(b.dataset.quickDuration) === S.profile.duration;
+    const active = S.plan.mode === 'duration' && Number(b.dataset.quickDuration) === runDuration();
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-pressed', String(active));
   });
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
+  renderPlanControls();
+  renderRunMiniTimeline();
+  renderStartCompare();
+  renderWatchControl();
   $('#updatedAt').textContent = freshness(S.bundle.at, Date.now(), S.cached, T);
   renderStrip();
+}
+
+function renderPlanControls() {
+  $$('[data-run-mode]').forEach(b => {
+    const active = b.dataset.runMode === S.plan.mode;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+  $('.duration-quick').hidden = S.plan.mode !== 'duration';
+  $('#distancePlan').hidden = S.plan.mode !== 'distance';
+  $('#distanceKm').value = String(S.plan.distanceKm);
+  $('#paceInput').value = paceText(S.plan.paceSecPerKm);
+  $('#distanceSummary').textContent = T.distanceSummary(
+    Number(S.plan.distanceKm.toFixed(1)), paceText(S.plan.paceSecPerKm), runDuration());
+  $('#availableFrom').value = S.plan.availableFrom;
+  $('#availableTo').value = S.plan.availableTo;
+  $('#clearAvailability').hidden = !hasAvailability(S.plan);
+}
+
+function renderRunMiniTimeline() {
+  const box = $('#runMiniTimeline'), run = currentRun(), w = run.window;
+  if (!w?.slice?.length) { box.innerHTML = ''; return; }
+  const points = w.slice.map(h => ({ time: hhmm(h.t), score: h.score, temp: round(h.temp), end: false }));
+  const last = w.slice.at(-1);
+  points.push({ time: hhmm(w.end), score: last.score, temp: round(last.temp), end: true });
+  box.innerHTML = `<div class="run-mini__head"><b>${T.runTimelineTitle}</b><span>${T.min(runDuration())}</span></div>
+    <div class="run-mini__track">${points.map((p, i) => `
+      <div class="run-mini__point${p.end ? ' is-end' : ''}">
+        <span class="run-mini__dot" style="background:${bandColor(p.score)}"></span>
+        <b>${p.time}</b><small>${p.end ? T.runTimelineEnd : `${p.score}/100 · ${p.temp}°`}</small>
+      </div>`).join('')}</div>`;
+}
+
+function plannerStartOptions() {
+  const fromMin = timeToMinutes(S.plan.availableFrom), toMin = timeToMinutes(S.plan.availableTo);
+  return runStartOptions(S.hours, runDuration(), {
+    horizonHours: 4,
+    fromMin: hasAvailability(S.plan) ? fromMin : null,
+    toMin: hasAvailability(S.plan) ? toMin : null
+  });
+}
+
+function renderStartCompare() {
+  const box = $('#startCompare'), options = plannerStartOptions();
+  const best = bestStartOption(options);
+  box.innerHTML = `<div class="start-compare__head">${T.compareStarts}</div>` +
+    (options.length ? `<div class="start-compare__grid">${options.slice(0, 6).map((o, i) => {
+      const isBest = o === best;
+      return `<div class="start-option${isBest ? ' is-best' : ''}">
+        <span>${o.waitMin <= 30 && i === 0 ? T.startNow : hhmm(o.slice[0].t)}</span>
+        <b style="color:${bandColor(o.score)}">${o.score}</b>
+        <small>${isBest ? T.startBest : windowText(o)}</small>
+      </div>`;
+    }).join('')}</div>` : `<p class="start-compare__empty">${T.noStartOptions}</p>`);
+}
+
+function renderWatchControl() {
+  const button = $('#watchBest'), status = $('#watchStatus');
+  const active = !!S.watch?.enabled;
+  button.textContent = active ? T.stopWatch : T.watchBest;
+  button.classList.toggle('is-on', active);
+  status.hidden = !active;
+  status.textContent = active ? T.watchActive : '';
+  if (active && 'Notification' in window && Notification.permission === 'denied') {
+    status.hidden = false; status.textContent = T.watchPermission;
+  }
+}
+
+async function sendWatchNotification(option) {
+  if (!('Notification' in window) || Notification.permission !== 'granted' || !option) return;
+  const title = T.watchChangedTitle, body = T.watchChangedBody(windowText(option), option.score);
+  try {
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.ready;
+      await reg.showNotification(title, { body, tag: 'run-weather-watch', renotify: true });
+    } else {
+      new Notification(title, { body, tag: 'run-weather-watch' });
+    }
+  } catch {}
+}
+
+function checkWatch() {
+  if (!S.watch?.enabled || !S.bundle) return;
+  const key = `${S.place.lat.toFixed(2)},${S.place.lon.toFixed(2)}`;
+  if (S.watch.placeKey !== key) return;
+  const option = bestStartOption(plannerStartOptions());
+  const change = watchChange(S.watch, option);
+  if (!change || !option) return;
+  sendWatchNotification(option);
+  S.watch = makeWatch(option, S.place, runDuration());
+  saveWatch(S.watch);
+}
+
+function routeWindLabel() {
+  const first = currentRun().window?.slice?.[0];
+  const kind = routeWindContext(S.route, first?.windDir);
+  return kind ? T[kind] : T.windUnknown;
 }
 
 function renderStrip() {
@@ -275,7 +399,7 @@ function renderStrip() {
     const D = S.bundle.weather.daily;
     box.innerHTML = D.time.map((t, i) => {
       const dt = new Date(t + 'T12:00');
-      const bw = bestWindowOfDay(S.hours, t, S.profile.duration);
+      const bw = bestWindowOfDay(S.hours, t, runDuration());
       return `<div class="hitem"><div class="hitem__t">${dowOf(dt)}</div>
         <div class="hitem__i">${weatherIcon(D.weather_code[i], 1)}</div>
         <div class="hitem__d">${round(D.temperature_2m_max[i])}°</div>
@@ -304,9 +428,10 @@ $('#btnAddCity').addEventListener('click', () => go('cities'));
 $('#btnLocate').addEventListener('click', locate);
 $('.duration-quick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick-duration]');
-  if (b && selectDuration(S.profile, b.dataset.quickDuration, saveProfile) && S.bundle) {
-    recompute(); paint();
-  }
+  if (!b) return;
+  S.plan.mode = 'duration'; saveRunPlan(S.plan);
+  if (selectDuration(S.profile, b.dataset.quickDuration, saveProfile) && S.bundle) recompute();
+  if (S.bundle) paint();
 });
 $('.near-term__choices').addEventListener('click', e => {
   const b = e.target.closest('[data-horizon]');
@@ -314,6 +439,52 @@ $('.near-term__choices').addEventListener('click', e => {
   S.horizon = Number(b.dataset.horizon);
   if (S.bundle) renderHome();
 });
+
+$('.run-mode__choices').addEventListener('click', e => {
+  const b = e.target.closest('[data-run-mode]'); if (!b) return;
+  S.plan.mode = b.dataset.runMode; saveRunPlan(S.plan);
+  if (S.bundle) paint();
+});
+$('.distance-plan__presets').addEventListener('click', e => {
+  const b = e.target.closest('[data-distance]'); if (!b) return;
+  S.plan.distanceKm = Number(b.dataset.distance); saveRunPlan(S.plan);
+  if (S.bundle) paint();
+});
+$('#distanceKm').addEventListener('change', e => {
+  const v = Math.max(1, Math.min(100, Number(e.target.value) || 10));
+  S.plan.distanceKm = Math.round(v * 10) / 10; saveRunPlan(S.plan);
+  if (S.bundle) paint();
+});
+$('#paceInput').addEventListener('change', e => {
+  const pace = parsePace(e.target.value);
+  if (pace == null) { e.target.value = paceText(S.plan.paceSecPerKm); return; }
+  S.plan.paceSecPerKm = pace; saveRunPlan(S.plan);
+  if (S.bundle) paint();
+});
+for (const id of ['availableFrom','availableTo']) {
+  $('#' + id).addEventListener('change', e => {
+    S.plan[id === 'availableFrom' ? 'availableFrom' : 'availableTo'] = e.target.value;
+    saveRunPlan(S.plan); if (S.bundle) paint();
+  });
+}
+$('#clearAvailability').addEventListener('click', () => {
+  S.plan.availableFrom = ''; S.plan.availableTo = ''; saveRunPlan(S.plan);
+  if (S.bundle) paint();
+});
+
+$('#watchBest').addEventListener('click', async () => {
+  if (S.watch?.enabled) {
+    S.watch = null; saveWatch(null); if (S.bundle) renderHome(); return;
+  }
+  const option = bestStartOption(plannerStartOptions()) || currentRun().window;
+  if (!option) return;
+  if ('Notification' in window && Notification.permission === 'default') {
+    try { await Notification.requestPermission(); } catch {}
+  }
+  S.watch = makeWatch(option, S.place, runDuration()); saveWatch(S.watch);
+  if (S.bundle) renderHome();
+});
+$('#logRunFeedback').addEventListener('click', () => openFeedbackSheet());
 
 function locate() {
   if (!navigator.geolocation) return toast(T.myLocation + ' —');
@@ -331,7 +502,7 @@ function renderHourly() {
   $('#hourlyCity').textContent = S.place.name;
   $('#hourlyDate').textContent = `${dowOf(d)}, ${dateOf(d)}`;
   const n = nowIndex(), list = S.hours.slice(n, n + 24);
-  const w = bestWindow(S.hours, S.profile.duration);
+  const w = bestWindow(S.hours, runDuration());
   const win = new Set(w ? w.slice.map(x => x.iso) : []);
 
   $('#hourlyRows').innerHTML = list.map((h, i) => `
@@ -390,7 +561,7 @@ function renderDaily() {
 
   let bestI = -1, bestV = -1;
   const sc = D.time.map((t, i) => {
-    const bw = bestWindowOfDay(S.hours, t, S.profile.duration);
+    const bw = bestWindowOfDay(S.hours, t, runDuration());
     const v = bw ? bw.score : null;
     if (v != null && v > bestV) { bestV = v; bestI = i; }
     return v;
@@ -445,13 +616,13 @@ function ring(score, size = 112) {
 function renderAnalysis() {
   const run = currentRun(), sc = run.score ?? 0;
   const h = run.window?.limiting.hour || run.window?.slice[0] || nowHour();
-  const w = bestWindow(S.hours, S.profile.duration);
+  const w = bestWindow(S.hours, runDuration());
   $('#ringWrap').innerHTML = ring(sc) +
     `<div class="ringcap" style="color:${bandColor(sc)}">${subFor(sc)}</div>`;
 
   const rows = [
     [T.bestTime, w ? windowText(w) : '—', ''],
-    [T.duration, T.min(S.profile.duration), S.profile.duration === 60 ? `<em>(${T.defaultWord})</em>` : ''],
+    [T.duration, T.min(runDuration()), runDuration() === 60 ? `<em>(${T.defaultWord})</em>` : ''],
     [T.mainConditions, run.limiting ? T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason]) : mainConditions(h), '']
   ];
   $('#analysisChecks').innerHTML = rows.map(([k, v, extra]) =>
@@ -485,6 +656,14 @@ function explainRun(run) {
   return weakest ? T.runWeakest(F_NAME()[weakest[0]], hhmm(weakest[1].hour.t)) : '';
 }
 
+function scoreBandRects(y, left, right) {
+  const bands = [
+    [100, 80, '#EAF7EE'], [80, 65, '#FFF7D8'], [65, 45, '#FFF0E4'], [45, 0, '#FDEBE8']
+  ];
+  return bands.map(([hi, lo, fill]) =>
+    `<rect x="${left}" y="${y(hi)}" width="${right - left}" height="${Math.max(0, y(lo) - y(hi))}" fill="${fill}"/>`).join('');
+}
+
 // График «как меняется в течение дня» — точки через 2 часа, скобка лучшего окна
 function drawDayChart() {
   const n = nowIndex();
@@ -494,7 +673,7 @@ function drawDayChart() {
   const step = (W - L - R) / (list.length - 1);
   const y = s => TOP + (100 - s) * 0.38;
   const pts = list.map((h, i) => [L + i * step, y(h.score)]);
-  const w = bestWindow(S.hours, S.profile.duration);
+  const w = bestWindow(S.hours, runDuration());
   const win = new Set(w ? w.slice.map(x => x.iso) : []);
   const inWin = list.map(h => win.has(h.iso));
   const first = inWin.indexOf(true), last = inWin.lastIndexOf(true);
@@ -512,6 +691,7 @@ function drawDayChart() {
 
   $('#dayChart').innerHTML = `
     <svg class="chart" role="img" aria-label="${T.chartSummary(list[0].score, list.at(-1).score, w ? windowText(w) : null)}" viewBox="0 0 ${W} ${H}">
+      ${scoreBandRects(y, L, W - R)}
       ${bracket}
       ${pts.map(p => `<line x1="${p[0]}" y1="${p[1] + 7}" x2="${p[0]}" y2="${ROW - 12}"
           stroke="#D8E1EB" stroke-width="1" stroke-dasharray="2 3"/>`).join('')}
@@ -540,7 +720,7 @@ $$('.utab[data-btab]').forEach(b => b.addEventListener('click', () => {
 
 function renderWhy() {
   const run = currentRun(), sc = run.score ?? 0;
-  $('#whyTitle').textContent = T.whyRun(S.profile.duration);
+  $('#whyTitle').textContent = T.whyRun(runDuration());
   $('#whyRing').innerHTML = ring(sc, 120);
   $('#whyCap').textContent = `${subFor(sc)} · ${run.window ? windowText(run.window) : '—'}${run.limiting ? ` · ${T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason])}` : ''}`;
   renderBreakdown();
@@ -563,6 +743,13 @@ const FMETA = () => ({
     (h.pollen ?? 0) < 10 ? T.low.toLowerCase() : (h.pollen ?? 0) < 50 ? T.moderate.toLowerCase() : T.high.toLowerCase()]
 });
 
+function factorTrend(run, key) {
+  const values = (run.window?.slice || []).map(h => h.factors?.[key]?.v).filter(Number.isFinite);
+  if (values.length < 2) return T.trendStable;
+  const delta = values.at(-1) - values[0];
+  return delta >= 5 ? `↗ ${T.trendBetter}` : delta <= -5 ? `↘ ${T.trendWorse}` : `→ ${T.trendStable}`;
+}
+
 function renderBreakdown() {
   const run = currentRun(); if (!run.window) return;
   const M = FMETA(), box = $('#breakdown'), es = Object.entries(run.factors);
@@ -581,7 +768,7 @@ function renderBreakdown() {
     const q = M[k][3](h);
     return `<button class="frow" data-factor="${k}">
       <span class="frow__ic">${M[k][1]}</span>
-      <span class="frow__k">${M[k][0]}<small>${hhmm(h.t)} · ${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''}</small></span>
+      <span class="frow__k">${M[k][0]}<small>${T.worstAt(hhmm(h.t))} · ${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''} · ${factorTrend(run, k)}</small></span>
       <span class="frow__n" style="color:${bandColor(v.v)}">${Math.round(v.v)}</span>
       <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg>
     </button>`;
@@ -656,8 +843,8 @@ function renderFactor() {
   const x = Math.max(2.5, Math.min(97.5, ((val - lo) / (hi - lo)) * 100));
   const col = bandColor(f.v);
   const desc = S.langCode === 'ru'
-    ? `${M[0]}: ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}.`
-    : `${M[0]} is ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}.`;
+    ? `${M[0]}: ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}. ${T.worstAt(hhmm(h.t))}.`
+    : `${M[0]} is ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}; ${T.worstAt(hhmm(h.t))}.`;
 
   $('#factorBody').innerHTML = `
     <div class="fhead"><span class="fhead__ic">${M[1]}</span><h1>${M[0]}</h1></div>
@@ -731,9 +918,19 @@ function drawTimelineChart(list) {
   const step = (W - L - R) / (pick.length - 1);
   const y = s => TOP + (100 - s) * 0.62;
   const pts = pick.map((h, i) => [L + i * step, y(h.score)]);
-  const w = bestWindow(S.hours, S.profile.duration);
+  const w = bestWindow(S.hours, runDuration());
   const win = new Set(w ? w.slice.map(x => x.iso) : []);
   const bi = pick.findIndex(h => win.has(h.iso));
+  const current = currentRun().window;
+  const currentSet = new Set(current ? current.slice.map(x => x.iso) : []);
+  const currentIdx = pick.map((h, i) => currentSet.has(h.iso) ? i : -1).filter(i => i >= 0);
+  const currentShade = currentIdx.length ? (() => {
+    const a = currentIdx[0], z = currentIdx.at(-1);
+    const x1 = Math.max(L, pts[a][0] - step * .42);
+    const x2 = Math.min(W - R, pts[z][0] + step * .42);
+    return `<rect x="${x1.toFixed(1)}" y="${TOP - 14}" width="${Math.max(10, x2 - x1).toFixed(1)}"
+      height="${BASE - TOP + 16}" rx="8" fill="#2F6FEB" opacity=".07"/>`;
+  })() : '';
 
   const lines = pts.slice(0, -1).map((p, i) =>
     `<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${pts[i + 1][0].toFixed(1)}"
@@ -751,7 +948,9 @@ function drawTimelineChart(list) {
       <defs><linearGradient id="tla" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#2E9E4F" stop-opacity=".2"/>
         <stop offset="100%" stop-color="#2E9E4F" stop-opacity=".02"/></linearGradient></defs>
+      ${scoreBandRects(y, L, W - R)}
       ${grid}
+      ${currentShade}
       <path d="${area}" fill="url(#tla)"/>
       ${lines}
       ${pts.filter((_, i) => i % 2 === 0).map((p, i) =>
@@ -1226,6 +1425,21 @@ function renderDetails() {
       <span class="drow__v" style="font-weight:560;color:var(--ink-2)">${V[k]}</span>
       <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg></button>`).join('');
 
+  $('#routeTitle').textContent = T.routeTitle;
+  $('#routeImportLabel').textContent = T.routeImport;
+  $('#routeClear').textContent = T.routeClear;
+  $('#routeClear').hidden = !S.route;
+  $('#routeSummary').textContent = S.route
+    ? T.routeSummary(S.route.distanceKm.toFixed(1), S.route.ascentM, routeWindLabel())
+    : '';
+  $('#historyTitle').textContent = T.historyTitle;
+  const effortName = e => e < 0 ? T.feedbackEasier : e > 0 ? T.feedbackHarder : T.feedbackExpected;
+  $('#historyList').innerHTML = S.history.length ? S.history.slice(0, 8).map(item => {
+    const d = new Date(item.savedAt);
+    return `<div class="history-row"><span><b>${item.place || '—'}</b><small>${d.toLocaleDateString(T.lang)} · ${item.duration} min</small></span>
+      <strong style="color:${bandColor(item.score)}">${item.score}</strong><em>${effortName(item.effort)}</em></div>`;
+  }).join('') : `<p class="history-empty">${T.historyEmpty}</p>`;
+
   $('#langChooser').innerHTML = [['en', 'English'], ['ru', 'Русский']]
     .map(([c, n]) => `<button class="chip ${S.langCode === c ? 'is-on' : ''}" data-lang="${c}">${n}</button>`).join('');
 }
@@ -1235,6 +1449,22 @@ $('#profileList').addEventListener('click', e => {
 $('#langChooser').addEventListener('click', e => {
   const b = e.target.closest('[data-lang]'); if (!b) return;
   S.langCode = b.dataset.lang; T = LANGS[S.langCode]; setLang(S.langCode); paint();
+});
+
+$('#gpxFile').addEventListener('change', async e => {
+  const file = e.target.files?.[0]; if (!file) return;
+  try {
+    const route = parseGpx(await file.text());
+    if (!route) return toast(T.routeInvalid);
+    route.name = file.name.replace(/\.gpx$/i, '') || T.routeTitle;
+    S.route = route; saveRoute(route);
+    S.plan.mode = 'distance'; S.plan.distanceKm = route.distanceKm; saveRunPlan(S.plan);
+    toast(T.routeLoaded); if (S.bundle) paint();
+  } catch { toast(T.routeInvalid); }
+  finally { e.target.value = ''; }
+});
+$('#routeClear').addEventListener('click', () => {
+  S.route = null; saveRoute(null); if (S.bundle) paint();
 });
 
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
@@ -1346,7 +1576,7 @@ function openHourSheet(h) {
 function openDaySheet(iso) {
   const dt = new Date(iso + 'T12:00');
   const day = S.hours.filter(h => h.iso.slice(0, 10) === iso);
-  const bw = bestWindowOfDay(S.hours, iso, S.profile.duration);
+  const bw = bestWindowOfDay(S.hours, iso, runDuration());
   openSheet(`<h3>${dowOf(dt)}, ${dateOf(dt)}</h3>
     ${bw ? `<p>${T.bestWindow}: ${windowText(bw)} · ${bw.score}</p>` : ''}
     <div class="table">
@@ -1381,6 +1611,28 @@ function openProfileSheet(key) {
     if (key === 'duration') selectDuration(S.profile, b.dataset.set, saveProfile);
     else { S.profile[key] = b.dataset.set; saveProfile(S.profile); }
     recompute(); closeSheet(); paint(); toast(T.saved);
+  });
+}
+
+function openFeedbackSheet() {
+  const run = currentRun();
+  const body = openSheet(`<h3>${T.feedbackTitle}</h3>
+    <div class="chooser">
+      <button class="chip" data-effort="-1">${T.feedbackEasier}</button>
+      <button class="chip" data-effort="0">${T.feedbackExpected}</button>
+      <button class="chip" data-effort="1">${T.feedbackHarder}</button>
+    </div>`);
+  body.addEventListener('click', e => {
+    const b = e.target.closest('[data-effort]'); if (!b) return;
+    S.history = addRun({
+      place: S.place.name,
+      score: run.score ?? 0,
+      duration: runDuration(),
+      distanceKm: S.plan.mode === 'distance' ? S.plan.distanceKm : null,
+      effort: Number(b.dataset.effort),
+      startIso: run.window?.slice?.[0]?.iso || null
+    });
+    closeSheet(); paint(); toast(T.feedbackSaved);
   });
 }
 

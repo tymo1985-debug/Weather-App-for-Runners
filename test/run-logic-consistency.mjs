@@ -37,10 +37,10 @@ test('renderers and Share use one current run; duration changes stay local', () 
   assert.match(app, /const recommendation = currentRun\(\)/);
   assert.match(app, /function renderAnalysis\(\) \{\s*const run = currentRun\(\)/);
   assert.match(app, /function renderWhy\(\) \{\s*const run = currentRun\(\)/);
-  assert.match(app, /shareRun\(S\.place\.name, S\.profile\.duration,\s*currentRun\(\)\.score/);
+  assert.match(app, /shareRun\(S\.place\.name, runDuration\(\),\s*currentRun\(\)\.score/);
   assert.doesNotMatch(app, /nowScore\(\)/);
-  assert.match(app, /selectDuration\(S\.profile, b\.dataset\.quickDuration, saveProfile\) && S\.bundle\) \{\s*recompute\(\); paint\(\)/);
-  assert.match(app, /if \(key === 'duration'\) selectDuration\(S\.profile, b\.dataset\.set, saveProfile\);[\s\S]{0,150}recompute\(\); closeSheet\(\); paint\(\)/);
+  assert.match(app, /S\.plan\.mode = 'duration'; saveRunPlan\(S\.plan\);[\s\S]{0,140}selectDuration\(S\.profile, b\.dataset\.quickDuration, saveProfile\)/);
+  assert.match(app, /if \(key === 'duration'\) selectDuration\(S\.profile, b\.dataset\.set, saveProfile\);[\s\S]{0,180}recompute\(\); closeSheet\(\); paint\(\)/);
 });
 
 test('Share renders the selected duration and current-window score in both languages', () => {
