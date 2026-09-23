@@ -1365,7 +1365,7 @@ const BASEMAPS = [
   ['light', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--light'],
   ['dark', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--dark']
 ];
-const R = { map: null, base: null, baseIdx: 0, marker: null, frames: [], layers: new Map(),
+const R = { map: null, base: null, baseIdx: 1, marker: null, frames: [], layers: new Map(),
   idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false,
   modelReady: false, modelLoading: false, modelRetryAt: 0 };
 
@@ -1381,6 +1381,18 @@ function mapState(kind, msg) {
     : `<div class="mapstate__box"><span>${msg}</span>
         <button class="mapstate__retry" id="mapRetry">${T.retry}</button></div>`;
   if (kind === 'error') $('#mapRetry').addEventListener('click', () => { R.ready = false; initRadar(); });
+}
+
+function setForecastStatus(kind) {
+  const el = $('#radarForecastState');
+  if (!el) return;
+  el.className = 'radar__forecast-state' + (kind === 'ready' ? ' is-ready' : kind === 'retry' ? ' is-retry' : '');
+  if (kind === 'loading') el.textContent = T.modelLoading;
+  else if (kind === 'retry') el.textContent = T.modelRetrying;
+  else if (kind === 'ready') {
+    const last = [...R.frames].reverse().find(f => f.kind === 'model');
+    el.textContent = last ? T.modelReadyUntil(hhmm(atPlace(last.time))) : '';
+  } else el.textContent = '';
 }
 
 async function initRadar() {
@@ -1406,7 +1418,7 @@ async function initRadar() {
       R.map = L.map('map', { zoomControl: false, attributionControl: true, maxZoom: MAP_MAX_Z })
         .setView([S.place.lat, S.place.lon], RADAR_NATIVE_Z);
       R.map.attributionControl.setPrefix('');
-      setBasemap(0);
+      setBasemap(1);
       R.marker = L.circleMarker([S.place.lat, S.place.lon],
         { radius: 8, color: '#fff', weight: 3, fillColor: '#2F6FEB', fillOpacity: 1 }).addTo(R.map);
       bindMapControls();
@@ -1510,6 +1522,7 @@ async function loadFrames() {
   R.layers.clear();
   R.modelReady = false;
   R.modelRetryAt = 0;
+  setForecastStatus('loading');
   R.nowIdx = Math.max(0, past.length - 1);
   R.idx = R.nowIdx;
 
@@ -1525,14 +1538,12 @@ async function loadFrames() {
 // и та же цветовая шкала, что в легенде. Разрешение — десятки километров,
 // поэтому слой намеренно полупрозрачнее радарного, а кадр подписан «по модели».
 const MODEL_HOURS = 6;
-const GRID = 8;                        // 8×8 достаточно для грубого регионального слоя
-const MODEL_BATCH = 32;                // небольшие запросы стабильнее одного пакета на сотни точек
-const GRID_DLON = 3.4;                 // половина ширины области, градусы
-// По вертикали видимая часть карты зависит от широты (проекция Меркатора),
-// поэтому высоту области считаем от неё, иначе прогноз не закрывает экран.
+const GRID = 5;                         // лёгкая 5×5 сетка: фон остаётся грубым, но запрос надёжный
+const MODEL_STEPS = MODEL_HOURS * 4;    // 15-минутные кадры на 6 часов
+const GRID_DLON = 3.4;
 const gridDLat = lat => Math.min(4.6, Math.max(2, 4.6 * Math.cos(lat * Math.PI / 180)));
 
-const PRECIP_STOPS = [                 // мм/ч → цвет, совпадает с .radar__grad
+const PRECIP_STOPS = [
   [0.1, [127, 212, 193]], [0.4, [95, 196, 126]], [1, [201, 222, 94]],
   [2, [242, 209, 76]], [4, [238, 154, 63]], [8, [228, 96, 63]],
   [16, [195, 58, 107]], [30, [156, 47, 165]]
@@ -1542,18 +1553,17 @@ function precipColor(mm) {
   if (!(mm > 0.08)) return [0, 0, 0, 0];
   let col = PRECIP_STOPS[PRECIP_STOPS.length - 1][1];
   for (let i = 0; i < PRECIP_STOPS.length; i++) {
-    const [lim, c] = PRECIP_STOPS[i];
+    const [lim, colour] = PRECIP_STOPS[i];
     if (mm <= lim) {
-      const [plim, pc] = PRECIP_STOPS[i - 1] || [0, PRECIP_STOPS[0][1]];
+      const [plim, prev] = PRECIP_STOPS[i - 1] || [0, PRECIP_STOPS[0][1]];
       const t = lim > plim ? (mm - plim) / (lim - plim) : 0;
-      col = c.map((v, k) => Math.round(pc[k] + (v - pc[k]) * t));
+      col = colour.map((v, k) => Math.round(prev[k] + (v - prev[k]) * t));
       break;
     }
   }
   return [col[0], col[1], col[2], Math.round(255 * Math.min(1, .3 + mm / 3))];
 }
 
-// Сетка 8×8 растягивается на картинку 128×128 — края получаются мягкими.
 function paintGrid(vals) {
   const N = 128, cv = document.createElement('canvas');
   cv.width = cv.height = N;
@@ -1564,26 +1574,26 @@ function paintGrid(vals) {
       const gx = x / (N - 1) * (GRID - 1), x0 = Math.floor(gx), x1 = Math.min(GRID - 1, x0 + 1), tx = gx - x0;
       const v = vals[y0][x0] * (1 - tx) * (1 - ty) + vals[y0][x1] * tx * (1 - ty)
               + vals[y1][x0] * (1 - tx) * ty + vals[y1][x1] * tx * ty;
-      const c = precipColor(v), p = (y * N + x) * 4;
-      img.data[p] = c[0]; img.data[p + 1] = c[1]; img.data[p + 2] = c[2]; img.data[p + 3] = c[3];
+      const colour = precipColor(v), p = (y * N + x) * 4;
+      img.data[p] = colour[0]; img.data[p + 1] = colour[1]; img.data[p + 2] = colour[2]; img.data[p + 3] = colour[3];
     }
   }
   ctx.putImageData(img, 0, 0);
   return cv.toDataURL('image/png');
 }
 
-// Модельные кадры всегда лежат в хвосте — их можно отбросить, не трогая радар.
 function dropModelFrames() {
   R.modelReady = false;
   R.modelRetryAt = 0;
   const keep = R.frames.filter(f => f.kind !== 'model').length;
   if (keep !== R.frames.length) {
-    R.layers.forEach((l, k) => { if (k >= keep) { R.map.removeLayer(l); R.layers.delete(k); } });
+    R.layers.forEach((layer, k) => { if (k >= keep) { R.map.removeLayer(layer); R.layers.delete(k); } });
     R.frames.length = keep;
     if (R.idx >= keep) R.idx = R.nowIdx;
   }
   const sl = $('#radarTime');
   sl.max = Math.max(0, keep - 1);
+  setForecastStatus('loading');
   renderTicks();
   if (R.frames[R.idx]) showFrame(R.idx);
 }
@@ -1591,34 +1601,36 @@ function dropModelFrames() {
 function ensureModelForecast() {
   if (!R.frames.length || R.modelReady || R.modelLoading || Date.now() < R.modelRetryAt) return;
   R.modelLoading = true;
+  setForecastStatus('loading');
   loadModel()
-    .then(ok => { if (ok) { R.modelReady = true; R.modelRetryAt = 0; } })
+    .then(() => {
+      R.modelReady = true;
+      R.modelRetryAt = 0;
+      setForecastStatus('ready');
+    })
     .catch(e => {
       R.modelReady = false;
       const retryDelay = 30000;
       R.modelRetryAt = Date.now() + retryDelay;
+      setForecastStatus('retry');
       console.warn('precip forecast unavailable:', e);
       setTimeout(() => {
         if (!R.modelReady && R.placeKey === placeKey(S.place)) ensureModelForecast();
       }, retryDelay + 100);
     })
-    .finally(() => {
-      R.modelLoading = false;
-      if (!R.modelReady && R.placeKey === placeKey(S.place) && Date.now() >= R.modelRetryAt) {
-        setTimeout(ensureModelForecast, 0);
-      }
-    });
+    .finally(() => { R.modelLoading = false; });
 }
 
-async function fetchModelBatch(points) {
+async function fetchModelGrid(points) {
   const lats = points.map(p => p.lat).join(',');
   const lons = points.map(p => p.lon).join(',');
-  const res = await fetch('https://api.open-meteo.com/v1/forecast'
+  const url = 'https://api.open-meteo.com/v1/forecast'
     + `?latitude=${lats}&longitude=${lons}`
-    + '&hourly=precipitation&forecast_days=2&timezone=UTC&timeformat=unixtime')
-    .then(r => { if (!r.ok) throw new Error('model'); return r.json(); });
+    + `&minutely_15=precipitation&forecast_minutely_15=${MODEL_STEPS + 2}`
+    + '&timezone=UTC&timeformat=unixtime&cell_selection=nearest';
+  const res = await fetch(url).then(r => { if (!r.ok) throw new Error('model'); return r.json(); });
   const rows = Array.isArray(res) ? res : [res];
-  if (rows.length !== points.length) throw new Error('grid batch');
+  if (rows.length !== points.length) throw new Error('grid');
   return rows;
 }
 
@@ -1628,45 +1640,44 @@ async function loadModel() {
   const top = Math.min(89.5, lat0 + dLat), bot = Math.max(-89.5, lat0 - dLat);
   const points = [];
   for (let r = 0; r < GRID; r++)
-    for (let c = 0; c < GRID; c++) {
+    for (let col = 0; col < GRID; col++) {
       points.push({
         lat: (top - r * (top - bot) / (GRID - 1)).toFixed(2),
-        lon: (lon0 - GRID_DLON + c * (2 * GRID_DLON / (GRID - 1))).toFixed(2)
+        lon: (lon0 - GRID_DLON + col * (2 * GRID_DLON / (GRID - 1))).toFixed(2)
       });
     }
 
-  const batches = [];
-  for (let i = 0; i < points.length; i += MODEL_BATCH) batches.push(points.slice(i, i + MODEL_BATCH));
-  const pts = (await Promise.all(batches.map(fetchModelBatch))).flat();
+  const pts = await fetchModelGrid(points);
+  if (key !== placeKey(S.place) || !R.frames.length) throw new Error('stale model');
 
-  if (pts.length !== GRID * GRID) throw new Error('grid');
-  if (key !== placeKey(S.place) || !R.frames.length) return false;   // город успели сменить
-
-  const times = pts[0].hourly.time.map(t => t * 1000);
-  const after = R.frames[R.frames.length - 1].time;
-  const limit = Date.now() + MODEL_HOURS * 3600e3;
+  const timeline = pts[0].minutely_15;
+  if (!timeline?.time?.length) throw new Error('no model timeline');
+  const times = timeline.time.map(t => Number(t) * 1000);
+  const cutoff = Math.max(Date.now(), R.frames[R.nowIdx]?.time || 0);
+  const limit = cutoff + MODEL_HOURS * 3600e3;
   const bounds = [[bot, lon0 - GRID_DLON], [top, lon0 + GRID_DLON]];
   const add = [];
 
-  for (let h = 0; h < times.length && add.length < MODEL_HOURS; h++) {
-    if (!(times[h] > after) || times[h] > limit) continue;
+  for (let h = 0; h < times.length && add.length < MODEL_STEPS; h++) {
+    if (!(times[h] > cutoff) || times[h] > limit) continue;
     const vals = [];
     for (let r = 0; r < GRID; r++) {
       const row = [];
-      for (let c = 0; c < GRID; c++) row.push(pts[r * GRID + c].hourly?.precipitation?.[h] ?? 0);
+      for (let col = 0; col < GRID; col++) {
+        const quarterHourMm = Number(pts[r * GRID + col].minutely_15?.precipitation?.[h] ?? 0);
+        row.push(Math.max(0, quarterHourMm) * 4); // переводим 15-минутную сумму в интенсивность мм/ч
+      }
       vals.push(row);
     }
     add.push({ time: times[h], kind: 'model', forecast: true, img: paintGrid(vals), bounds });
   }
 
-  if (add.length) {
-    R.frames.push(...add);
-    const sl = $('#radarTime');
-    sl.max = R.frames.length - 1;
-    renderTicks();
-    showFrame(R.idx);
-  }
-  return true;
+  if (!add.length) throw new Error('no future model frames');
+  R.frames.push(...add);
+  const sl = $('#radarTime');
+  sl.max = R.frames.length - 1;
+  renderTicks();
+  showFrame(R.idx);
 }
 
 // Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.

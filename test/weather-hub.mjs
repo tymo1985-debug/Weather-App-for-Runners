@@ -47,7 +47,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v29/);
+  assert.match(sw, /shell-v30/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -91,38 +91,36 @@ test('radar basemap no longer depends on keyed CARTO tiles', () => {
   assert.match(app, /© OpenStreetMap contributors · © RainViewer/);
 });
 
-test('Weather Hub attaches Run Score under the hero and keeps a compact radar preview', () => {
-  assert.match(css, /\.weather-hero\{[^}]*min-height:204px[^}]*border-radius:0/);
-  assert.match(css, /\.weather-run-score\{[^}]*width:100%[^}]*min-height:52px[^}]*border-radius:0 0 18px 18px/);
-  assert.match(css, /\.weather-run-score__action\{display:none\}/);
+test('Weather Hub keeps Run Score near the hero without pinning it into full-screen radar', () => {
+  assert.match(css, /\.weather-run-score\{[^}]*width:calc\(100% - 28px\)[^}]*border-radius:16px/);
+  assert.match(css, /body\.radar-expanded \.weather-run-score\{display:none\}/);
   assert.match(css, /\.weather-radar__map\{[^}]*height:clamp\(255px,64vw,310px\)/);
   assert.match(css, /\.weather-radar-card\.is-expanded \.weather-radar__map\{height:100dvh/);
-  const heroEnd = html.indexOf('</header>', html.indexOf('id="weatherHero"'));
-  const score = html.indexOf('id="weatherRunScore"');
-  const body = html.indexOf('class="weather-hub__body"');
-  assert.ok(heroEnd < score && score < body);
 });
 
 
-test('radar map styles use an explicit layer picker', () => {
+test('radar map styles use an explicit layer picker and default to the simple map', () => {
   assert.equal((html.match(/data-map-layer=/g) || []).length, 3);
   assert.match(html, /id="mapLayerMenu"/);
   assert.match(app, /function setLayerMenuOpen\(on\)/);
   assert.match(app, /function syncLayerMenu\(\)/);
-  assert.ok(app.includes("$('[data-map-layer]').forEach"));
-  assert.doesNotMatch(app, /(^|\n)\s*\$\('\[data-map-layer\]'\)\.forEach/m);
-  assert.match(app, /setBasemap\(Number\(b\.dataset\.mapLayer\)\)/);
-  assert.doesNotMatch(app, /setBasemap\(\(R\.baseIdx \+ 1\) % BASEMAPS\.length\)/);
+  assert.ok(app.includes("$$('[data-map-layer]').forEach"));
+  assert.ok(!app.includes("\n  $('[data-map-layer]').forEach"));
+  assert.match(app, /baseIdx: 1/);
+  assert.match(app, /setBasemap\(1\)/);
+  assert.match(css, /map-base--light\{filter:grayscale\(\.82\)/);
 });
 
-test('regional precipitation forecast uses small batches and can retry after failure', () => {
-  assert.match(app, /const GRID = 8/);
-  assert.match(app, /const MODEL_BATCH = 32/);
-  assert.match(app, /Promise\.all\(batches\.map\(fetchModelBatch\)\)/);
-  assert.match(app, /function ensureModelForecast\(\)/);
+test('regional precipitation forecast uses lightweight 15-minute model frames and retries', () => {
+  assert.match(app, /const GRID = 5/);
+  assert.match(app, /const MODEL_STEPS = MODEL_HOURS \* 4/);
+  assert.match(app, /minutely_15=precipitation/);
+  assert.match(app, /forecast_minutely_15=\$\{MODEL_STEPS \+ 2\}/);
+  assert.match(app, /quarterHourMm\) \* 4/);
+  assert.match(app, /if \(!add\.length\) throw new Error\('no future model frames'\)/);
   assert.match(app, /const retryDelay = 30000/);
-  assert.match(app, /modelRetryAt = Date\.now\(\) \+ retryDelay/);
-  assert.doesNotMatch(app, /точек 256/);
+  assert.match(html, /id="radarForecastState"/);
+  assert.match(app, /setForecastStatus\('ready'\)/);
 });
 
 test('normal radar timeline is compact while full-screen restores full controls', () => {
@@ -132,7 +130,7 @@ test('normal radar timeline is compact while full-screen restores full controls'
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.29.0');
+  assert.equal(APP_VERSION, '0.30.0');
   assert.equal(RELEASE_DATE, '2026-09-23');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
