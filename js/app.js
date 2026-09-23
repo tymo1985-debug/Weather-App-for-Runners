@@ -131,7 +131,7 @@ function expireDisplayedBundle() {
   dataError(true);
   return true;
 }
-function recompute() { S.hours = buildHours(S.bundle, S.profile); updateRouteWeather(); }
+function recompute() { S.hours = buildHours(S.bundle, S.profile); if (typeof updateRouteWeather === 'function') updateRouteWeather(); }
 function paint() { staticText(); RENDER[S.screen]?.(); }
 
 const nowIndex = () => {
