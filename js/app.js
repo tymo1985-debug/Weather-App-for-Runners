@@ -1192,7 +1192,134 @@ function renderAir() {
   });
 }
 
-// ── 9. РАДАР ───────────────────────────────────────────────────────────────
+// ── 9. WEATHER HUB ─────────────────────────────────────────────────────────
+const isPraguePlace = place => /^(prague|praha)$/i.test(String(place?.name || '').trim());
+
+function renderWeatherHub() {
+  const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
+  const hero = $('#weatherHero');
+  hero.classList.toggle('is-prague', isPraguePlace(S.place));
+  $('#weatherPlaceName').textContent = S.place.name;
+  $('#weatherHeroDate').textContent = `${dowOf(d)}, ${dateOf(d)} · ${hhmm(d)}`;
+  $('#weatherHeroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);
+  $('#weatherHeroTemp').textContent = round(cur.temperature_2m);
+  $('#weatherHeroCond').textContent = T.weather[cur.weather_code] || '';
+  $('#weatherHeroFeels').textContent = `${T.feelsLike} ${round(cur.apparent_temperature)}°`;
+  $('#weatherHeroMinMax').innerHTML =
+    `<span>↑ ${round(W.daily.temperature_2m_max[0])}°</span><span>↓ ${round(W.daily.temperature_2m_min[0])}°</span>`;
+
+  const sc = currentRun().score ?? 0;
+  const runCard = $('#weatherRunScore');
+  runCard.className = `weather-run-score is-${band(sc)}`;
+  $('#weatherRunValue').textContent = sc;
+  $('#weatherRunBand').textContent = bandText(sc);
+  runCard.setAttribute('aria-label', `${T.weatherRunNow}: ${sc} ${T.of100}, ${bandText(sc)}. ${T.weatherRunAction}`);
+
+  renderWeatherHourly();
+  renderWeatherDaily();
+  renderWeatherAir();
+  updateRadarExpandControl();
+  initRadar().then(() => setTimeout(() => R.map?.invalidateSize(), 0)).catch(() => {});
+}
+
+function renderWeatherHourly() {
+  const box = $('#weatherHourly'), n = Math.max(0, nowIndex());
+  const list = S.hours.slice(n, n + 8);
+  $$('[data-weather-mode]').forEach(b => {
+    const active = b.dataset.weatherMode === S.weatherMode;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+  if (!list.length) { box.innerHTML = ''; return; }
+
+  if (S.weatherMode === 'cards') {
+    box.innerHTML = `<div class="weather-hourly__cards">${list.map((h, i) => `
+      <button class="weather-hour" type="button" data-hour="${h.iso}">
+        <span class="weather-hour__time">${i === 0 ? T.now : hhmm(h.t)}</span>
+        <span class="weather-hour__icon">${weatherIcon(h.code, h.isDay)}</span>
+        <b>${round(h.temp)}°</b>
+        <small>${glyph.rain}<span>${h.pop}%</span></small>
+      </button>`).join('')}</div>`;
+    return;
+  }
+
+  const W = 340, H = 166, L = 18, RGT = 18, TOP = 24, BASE = 118;
+  const temps = list.map(h => h.temp);
+  const lo = Math.floor(Math.min(...temps) - 2), hi = Math.ceil(Math.max(...temps) + 2);
+  const span = Math.max(4, hi - lo);
+  const step = (W - L - RGT) / Math.max(1, list.length - 1);
+  const y = v => TOP + (hi - v) / span * 62;
+  const pts = list.map((h, i) => [L + i * step, y(h.temp)]);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  box.innerHTML = `<div class="weather-hourly__graph">
+    <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.weatherHourlyTitle}">
+      <path d="${line}" fill="none" stroke="#2F80ED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#2F80ED"/>
+        <text x="${p[0].toFixed(1)}" y="${Math.max(13,p[1]-10).toFixed(1)}" text-anchor="middle" class="weather-graph__temp">${round(list[i].temp)}°</text>`).join('')}
+      ${list.map((h, i) => {
+        const x = L + i * step, bh = Math.max(2, h.pop * .30);
+        return `<rect x="${(x-9).toFixed(1)}" y="${(BASE-bh).toFixed(1)}" width="18" height="${bh.toFixed(1)}" rx="4" fill="#58A8F6" opacity=".72"/>
+          <text x="${x.toFixed(1)}" y="${BASE+14}" text-anchor="middle" class="weather-graph__pop">${h.pop}%</text>
+          <text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:pad(h.t.getHours())}</text>`;
+      }).join('')}
+    </svg>
+    <div class="weather-graph__legend"><span><i class="is-temp"></i>${T.temperature}</span><span><i class="is-rain"></i>${T.colPrecip}</span></div>
+  </div>`;
+}
+
+function renderWeatherDaily() {
+  const D = S.bundle.weather.daily;
+  $('#weatherDaily').innerHTML = D.time.slice(0, 6).map((iso, i) => {
+    const dt = new Date(iso + 'T12:00');
+    return `<button type="button" class="weather-day" data-day="${iso}">
+      <span class="weather-day__date"><b>${i === 0 ? T.today : dowOf(dt)}</b><small>${dateOf(dt)}</small></span>
+      <span class="weather-day__icon">${weatherIcon(D.weather_code[i], 1)}</span>
+      <span class="weather-day__temp"><small>${round(D.temperature_2m_min[i])}°</small><b>${round(D.temperature_2m_max[i])}°</b></span>
+      <span class="weather-day__rain">${glyph.rain}<b>${D.precipitation_probability_max[i] ?? 0}%</b></span>
+      <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg>
+    </button>`;
+  }).join('');
+}
+
+function renderWeatherAir() {
+  const h = nowHour();
+  const box = $('#weatherAir');
+  const aqi = h?.aqi;
+  const aqiInfo = aqi == null ? null : aqiBand(aqi);
+  const aqiName = aqiInfo ? T.aqiNames[aqiInfo[0]] : '—';
+  const pollen = h?.pollen;
+  const pollenName = pollen == null ? '—' : pollen < 10 ? T.low : pollen < 50 ? T.moderate : pollen < 500 ? T.high : T.veryHigh;
+  box.innerHTML = `
+    <button class="weather-air__item" type="button" data-go="air">
+      <span class="weather-air__ic">${glyph.air}</span>
+      <span><small>${T.aqiWord}</small><b>${aqi == null ? '—' : Math.round(aqi)}</b><em>${aqiName}</em></span>
+    </button>
+    <button class="weather-air__item" type="button" data-go="air">
+      <span class="weather-air__ic">${glyph.leaf}</span>
+      <span><small>${T.weatherPollen}</small><b>${pollenName}</b><em>${pollen == null ? T.noPollen : ''}</em></span>
+    </button>`;
+}
+
+function updateRadarExpandControl() {
+  const b = $('#weatherRadarExpand');
+  if (!b) return;
+  b.innerHTML = S.radarExpanded
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4Z"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5v2H6v3H4Zm11-5h5v5h-2V6h-3V4ZM4 15h2v3h3v2H4v-5Zm14 0h2v5h-5v-2h3v-3Z"/></svg>';
+  b.setAttribute('aria-label', S.radarExpanded ? T.weatherCloseRadar : T.weatherExpandRadar);
+}
+
+function setRadarExpanded(on) {
+  S.radarExpanded = !!on;
+  const card = $('#weatherRadarCard');
+  if (!card) return;
+  card.classList.toggle('is-expanded', S.radarExpanded);
+  document.body.classList.toggle('radar-expanded', S.radarExpanded);
+  updateRadarExpandControl();
+  setTimeout(() => R.map?.invalidateSize(), 40);
+}
+
+// // ── 9. РАДАР ───────────────────────────────────────────────────────────────
 // Публичный API RainViewer с 2026 года не отдаёт тайлы выше 7-го зума:
 // вместо осадков приходит серая заглушка «Zoom Level Not Supported» с кодом 200,
 // которую Leaflet принимает за нормальный тайл. Держим карту в этих рамках.
