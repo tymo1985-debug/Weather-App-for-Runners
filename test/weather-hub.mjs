@@ -120,7 +120,8 @@ test('regional precipitation forecast uses small batches and can retry after fai
   assert.match(app, /const MODEL_BATCH = 32/);
   assert.match(app, /Promise\.all\(batches\.map\(fetchModelBatch\)\)/);
   assert.match(app, /function ensureModelForecast\(\)/);
-  assert.match(app, /modelRetryAt = Date\.now\(\) \+ 30000/);
+  assert.match(app, /const retryDelay = 30000/);
+  assert.match(app, /modelRetryAt = Date\.now\(\) \+ retryDelay/);
   assert.doesNotMatch(app, /точек 256/);
 });
 
