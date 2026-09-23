@@ -1,11 +1,11 @@
 const PREFIX = 'weather-runner-';
-const SHELL_CACHE = `${PREFIX}shell-v16`;
+const SHELL_CACHE = `${PREFIX}shell-v17`;
 const API_CACHE = `${PREFIX}api-v6`;
 const API_TTL_MS = 5 * 60 * 1000;
 const API_MAX_ENTRIES = 20;
 const SHELL = [
   './', './index.html', './css/styles.css',
-  './js/app.js', './js/home-ui.js', './js/engine.js', './js/icons.js',
+  './js/app.js', './js/home-ui.js', './js/run-plan.js', './js/engine.js', './js/icons.js',
   './js/i18n.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css'
