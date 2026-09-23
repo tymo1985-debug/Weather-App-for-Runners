@@ -301,6 +301,18 @@
     </button>
 
     <div class="weather-hub__body">
+      <section class="weather-card">
+        <div class="weather-card__head">
+          <b id="weatherHourlyTitle"></b>
+          <button class="weather-card__link" type="button" data-go="hourly"><span id="weatherHourlyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+        </div>
+        <div class="weather-hourly-mode" role="group" aria-label="Hourly weather view">
+          <button type="button" data-weather-mode="cards" class="is-on" aria-pressed="true"></button>
+          <button type="button" data-weather-mode="graph" aria-pressed="false"></button>
+        </div>
+        <div id="weatherHourly" class="weather-hourly"></div>
+      </section>
+
       <section class="weather-card weather-radar-card" id="weatherRadarCard">
         <div class="weather-card__head weather-radar-card__head">
           <div><b id="weatherRadarTitle"></b><small id="weatherRadarSubtitle"></small></div>
@@ -338,18 +350,16 @@
             <div class="radar__legend" id="radarLegend"></div>
           </div>
         </div>
-      </section>
-
-      <section class="weather-card">
-        <div class="weather-card__head">
-          <b id="weatherHourlyTitle"></b>
-          <button class="weather-card__link" type="button" data-go="hourly"><span id="weatherHourlyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+        <div class="radar-quick" id="radarQuick" role="group">
+          <div class="radar-quick__choices">
+            <button type="button" data-radar-offset="0"></button>
+            <button type="button" data-radar-offset="30" disabled></button>
+            <button type="button" data-radar-offset="60" disabled></button>
+            <button type="button" data-radar-offset="180" disabled></button>
+            <button type="button" data-radar-offset="360" disabled></button>
+          </div>
+          <small class="radar-quick__status" id="radarQuickStatus" aria-live="polite"></small>
         </div>
-        <div class="weather-hourly-mode" role="group" aria-label="Hourly weather view">
-          <button type="button" data-weather-mode="cards" class="is-on" aria-pressed="true"></button>
-          <button type="button" data-weather-mode="graph" aria-pressed="false"></button>
-        </div>
-        <div id="weatherHourly" class="weather-hourly"></div>
       </section>
 
       <section class="weather-card">
