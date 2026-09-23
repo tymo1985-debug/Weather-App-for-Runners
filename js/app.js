@@ -59,6 +59,7 @@ const RENDER = {
 };
 const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', why: 'home',
   factor: 'home', timeline: 'home', air: 'radar', radar: 'radar', cities: 'radar', details: 'details' };
+const tabFor = name => (['hourly', 'daily'].includes(name) && S.stack.at(-1) === 'radar') ? 'radar' : TAB_OF[name];
 
 function go(name, push = true) {
   if (name === S.screen) return;
@@ -67,8 +68,9 @@ function go(name, push = true) {
   if (push) { S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20); }
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
-  $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.go === TAB_OF[name]));
-  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === TAB_OF[name] ? 'page' : 'false'));
+  const activeTab = tabFor(name);
+  $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.go === activeTab));
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === activeTab ? 'page' : 'false'));
   window.scrollTo(0, 0);
   if (S.bundle) RENDER[name]?.();
   if (oldFocus.closest?.('.screen')) {
@@ -252,7 +254,7 @@ function staticText() {
     b.querySelector('.tab__ic').innerHTML = glyph[b.querySelector('.tab__ic').dataset.ic];
     b.querySelector('[data-t]').textContent = T[b.querySelector('[data-t]').dataset.t];
   });
-  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === TAB_OF[S.screen] ? 'page' : 'false'));
+  $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === tabFor(S.screen) ? 'page' : 'false'));
   ['.seg', '.utab[data-dcol]', '.utab[data-btab]'].forEach(syncPressed);
 }
 
@@ -1193,7 +1195,7 @@ function renderAir() {
 }
 
 // ── 9. WEATHER HUB ─────────────────────────────────────────────────────────
-const isPraguePlace = place => /^(prague|praha)$/i.test(String(place?.name || '').trim());
+const isPraguePlace = place => /^(prague|praha|prag|прага)$/i.test(String(place?.name || '').trim());
 
 function renderWeatherHub() {
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
