@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {
   normalizeWatchRequest, meaningfulWatchChange, notificationPayload, computeWatchOption
 } from '../worker/src/watch-core.js';
@@ -44,7 +45,7 @@ test('push payload is localized and contains navigation data',()=>{
   const p=notificationPayload({reason:'start'},next,'ru');
   assert.match(p.body,/19:00/);
   assert.equal(p.type,'weather-watch');
-  assert.equal(p.url,'./index.html');
+  assert.equal(p.url,'./');
 });
 
 test('application server key decoder handles base64url',()=>{
@@ -81,4 +82,13 @@ test('server watch option uses the existing run scorer and availability window',
   assert.equal(state.available,true);
   assert.equal(state.startIso,'2026-09-23T17:00');
   assert.ok(Number.isFinite(state.score));
+});
+
+
+test('PWA navigation uses the Cloudflare canonical root',()=>{
+  const manifest=JSON.parse(fs.readFileSync(new URL('../manifest.webmanifest',import.meta.url),'utf8'));
+  const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+  assert.equal(manifest.start_url,'./');
+  assert.ok(manifest.shortcuts.every(x=>!x.url.includes('index.html')));
+  assert.doesNotMatch(sw,/\.\/index\.html/);
 });
