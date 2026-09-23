@@ -7,6 +7,7 @@ import { loadBackgroundWatch, enableBackgroundWatch, disableBackgroundWatch } fr
 import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.js';
 import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
+import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from './version.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
@@ -235,6 +236,11 @@ function staticText() {
   $('#btnZoomIn').innerHTML = glyph.plus;
   $('#btnZoomOut').innerHTML = glyph.minus;
   $('#btnLayers').setAttribute('aria-label', T.layers);
+  $('#mapLayerTitle').textContent = T.layers;
+  $('#mapLayerStandard').textContent = T.basemapNames[0];
+  $('#mapLayerLight').textContent = T.basemapNames[1];
+  $('#mapLayerDark').textContent = T.basemapNames[2];
+  syncLayerMenu();
   $('#btnMapLocate').setAttribute('aria-label', T.myLocation);
   $('#btnZoomIn').setAttribute('aria-label', T.zoomIn);
   $('#btnZoomOut').setAttribute('aria-label', T.zoomOut);
@@ -247,6 +253,8 @@ function staticText() {
   $('#detailsTitle').textContent = T.weatherDetails;
   $('#profileTitle').textContent = T.yourProfile;
   $('#langTitle').textContent = T.language;
+  $('#appVersionTitle').textContent = T.appVersion;
+  $('#whatsNewTitle').textContent = T.whatsNew;
   $('#btnInstall').textContent = T.install;
   $('#tagline').textContent = T.tagline;
   $('#fineprint').textContent = T.dataNote;
@@ -1321,6 +1329,8 @@ function setRadarExpanded(on) {
   card.classList.toggle('is-expanded', S.radarExpanded);
   document.body.classList.toggle('radar-expanded', S.radarExpanded);
   updateRadarExpandControl();
+  setLayerMenuOpen(false);
+  renderTicks();
   setTimeout(() => R.map?.invalidateSize(), 40);
 }
 
@@ -1356,7 +1366,8 @@ const BASEMAPS = [
   ['dark', 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', 'map-base--dark']
 ];
 const R = { map: null, base: null, baseIdx: 0, marker: null, frames: [], layers: new Map(),
-  idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false };
+  idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false,
+  modelReady: false, modelLoading: false, modelRetryAt: 0 };
 
 const placeKey = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
 
@@ -1382,8 +1393,8 @@ async function initRadar() {
       R.map.setView([S.place.lat, S.place.lon], R.map.getZoom());
       R.marker.setLatLng([S.place.lat, S.place.lon]);
       dropModelFrames();                     // прогноз построен вокруг прежней точки
-      loadModel().catch(e => console.warn('precip forecast unavailable:', e));
     }
+    ensureModelForecast();
     return;
   }
 
@@ -1409,7 +1420,7 @@ async function initRadar() {
     R.ready = true;
     // Прогноз тянем отдельно и уже после показа радара: медленный ответ
     // Open-Meteo не должен задерживать карту, а его сбой — ломать радар.
-    loadModel().catch(e => console.warn('precip forecast unavailable:', e));
+    ensureModelForecast();
   } catch (e) {
     console.error('radar init failed:', e);
     mapState('error', T.radarOffline);
@@ -1434,15 +1445,31 @@ function firstLayerReady() {
   });
 }
 
+function setLayerMenuOpen(on) {
+  const menu = $('#mapLayerMenu');
+  if (!menu) return;
+  menu.hidden = !on;
+  $('#btnLayers')?.setAttribute('aria-expanded', String(!!on));
+}
+
+function syncLayerMenu() {
+  $('[data-map-layer]').forEach(b => {
+    const active = Number(b.dataset.mapLayer) === R.baseIdx;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
+}
+
 function setBasemap(i) {
-  R.baseIdx = i;
+  R.baseIdx = Math.max(0, Math.min(BASEMAPS.length - 1, Number(i) || 0));
   if (R.base) R.map.removeLayer(R.base);
-  R.base = L.tileLayer(BASEMAPS[i][1], {
+  R.base = L.tileLayer(BASEMAPS[R.baseIdx][1], {
     attribution: '© OpenStreetMap contributors · © RainViewer',
     maxZoom: MAP_MAX_Z,
     zIndex: 100,
-    className: BASEMAPS[i][2]
+    className: BASEMAPS[R.baseIdx][2]
   }).addTo(R.map);
+  syncLayerMenu();
 }
 
 // Пробный тайл: если 512 px недоступны — молча откатываемся на 256.
@@ -1481,6 +1508,8 @@ async function loadFrames() {
 
   R.layers.forEach(l => R.map.removeLayer(l));
   R.layers.clear();
+  R.modelReady = false;
+  R.modelRetryAt = 0;
   R.nowIdx = Math.max(0, past.length - 1);
   R.idx = R.nowIdx;
 
@@ -1496,7 +1525,8 @@ async function loadFrames() {
 // и та же цветовая шкала, что в легенде. Разрешение — десятки километров,
 // поэтому слой намеренно полупрозрачнее радарного, а кадр подписан «по модели».
 const MODEL_HOURS = 6;
-const GRID = 16;                       // узлов по стороне
+const GRID = 8;                        // 8×8 достаточно для грубого регионального слоя
+const MODEL_BATCH = 32;                // небольшие запросы стабильнее одного пакета на сотни точек
 const GRID_DLON = 3.4;                 // половина ширины области, градусы
 // По вертикали видимая часть карты зависит от широты (проекция Меркатора),
 // поэтому высоту области считаем от неё, иначе прогноз не закрывает экран.
@@ -1523,7 +1553,7 @@ function precipColor(mm) {
   return [col[0], col[1], col[2], Math.round(255 * Math.min(1, .3 + mm / 3))];
 }
 
-// Сетка 12×12 растягивается на картинку 128×128 — края получаются мягкими.
+// Сетка 8×8 растягивается на картинку 128×128 — края получаются мягкими.
 function paintGrid(vals) {
   const N = 128, cv = document.createElement('canvas');
   cv.width = cv.height = N;
@@ -1544,37 +1574,64 @@ function paintGrid(vals) {
 
 // Модельные кадры всегда лежат в хвосте — их можно отбросить, не трогая радар.
 function dropModelFrames() {
+  R.modelReady = false;
+  R.modelRetryAt = 0;
   const keep = R.frames.filter(f => f.kind !== 'model').length;
-  if (keep === R.frames.length) return;
-  R.layers.forEach((l, k) => { if (k >= keep) { R.map.removeLayer(l); R.layers.delete(k); } });
-  R.frames.length = keep;
-  if (R.idx >= keep) R.idx = R.nowIdx;
+  if (keep !== R.frames.length) {
+    R.layers.forEach((l, k) => { if (k >= keep) { R.map.removeLayer(l); R.layers.delete(k); } });
+    R.frames.length = keep;
+    if (R.idx >= keep) R.idx = R.nowIdx;
+  }
   const sl = $('#radarTime');
   sl.max = Math.max(0, keep - 1);
   renderTicks();
-  showFrame(R.idx);
+  if (R.frames[R.idx]) showFrame(R.idx);
+}
+
+function ensureModelForecast() {
+  if (!R.frames.length || R.modelReady || R.modelLoading || Date.now() < R.modelRetryAt) return;
+  R.modelLoading = true;
+  loadModel()
+    .then(ok => { if (ok) { R.modelReady = true; R.modelRetryAt = 0; } })
+    .catch(e => {
+      R.modelReady = false;
+      R.modelRetryAt = Date.now() + 30000;
+      console.warn('precip forecast unavailable:', e);
+    })
+    .finally(() => { R.modelLoading = false; });
+}
+
+async function fetchModelBatch(points) {
+  const lats = points.map(p => p.lat).join(',');
+  const lons = points.map(p => p.lon).join(',');
+  const res = await fetch('https://api.open-meteo.com/v1/forecast'
+    + `?latitude=${lats}&longitude=${lons}`
+    + '&hourly=precipitation&forecast_days=2&timezone=UTC&timeformat=unixtime')
+    .then(r => { if (!r.ok) throw new Error('model'); return r.json(); });
+  const rows = Array.isArray(res) ? res : [res];
+  if (rows.length !== points.length) throw new Error('grid batch');
+  return rows;
 }
 
 async function loadModel() {
   const key = placeKey(S.place);
   const lat0 = S.place.lat, lon0 = S.place.lon, dLat = gridDLat(lat0);
   const top = Math.min(89.5, lat0 + dLat), bot = Math.max(-89.5, lat0 - dLat);
-  const lats = [], lons = [];
+  const points = [];
   for (let r = 0; r < GRID; r++)
     for (let c = 0; c < GRID; c++) {
-      lats.push((top - r * (top - bot) / (GRID - 1)).toFixed(2));
-      lons.push((lon0 - GRID_DLON + c * (2 * GRID_DLON / (GRID - 1))).toFixed(2));
+      points.push({
+        lat: (top - r * (top - bot) / (GRID - 1)).toFixed(2),
+        lon: (lon0 - GRID_DLON + c * (2 * GRID_DLON / (GRID - 1))).toFixed(2)
+      });
     }
 
-  // timeformat=unixtime заметно уменьшает ответ: точек 256, и в каждой своя шкала времени.
-  const res = await fetch('https://api.open-meteo.com/v1/forecast'
-    + `?latitude=${lats.join(',')}&longitude=${lons.join(',')}`
-    + '&hourly=precipitation&forecast_days=2&timezone=UTC&timeformat=unixtime')
-    .then(r => { if (!r.ok) throw new Error('model'); return r.json(); });
+  const batches = [];
+  for (let i = 0; i < points.length; i += MODEL_BATCH) batches.push(points.slice(i, i + MODEL_BATCH));
+  const pts = (await Promise.all(batches.map(fetchModelBatch))).flat();
 
-  const pts = Array.isArray(res) ? res : [res];
   if (pts.length !== GRID * GRID) throw new Error('grid');
-  if (key !== placeKey(S.place) || !R.frames.length) return;   // город успели сменить
+  if (key !== placeKey(S.place) || !R.frames.length) return false;   // город успели сменить
 
   const times = pts[0].hourly.time.map(t => t * 1000);
   const after = R.frames[R.frames.length - 1].time;
@@ -1592,13 +1649,15 @@ async function loadModel() {
     }
     add.push({ time: times[h], kind: 'model', forecast: true, img: paintGrid(vals), bounds });
   }
-  if (!add.length) return;
 
-  R.frames.push(...add);
-  const sl = $('#radarTime');
-  sl.max = R.frames.length - 1;
-  renderTicks();
-  showFrame(R.idx);
+  if (add.length) {
+    R.frames.push(...add);
+    const sl = $('#radarTime');
+    sl.max = R.frames.length - 1;
+    renderTicks();
+    showFrame(R.idx);
+  }
+  return true;
 }
 
 // Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.
@@ -1649,7 +1708,10 @@ function renderTicks() {
   const at = i => (last ? i / last : 0) * 100;
   const MIN = 15;                       // минимальный зазор между метками, %
   const idxs = [];
-  for (const i of [0, R.nowIdx, last, Math.round((R.nowIdx + last) / 2)]) {
+  const candidates = S.radarExpanded
+    ? [0, R.nowIdx, Math.round((R.nowIdx + last) / 2), last]
+    : [0, R.nowIdx, last];
+  for (const i of candidates) {
     if (i < 0 || i > last) continue;
     if (idxs.some(j => Math.abs(at(j) - at(i)) < MIN)) continue;
     idxs.push(i);
@@ -1669,9 +1731,19 @@ function bindMapControls() {
   $('#btnZoomIn').addEventListener('click', () => R.map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => R.map.zoomOut());
   $('#btnMapLocate').addEventListener('click', () => R.map.setView([S.place.lat, S.place.lon], 8));
-  $('#btnLayers').addEventListener('click', () => {
-    setBasemap((R.baseIdx + 1) % BASEMAPS.length);
+  $('#btnLayers').addEventListener('click', e => {
+    e.stopPropagation();
+    setLayerMenuOpen($('#mapLayerMenu').hidden);
+  });
+  $('#mapLayerMenu').addEventListener('click', e => {
+    const b = e.target.closest('[data-map-layer]'); if (!b) return;
+    e.stopPropagation();
+    setBasemap(Number(b.dataset.mapLayer));
+    setLayerMenuOpen(false);
     toast(T.basemapNames[R.baseIdx]);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#mapLayerMenu') && !e.target.closest('#btnLayers')) setLayerMenuOpen(false);
   });
   $('#mapLive').addEventListener('click', () => { stopPlay(); showFrame(R.nowIdx); });
   $('#radarTicks').addEventListener('click', e => {
@@ -1769,6 +1841,14 @@ function renderDetails() {
 
   $('#langChooser').innerHTML = [['en', 'English'], ['ru', 'Русский']]
     .map(([c, n]) => `<button class="chip ${S.langCode === c ? 'is-on' : ''}" data-lang="${c}">${n}</button>`).join('');
+
+  const releaseDate = new Date(RELEASE_DATE + 'T12:00:00Z').toLocaleDateString(T.lang, {
+    day: 'numeric', month: 'short', year: 'numeric'
+  });
+  $('#appVersionMeta').textContent = `v${APP_VERSION} · ${T.updatedOn(releaseDate)}`;
+  $('#appVersionBadge').textContent = T.updateCurrent;
+  $('#whatsNewList').innerHTML = (RELEASE_NOTES[S.langCode] || RELEASE_NOTES.en)
+    .map(note => `<li>${note}</li>`).join('');
 }
 $('#profileList').addEventListener('click', e => {
   const b = e.target.closest('[data-opt]'); if (b) openProfileSheet(b.dataset.opt);
