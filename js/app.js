@@ -167,9 +167,10 @@ function staticText() {
   $('#icDur').innerHTML = glyph.target;
   $('#icUv').innerHTML = glyph.uv;
   $('#scoreHeadLbl').textContent = T.runningConditions;
-  $('#lblBestTime').textContent = T.bestTime;
+  $('#lblBestTime').textContent = T.recommendedStart;
   $('#lblDuration').textContent = T.duration;
   $('#quickDurationLabel').textContent = T.runDuration;
+  $('#quickDurationHint').textContent = T.runDurationHint;
   $('#runModeLabel').textContent = T.runModeLabel;
   $$('[data-run-mode]')[0].textContent = T.runModeDuration;
   $$('[data-run-mode]')[1].textContent = T.runModeDistance;
@@ -290,11 +291,11 @@ function renderHome() {
     $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(recommendation.limiting.hour.t), T.limitReasons[recommendation.limiting.reason])}`;
   const announcement = `${T.runningConditions}: ${sc} ${T.of100}, ${bandText(sc)}. ${$('#scoreSub').textContent}`;
   if ($('#recommendationStatus').textContent !== announcement) $('#recommendationStatus').textContent = announcement;
-  $('#lblBestTime').textContent = w ? T.betterLater : sc >= 65 ? T.runNow : T.conditionsNow;
   $('#factWindow').textContent = w
     ? `${windowText(w)} · ${w.score}/100${recommendation.overnight ? ` · ${T.overnightWindow}` : ''}`
     : recommendation.nowScore == null ? '—' : T.now;
   $('#factDuration').textContent = T.min(runDuration());
+  $('#runScenario').textContent = recommendation.nowScore == null ? '' : T.currentScoreScenario(runDuration());
   const near = nearTermRecommendation(S.hours, runDuration(), S.horizon);
   $('#nearTermAdvice').textContent = !near ? T.nearTermUnavailable : near.later
     ? T.nearTermWait(near.nowScore, near.later.score,
@@ -1296,7 +1297,7 @@ function renderWeatherAir() {
   box.innerHTML = `
     <button class="weather-air__item" type="button" data-go="air">
       <span class="weather-air__ic">${glyph.air}</span>
-      <span><small>${T.aqiWord}</small><b>${aqi == null ? '—' : Math.round(aqi)}</b><em>${aqiName}</em></span>
+      <span><small>${T.weatherAqiLabel}</small><b>${aqi == null ? '—' : `${T.aqiWord} ${Math.round(aqi)}`}</b><em>${aqiName}</em></span>
     </button>
     <button class="weather-air__item" type="button" data-go="air">
       <span class="weather-air__ic">${glyph.leaf}</span>
@@ -1741,7 +1742,7 @@ function renderDetails() {
   $('#profileList').innerHTML = [
     ['heat', T.heatTolerance, glyph.uv], ['cold', T.coldTolerance, glyph.temp],
     ['rain', T.rainPreference, glyph.rain], ['air', T.airSensitivity, glyph.air],
-    ['pollen', T.pollenSensitivity, glyph.leaf], ['duration', T.planToRun, glyph.clock]
+    ['pollen', T.pollenSensitivity, glyph.leaf], ['duration', T.usualRunDuration, glyph.clock]
   ].map(([k, label, ic]) => `<button class="drow" data-opt="${k}">
       <span class="drow__ic">${ic}</span><span class="drow__k">${label}</span>
       <span class="drow__v" style="font-weight:560;color:var(--ink-2)">${V[k]}</span>
