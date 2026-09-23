@@ -521,9 +521,9 @@ input{font:inherit}
 .run-mini__head span{font-size:12px;color:var(--muted);font-weight:650}
 .run-mini__track{display:flex;align-items:flex-start;gap:0;overflow-x:auto;scrollbar-width:none;padding:0 2px 2px}
 .run-mini__track::-webkit-scrollbar{display:none}
-.run-mini__point{position:relative;min-width:86px;padding-left:13px;display:grid;gap:1px}
-.run-mini__point:not(:last-child)::after{content:"";position:absolute;left:9px;right:-4px;top:5px;height:2px;background:#DDE6EF;z-index:0}
-.run-mini__dot{position:absolute;left:2px;top:1px;width:10px;height:10px;border-radius:50%;z-index:1;box-shadow:0 0 0 3px #fff}
+.run-mini__point{position:relative;min-width:86px;padding-top:17px;display:grid;gap:1px}
+.run-mini__point:not(:last-child)::after{content:"";position:absolute;left:6px;right:-6px;top:5px;height:2px;background:#DDE6EF;z-index:0}
+.run-mini__dot{position:absolute;left:0;top:0;width:12px;height:12px;border-radius:50%;z-index:1;box-shadow:0 0 0 3px #fff}
 .run-mini__point b{font-size:12.5px;font-variant-numeric:tabular-nums}
 .run-mini__point small{font-size:10.5px;color:var(--muted);font-weight:600;white-space:nowrap}
 .run-mini__point.is-end small{color:var(--ink-2)}
