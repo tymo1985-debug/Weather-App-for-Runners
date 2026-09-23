@@ -63,10 +63,14 @@ export function parseGpx(text){
   }
   if(pts.length<2) return null;
   let distanceKm=0,ascentM=0,bx=0,by=0;
+  let previousEle=Number.isFinite(pts[0].ele)?pts[0].ele:null;
   for(let i=1;i<pts.length;i++){
     const len=routeDistance(pts[i-1],pts[i]);
     distanceKm+=len;
-    if(pts[i-1].ele!=null&&pts[i].ele!=null&&pts[i].ele>pts[i-1].ele) ascentM+=pts[i].ele-pts[i-1].ele;
+    if(Number.isFinite(pts[i].ele)){
+      if(previousEle!=null&&pts[i].ele>previousEle) ascentM+=pts[i].ele-previousEle;
+      previousEle=pts[i].ele;
+    }
     const b=routeBearing(pts[i-1],pts[i]);
     if(Number.isFinite(b)&&len>0){bx+=Math.cos(rad(b))*len;by+=Math.sin(rad(b))*len;}
   }
