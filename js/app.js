@@ -1262,7 +1262,7 @@ function renderWeatherHourly() {
         const x = L + i * step, bh = Math.max(2, h.pop * .30);
         return `<rect x="${(x-9).toFixed(1)}" y="${(BASE-bh).toFixed(1)}" width="18" height="${bh.toFixed(1)}" rx="4" fill="#58A8F6" opacity=".72"/>
           <text x="${x.toFixed(1)}" y="${BASE+14}" text-anchor="middle" class="weather-graph__pop">${h.pop}%</text>
-          <text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:pad(h.t.getHours())}</text>`;
+          <text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:`${pad(h.t.getHours())}:00`}</text>`;
       }).join('')}
     </svg>
     <div class="weather-graph__legend"><span><i class="is-temp"></i>${T.temperature}</span><span><i class="is-rain"></i>${T.colPrecip}</span></div>
