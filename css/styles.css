@@ -563,3 +563,34 @@ input{font:inherit}
   .start-compare__grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .distance-plan__presets{grid-template-columns:repeat(3,minmax(0,1fr))}
 }
+
+
+/* ── RUN PLANNER ROADMAP · PHASE H-J ───────────────────────────── */
+.watch-btn,.run-log{width:100%;min-height:40px;border-radius:11px;font-size:12.5px;font-weight:680}
+.watch-btn{margin-top:9px;background:#EEF4FE;color:var(--blue);border:1px solid #D9E7FC}
+.watch-btn.is-on{background:#EAF7EE;color:var(--green-ink);border-color:#CDE8D6}
+.watch-status{margin:7px 2px 0;font-size:11px;line-height:1.35;color:var(--muted)}
+.run-card>.linkrow{width:100%;min-height:42px;margin:0;padding:0;justify-content:center;border-radius:12px;
+  background:#F5F8FC;color:var(--blue);font-size:13.5px;font-weight:680}
+.run-log{margin-top:7px;background:transparent;color:var(--ink-2);border:1px solid #E2E8F0}
+
+.route-tools{display:flex;gap:8px;align-items:center;margin-bottom:10px}
+.route-import,.route-clear{min-height:40px;border-radius:11px;padding:9px 12px;font-size:12.5px;font-weight:680;display:inline-flex;align-items:center}
+.route-import{background:var(--blue);color:#fff;cursor:pointer}
+.route-clear{background:#F2F5F8;color:var(--ink-2)}
+.route-summary{font-size:13px;color:var(--ink-2);font-weight:620;line-height:1.45}
+
+.history-list{display:grid;gap:0}
+.history-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--hair)}
+.history-row:first-child{border-top:0}
+.history-row span{min-width:0}
+.history-row b{display:block;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.history-row small{display:block;margin-top:2px;color:var(--muted);font-size:10.5px}
+.history-row strong{font-size:17px;font-variant-numeric:tabular-nums}
+.history-row em{font-size:10.5px;font-style:normal;color:var(--ink-2);font-weight:650;text-align:right}
+.history-empty{margin:0;color:var(--muted);font-size:12.5px}
+
+@media (max-width:360px){
+  .history-row{grid-template-columns:1fr auto}
+  .history-row em{grid-column:1/-1;text-align:left;margin-top:-5px}
+}
