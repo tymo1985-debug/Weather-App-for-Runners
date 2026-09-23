@@ -46,7 +46,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v26/);
+  assert.match(sw, /shell-v27/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -74,4 +74,11 @@ test('internal Weather city picker has an explicit back path', () => {
 test('Weather Hub accessibility labels are localized through staticText', () => {
   assert.match(app, /weather-hourly-mode'\)\.setAttribute\('aria-label', T\.weatherHourlyTitle\)/);
   assert.match(app, /weather-air-card \.weather-card__link'\)\.setAttribute\('aria-label', T\.weatherAirTitle\)/);
+});
+
+
+test('Weather Hub spells out air quality instead of showing an unexplained AQI acronym', () => {
+  assert.equal(LANGS.en.weatherAqiLabel, 'Air quality');
+  assert.equal(LANGS.ru.weatherAqiLabel, 'Качество воздуха');
+  assert.match(app, /<small>\$\{T\.weatherAqiLabel\}<\/small><b>\$\{aqi == null \? '—' : `\$\{T\.aqiWord\} \$\{Math\.round\(aqi\)\}`\}/);
 });
