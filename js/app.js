@@ -219,7 +219,7 @@ function staticText() {
   $('#weatherDailyTitle').textContent = T.weatherDailyTitle;
   $('#weatherDailyMore').textContent = T.weatherDailyMore;
   $('#weatherAirTitle').textContent = T.weatherAirTitle;
-  $('[data-weather-mode]').forEach(b => {
+  $$('[data-weather-mode]').forEach(b => {
     b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
   });
   $('#weatherPlace').setAttribute('aria-label', T.cities);
