@@ -669,9 +669,9 @@ input{font:inherit}
 .weather-hero__copy b{font-size:16px;line-height:1.15;font-weight:720}.weather-hero__copy span{font-size:11.5px;font-weight:560;opacity:.92}
 .weather-hero__minmax{display:flex;gap:16px;margin:6px 0 0 65px;font-size:12.5px;font-weight:700;text-shadow:0 1px 6px rgba(0,0,0,.22)}
 
-.weather-run-score{position:relative;z-index:3;width:100%;min-height:52px;background:linear-gradient(135deg,#F2FFF6,#E8F8EF);border:0;
-  border-bottom:1px solid #D7F0DF;border-radius:0 0 18px 18px;box-shadow:0 5px 14px rgba(24,73,47,.08);
-  padding:8px 16px;margin:0 0 10px;display:grid;grid-template-columns:28px minmax(0,1fr) 16px;align-items:center;gap:8px;text-align:left}
+.weather-run-score{position:relative;z-index:3;width:calc(100% - 28px);min-height:50px;background:linear-gradient(135deg,#F2FFF6,#E8F8EF);
+  border:1px solid #D7F0DF;border-radius:16px;box-shadow:0 5px 14px rgba(24,73,47,.08);
+  padding:8px 13px;margin:-8px auto 10px;display:grid;grid-template-columns:28px minmax(0,1fr) 16px;align-items:center;gap:8px;text-align:left}
 .weather-hub__body{position:relative;z-index:2;margin-top:0;padding:0 14px 18px}
 .weather-run-score.is-mid{background:#FFF9E8;border-color:#F5E7AE}.weather-run-score.is-low{background:#FFF2E9;border-color:#F3D4BE}
 .weather-run-score.is-bad{background:#FDEDEB;border-color:#F1CAC4}
@@ -696,9 +696,9 @@ input{font:inherit}
 .weather-radar-card{padding-bottom:12px}
 .weather-radar__map{position:relative;height:clamp(255px,64vw,310px);border-radius:16px;overflow:hidden;background:#22303B}
 .weather-radar__map #map{position:absolute;inset:0!important;bottom:0!important;z-index:0;background:#22303B}
-.weather-radar__map .map-base--standard{filter:saturate(.92) contrast(.98)}
-.weather-radar__map .map-base--light{filter:grayscale(.18) brightness(1.08) contrast(.92)}
-.weather-radar__map .map-base--dark{filter:invert(.90) hue-rotate(180deg) brightness(.72) saturate(.72)}
+.weather-radar__map .map-base--standard{filter:saturate(.72) contrast(.92) brightness(1.03)}
+.weather-radar__map .map-base--light{filter:grayscale(.82) saturate(.18) brightness(1.14) contrast(.76) opacity(.82)}
+.weather-radar__map .map-base--dark{filter:invert(.90) hue-rotate(180deg) brightness(.68) saturate(.52) contrast(.86)}
 .weather-radar__map .mapstate{position:absolute;inset:0!important;bottom:0!important;z-index:450;border-radius:16px}
 .weather-radar__map .mapchip{left:10px;right:68px;top:10px;padding:0;gap:7px}
 .weather-radar__map .mapchip__pin{width:16px;height:16px}
@@ -723,9 +723,12 @@ input{font:inherit}
 .weather-radar__map .radar__play svg{width:20px;height:20px}
 .weather-radar__map .radarpanel input[type=range]{height:36px}
 .weather-radar__map .radar__now{min-width:42px}.weather-radar__map .radar__now b{font-size:11px}.weather-radar__map .radar__now small{font-size:8.5px}
-.weather-radar__map .radar__ticks{height:15px;margin:1px 2px 0;font-size:8.5px}.weather-radar__map .radar__ticks span{padding:1px 2px}
+.weather-radar__map .radar__forecast-state{min-height:13px;margin:-1px 42px 0;color:var(--muted);font-size:8.5px;font-weight:650;text-align:center}
+.weather-radar__map .radar__forecast-state.is-ready{color:#276749}.weather-radar__map .radar__forecast-state.is-retry{color:#9A5B16}
+.weather-radar__map .radar__ticks{height:15px;margin:0 2px;font-size:8.5px}.weather-radar__map .radar__ticks span{padding:1px 2px}
 .weather-radar-card:not(.is-expanded) .radar__grad,.weather-radar-card:not(.is-expanded) .radar__legend{display:none}
 body.radar-expanded{overflow:hidden}
+body.radar-expanded .weather-run-score{display:none}
 .weather-radar-card.is-expanded{position:fixed;inset:0;z-index:1000;margin:0;padding:0;border-radius:0;background:#14213A;overflow:hidden}
 .weather-radar-card.is-expanded .weather-radar-card__head{position:absolute;left:0;right:0;top:0;z-index:610;margin:0;
   padding:max(12px,env(safe-area-inset-top)) 16px 10px;color:#fff;background:linear-gradient(180deg,rgba(11,25,42,.92),rgba(11,25,42,.68),transparent)}
@@ -741,7 +744,8 @@ body.radar-expanded{overflow:hidden}
 .weather-radar-card.is-expanded .radarpanel{left:14px;right:14px;width:auto;transform:none;bottom:max(16px,env(safe-area-inset-bottom));padding:12px 14px 13px;border-radius:20px}
 .weather-radar-card.is-expanded .radar__play{width:44px;height:44px}.weather-radar-card.is-expanded .radar__play svg{width:24px;height:24px}
 .weather-radar-card.is-expanded .radarpanel input[type=range]{height:44px}
-.weather-radar-card.is-expanded .radar__ticks{height:20px;margin:10px 2px 8px;font-size:12px}
+.weather-radar-card.is-expanded .radar__forecast-state{min-height:16px;margin:0 54px 2px;font-size:10.5px}
+.weather-radar-card.is-expanded .radar__ticks{height:20px;margin:6px 2px 8px;font-size:12px}
 .weather-radar-card.is-expanded .radar__now b{font-size:14px}.weather-radar-card.is-expanded .radar__now small{font-size:10.5px}
 .weather-radar-card.is-expanded .radar__grad,.weather-radar-card.is-expanded .radar__legend{display:flex}
 .weather-radar-card.is-expanded .radar__grad{display:block}
@@ -787,7 +791,7 @@ body.radar-expanded .tabbar{display:none}
   .weather-hero__icon{width:54px;height:58px}.weather-hero__temp{font-size:52px}
   .weather-hero__copy b{font-size:14px}.weather-hero__copy span{font-size:10.5px}
   .weather-hero__minmax{margin-left:59px}.weather-hub__body{padding-left:10px;padding-right:10px}
-  .weather-run-score{padding-left:12px;padding-right:12px}
+  .weather-run-score{width:calc(100% - 20px);padding-left:12px;padding-right:12px}
   .weather-run-score__copy small{font-size:9.5px}.weather-run-score__copy b{font-size:18px}.weather-run-score__copy>span{font-size:9.5px}
   .weather-radar__map{height:255px}.weather-day{grid-template-columns:minmax(66px,1fr) 34px 70px 46px 10px;gap:5px}
   .weather-card{padding-left:10px;padding-right:10px}.weather-air{gap:6px}.weather-air__item{padding:8px;grid-template-columns:29px 1fr}
