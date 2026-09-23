@@ -12,7 +12,7 @@ const [html, css, app, sw] = await Promise.all([
 
 test('bottom navigation is Home Weather Profile', () => {
   const nav = html.slice(html.indexOf('<nav class="tabbar'), html.indexOf('</nav>') + 6);
-  assert.equal((nav.match(/class="tab/g) || []).length, 3);
+  assert.equal((nav.match(/<button class="tab/g) || []).length, 3);
   assert.match(nav, /data-go="home"/);
   assert.match(nav, /data-go="radar"[^>]*>.*data-t="tabWeather"/s);
   assert.match(nav, /data-go="details"/);
