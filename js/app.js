@@ -245,8 +245,13 @@ function staticText() {
   $('#btnZoomIn').setAttribute('aria-label', T.zoomIn);
   $('#btnZoomOut').setAttribute('aria-label', T.zoomOut);
   $('#radarTime').setAttribute('aria-label', T.radarTime);
+  $$('[data-radar-offset]').forEach((b, i) => {
+    b.textContent = T.radarQuickLabels[i] || '';
+    b.setAttribute('aria-label', T.radarQuickLabels[i] || '');
+  });
   $('#radarLegend').innerHTML = [T.legLight, T.legModerate, T.legHeavy, T.legExtreme]
     .map(x => `<span>${x}</span>`).join('');
+  updateRadarQuick();
   if (!R.timer) stopPlay();
   if (!R.frames.length) $('#radarLabel').innerHTML = `<b>${T.now}</b>`;
   else { renderTicks(); showFrame(R.idx); }
@@ -1331,6 +1336,7 @@ function setRadarExpanded(on) {
   updateRadarExpandControl();
   setLayerMenuOpen(false);
   renderTicks();
+  updateRadarQuick();
   setTimeout(() => R.map?.invalidateSize(), 40);
 }
 
@@ -1347,6 +1353,14 @@ $('#weatherHourly').addEventListener('click', e => {
 });
 $('#weatherDaily').addEventListener('click', e => {
   const b = e.target.closest('[data-day]'); if (b) openDaySheet(b.dataset.day);
+});
+$('#radarQuick').addEventListener('click', e => {
+  const b = e.target.closest('[data-radar-offset]');
+  if (!b || b.disabled) return;
+  const idx = radarQuickFrameIndex(Number(b.dataset.radarOffset));
+  if (idx < 0) return;
+  stopPlay();
+  showFrame(idx);
 });
 $('#weatherRadarExpand').addEventListener('click', () => setRadarExpanded(!S.radarExpanded));
 document.addEventListener('keydown', e => {
@@ -1384,15 +1398,54 @@ function mapState(kind, msg) {
 }
 
 function setForecastStatus(kind) {
-  const el = $('#radarForecastState');
-  if (!el) return;
-  el.className = 'radar__forecast-state' + (kind === 'ready' ? ' is-ready' : kind === 'retry' ? ' is-retry' : '');
-  if (kind === 'loading') el.textContent = T.modelLoading;
-  else if (kind === 'retry') el.textContent = T.modelRetrying;
+  let message = '';
+  let stateClass = '';
+  if (kind === 'loading') message = T.modelLoading;
+  else if (kind === 'retry') { message = T.modelRetrying; stateClass = ' is-retry'; }
   else if (kind === 'ready') {
     const last = [...R.frames].reverse().find(f => f.kind === 'model');
-    el.textContent = last ? T.modelReadyUntil(hhmm(atPlace(last.time))) : '';
-  } else el.textContent = '';
+    message = last ? T.modelReadyUntil(hhmm(atPlace(last.time))) : '';
+    stateClass = ' is-ready';
+  }
+  const full = $('#radarForecastState');
+  if (full) {
+    full.className = 'radar__forecast-state' + stateClass;
+    full.textContent = message;
+  }
+  const compact = $('#radarQuickStatus');
+  if (compact) {
+    compact.className = 'radar-quick__status' + stateClass;
+    compact.textContent = message;
+  }
+  updateRadarQuick();
+}
+
+const RADAR_QUICK_OFFSETS = [0, 30, 60, 180, 360];
+
+function radarQuickFrameIndex(offsetMin) {
+  if (!R.frames.length) return -1;
+  if (offsetMin === 0) return R.nowIdx;
+  const base = Math.max(Date.now(), R.frames[R.nowIdx]?.time || Date.now());
+  const target = base + offsetMin * 60e3;
+  let best = -1, bestDelta = Infinity;
+  R.frames.forEach((frame, i) => {
+    if (!frame.forecast || frame.time <= base) return;
+    const delta = Math.abs(frame.time - target);
+    if (delta < bestDelta) { bestDelta = delta; best = i; }
+  });
+  return best;
+}
+
+function updateRadarQuick() {
+  $$('[data-radar-offset]').forEach(b => {
+    const offset = Number(b.dataset.radarOffset);
+    const idx = radarQuickFrameIndex(offset);
+    const enabled = offset === 0 ? idx >= 0 : R.modelReady && idx >= 0;
+    b.disabled = !enabled;
+    const active = enabled && idx === R.idx;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-pressed', String(active));
+  });
 }
 
 async function initRadar() {
@@ -1717,6 +1770,7 @@ function showFrame(i) {
     : `<b>${hhmm(atPlace(f.time))}</b><small>${word}</small>`;
   $('#radarTime').value = i;
   $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
+  updateRadarQuick();
 
   // Один раз объясняем, что дальше получаса это уже не радар.
   if (f.kind === 'model' && !R.modelToldOnce) { R.modelToldOnce = true; toast(T.modelNote); }

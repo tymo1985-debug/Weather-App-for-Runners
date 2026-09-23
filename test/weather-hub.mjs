@@ -33,6 +33,15 @@ test('Weather Hub contains approved key sections', () => {
   assert.match(hub, /id="map"/);
 });
 
+test('Weather Hub order is hero score hourly radar daily air', () => {
+  const start = html.indexOf('data-screen="radar"');
+  const end = html.indexOf('<!-- 10 - ДЕТАЛИ', start);
+  const hub = html.slice(start, end);
+  const order = ['weatherHero','weatherRunScore','weatherHourly','weatherRadarCard','weatherDaily','weatherAir']
+    .map(id => hub.indexOf(`id="${id}"`));
+  assert.ok(order.every((pos, i) => pos >= 0 && (i === 0 || pos > order[i - 1])));
+});
+
 test('Weather Hub reuses running score and keeps city search internal', () => {
   assert.match(app, /radar: renderWeatherHub/);
   assert.match(app, /currentRun\(\)\.score/);
@@ -47,7 +56,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v30/);
+  assert.match(sw, /shell-v31/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -91,10 +100,10 @@ test('radar basemap no longer depends on keyed CARTO tiles', () => {
   assert.match(app, /© OpenStreetMap contributors · © RainViewer/);
 });
 
-test('Weather Hub keeps Run Score near the hero without pinning it into full-screen radar', () => {
+test('Weather Hub keeps Run Score out of full-screen radar and uses a compact radar preview', () => {
   assert.match(css, /\.weather-run-score\{[^}]*width:calc\(100% - 28px\)[^}]*border-radius:16px/);
   assert.match(css, /body\.radar-expanded \.weather-run-score\{display:none\}/);
-  assert.match(css, /\.weather-radar__map\{[^}]*height:clamp\(255px,64vw,310px\)/);
+  assert.match(css, /\.weather-radar__map\{[^}]*height:clamp\(176px,46vw,190px\)/);
   assert.match(css, /\.weather-radar-card\.is-expanded \.weather-radar__map\{height:100dvh/);
 });
 
@@ -123,14 +132,23 @@ test('regional precipitation forecast uses lightweight 15-minute model frames an
   assert.match(app, /setForecastStatus\('ready'\)/);
 });
 
-test('normal radar timeline is compact while full-screen restores full controls', () => {
-  assert.match(css, /\.weather-radar__map \.radarpanel\{[^}]*width:min\(calc\(100% - 20px\),310px\)/);
+test('compact radar preview replaces the slider with five quick times', () => {
+  const hubStart = html.indexOf('data-screen="radar"');
+  const hubEnd = html.indexOf('<!-- 10 - ДЕТАЛИ', hubStart);
+  const hub = html.slice(hubStart, hubEnd);
+  assert.equal((hub.match(/data-radar-offset=/g) || []).length, 5);
+  assert.match(css, /\.weather-radar-card:not\(\.is-expanded\) \.radarpanel[\s\S]*display:none!important/);
   assert.match(css, /\.weather-radar-card\.is-expanded \.radarpanel\{[^}]*width:auto[^}]*transform:none/);
-  assert.match(app, /const candidates = S\.radarExpanded/);
+  assert.match(css, /\.weather-radar-card\.is-expanded \.radar-quick\{display:none\}/);
+  assert.match(app, /const RADAR_QUICK_OFFSETS = \[0, 30, 60, 180, 360\]/);
+  assert.match(app, /function radarQuickFrameIndex\(offsetMin\)/);
+  assert.match(app, /function updateRadarQuick\(\)/);
+  assert.match(app, /#radarQuick'\)\.addEventListener\('click'/);
+  assert.deepEqual(LANGS.ru.radarQuickLabels, ['Сейчас', '+30 мин', '+1 ч', '+3 ч', '+6 ч']);
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.30.0');
+  assert.equal(APP_VERSION, '0.31.0');
   assert.equal(RELEASE_DATE, '2026-09-23');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
