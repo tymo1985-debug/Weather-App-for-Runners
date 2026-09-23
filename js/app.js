@@ -1453,7 +1453,7 @@ function setLayerMenuOpen(on) {
 }
 
 function syncLayerMenu() {
-  $('[data-map-layer]').forEach(b => {
+  $$('[data-map-layer]').forEach(b => {
     const active = Number(b.dataset.mapLayer) === R.baseIdx;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-pressed', String(active));
