@@ -367,6 +367,34 @@ export function runAdvice(window, durationMin) {
   return tips.slice(0, 2);
 }
 
+export function runStartOptions(hours, durationMin, {
+  now = Date.now(), horizonHours = 4, fromMin = null, toMin = null
+} = {}) {
+  const out = [];
+  const hasWindow = Number.isFinite(fromMin) && Number.isFinite(toMin);
+  const inAvailability = (h) => {
+    if (!hasWindow) return true;
+    const m = h.t.getHours() * 60 + h.t.getMinutes();
+    return fromMin <= toMin ? m >= fromMin && m <= toMin : m >= fromMin || m <= toMin;
+  };
+  for (let i = 0; i < hours.length; i++) {
+    const h = hours[i];
+    if (h.ts < now - 30 * 60e3) continue;
+    if (!hasWindow && h.ts > now + horizonHours * 3600e3) break;
+    if (hasWindow && h.ts > now + 24 * 3600e3) break;
+    if (!inAvailability(h)) continue;
+    const candidate = windowAt(hours, i, durationMin);
+    if (!candidate) continue;
+    out.push({ i, ...candidate, waitMin: Math.max(0, Math.round((h.ts - now) / 60000)) });
+  }
+  return out;
+}
+
+export function bestStartOption(options) {
+  return (options || []).reduce((best, item) =>
+    !best || item.score > best.score ? item : best, null);
+}
+
 export function bestWindowOfDay(hours, dayISO, durationMin) {
   const day = hours.filter(h => h.iso.slice(0, 10) === dayISO);
   let best = null;
