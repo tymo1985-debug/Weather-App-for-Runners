@@ -1,0 +1,9 @@
+.git
+.github
+worker
+test
+node_modules
+package.json
+package-lock.json
+README.md
+.assetsignore
