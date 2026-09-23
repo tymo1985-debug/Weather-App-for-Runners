@@ -1598,7 +1598,12 @@ function ensureModelForecast() {
       R.modelRetryAt = Date.now() + 30000;
       console.warn('precip forecast unavailable:', e);
     })
-    .finally(() => { R.modelLoading = false; });
+    .finally(() => {
+      R.modelLoading = false;
+      if (!R.modelReady && R.placeKey === placeKey(S.place) && Date.now() >= R.modelRetryAt) {
+        setTimeout(ensureModelForecast, 0);
+      }
+    });
 }
 
 async function fetchModelBatch(points) {
