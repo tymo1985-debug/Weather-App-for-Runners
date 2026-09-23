@@ -178,7 +178,7 @@ export function notificationPayload(change,next,lang='en'){
     type:'weather-watch',
     title,
     body,
-    url:'./index.html',
+    url:'./',
     data:{reason:change?.reason||'change',score:next?.score??null,startIso:next?.startIso??null}
   };
 }

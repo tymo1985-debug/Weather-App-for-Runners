@@ -1,10 +1,10 @@
 const PREFIX = 'weather-runner-';
-const SHELL_CACHE = `${PREFIX}shell-v22`;
+const SHELL_CACHE = `${PREFIX}shell-v23`;
 const API_CACHE = `${PREFIX}api-v6`;
 const API_TTL_MS = 5 * 60 * 1000;
 const API_MAX_ENTRIES = 20;
 const SHELL = [
-  './', './index.html', './css/styles.css',
+  './', './css/styles.css',
   './js/app.js', './js/home-ui.js', './js/run-plan.js', './js/weather-watch.js', './js/background-watch.js', './js/route-plan.js', './js/route-weather.js', './js/run-history.js', './js/engine.js', './js/icons.js',
   './js/i18n.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',
@@ -89,7 +89,7 @@ self.addEventListener('fetch', e => {
         return response;
       } catch (error) {
         if (req.mode === 'navigate') {
-          const index = await cache.match('./index.html');
+          const index = await cache.match('./');
           if (index) return index;
         }
         throw error;
@@ -105,7 +105,7 @@ self.addEventListener('push', event => {
   const title = payload.title || 'Run Weather';
   const icon = new URL('icons/icon-192.png', self.registration.scope).href;
   const badge = new URL('icons/icon-192.png', self.registration.scope).href;
-  const url = new URL(payload.url || './index.html', self.registration.scope).href;
+  const url = new URL(payload.url || './', self.registration.scope).href;
   event.waitUntil(self.registration.showNotification(title, {
     body: payload.body || '',
     icon,
@@ -119,7 +119,7 @@ self.addEventListener('push', event => {
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   const target = event.notification.data?.url ||
-    new URL('index.html', self.registration.scope).href;
+    new URL('./', self.registration.scope).href;
   event.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
     for (const client of list) {
       if (client.url === target && 'focus' in client) return client.focus();
