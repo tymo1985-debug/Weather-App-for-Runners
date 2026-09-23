@@ -587,6 +587,14 @@ function explainRun(run) {
   return weakest ? T.runWeakest(F_NAME()[weakest[0]], hhmm(weakest[1].hour.t)) : '';
 }
 
+function scoreBandRects(y, left, right) {
+  const bands = [
+    [100, 80, '#EAF7EE'], [80, 65, '#FFF7D8'], [65, 45, '#FFF0E4'], [45, 0, '#FDEBE8']
+  ];
+  return bands.map(([hi, lo, fill]) =>
+    `<rect x="${left}" y="${y(hi)}" width="${right - left}" height="${Math.max(0, y(lo) - y(hi))}" fill="${fill}"/>`).join('');
+}
+
 // График «как меняется в течение дня» — точки через 2 часа, скобка лучшего окна
 function drawDayChart() {
   const n = nowIndex();
@@ -614,6 +622,7 @@ function drawDayChart() {
 
   $('#dayChart').innerHTML = `
     <svg class="chart" role="img" aria-label="${T.chartSummary(list[0].score, list.at(-1).score, w ? windowText(w) : null)}" viewBox="0 0 ${W} ${H}">
+      ${scoreBandRects(y, L, W - R)}
       ${bracket}
       ${pts.map(p => `<line x1="${p[0]}" y1="${p[1] + 7}" x2="${p[0]}" y2="${ROW - 12}"
           stroke="#D8E1EB" stroke-width="1" stroke-dasharray="2 3"/>`).join('')}
@@ -665,6 +674,13 @@ const FMETA = () => ({
     (h.pollen ?? 0) < 10 ? T.low.toLowerCase() : (h.pollen ?? 0) < 50 ? T.moderate.toLowerCase() : T.high.toLowerCase()]
 });
 
+function factorTrend(run, key) {
+  const values = (run.window?.slice || []).map(h => h.factors?.[key]?.v).filter(Number.isFinite);
+  if (values.length < 2) return T.trendStable;
+  const delta = values.at(-1) - values[0];
+  return delta >= 5 ? `↗ ${T.trendBetter}` : delta <= -5 ? `↘ ${T.trendWorse}` : `→ ${T.trendStable}`;
+}
+
 function renderBreakdown() {
   const run = currentRun(); if (!run.window) return;
   const M = FMETA(), box = $('#breakdown'), es = Object.entries(run.factors);
@@ -683,7 +699,7 @@ function renderBreakdown() {
     const q = M[k][3](h);
     return `<button class="frow" data-factor="${k}">
       <span class="frow__ic">${M[k][1]}</span>
-      <span class="frow__k">${M[k][0]}<small>${hhmm(h.t)} · ${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''}</small></span>
+      <span class="frow__k">${M[k][0]}<small>${T.worstAt(hhmm(h.t))} · ${M[k][2](h)}${q ? ` <em>(${q})</em>` : ''} · ${factorTrend(run, k)}</small></span>
       <span class="frow__n" style="color:${bandColor(v.v)}">${Math.round(v.v)}</span>
       <svg viewBox="0 0 24 24" class="i14 chevr"><path d="M9 5l7 7-7 7z"/></svg>
     </button>`;
@@ -758,8 +774,8 @@ function renderFactor() {
   const x = Math.max(2.5, Math.min(97.5, ((val - lo) / (hi - lo)) * 100));
   const col = bandColor(f.v);
   const desc = S.langCode === 'ru'
-    ? `${M[0]}: ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}.`
-    : `${M[0]} is ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}.`;
+    ? `${M[0]}: ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}. ${T.worstAt(hhmm(h.t))}.`
+    : `${M[0]} is ${M[2](h)}${M[3](h) ? ` — ${M[3](h)}` : ''}; ${T.worstAt(hhmm(h.t))}.`;
 
   $('#factorBody').innerHTML = `
     <div class="fhead"><span class="fhead__ic">${M[1]}</span><h1>${M[0]}</h1></div>
@@ -836,6 +852,16 @@ function drawTimelineChart(list) {
   const w = bestWindow(S.hours, runDuration());
   const win = new Set(w ? w.slice.map(x => x.iso) : []);
   const bi = pick.findIndex(h => win.has(h.iso));
+  const current = currentRun().window;
+  const currentSet = new Set(current ? current.slice.map(x => x.iso) : []);
+  const currentIdx = pick.map((h, i) => currentSet.has(h.iso) ? i : -1).filter(i => i >= 0);
+  const currentShade = currentIdx.length ? (() => {
+    const a = currentIdx[0], z = currentIdx.at(-1);
+    const x1 = Math.max(L, pts[a][0] - step * .42);
+    const x2 = Math.min(W - R, pts[z][0] + step * .42);
+    return `<rect x="${x1.toFixed(1)}" y="${TOP - 14}" width="${Math.max(10, x2 - x1).toFixed(1)}"
+      height="${BASE - TOP + 16}" rx="8" fill="#2F6FEB" opacity=".07"/>`;
+  })() : '';
 
   const lines = pts.slice(0, -1).map((p, i) =>
     `<line x1="${p[0].toFixed(1)}" y1="${p[1].toFixed(1)}" x2="${pts[i + 1][0].toFixed(1)}"
@@ -853,7 +879,9 @@ function drawTimelineChart(list) {
       <defs><linearGradient id="tla" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stop-color="#2E9E4F" stop-opacity=".2"/>
         <stop offset="100%" stop-color="#2E9E4F" stop-opacity=".02"/></linearGradient></defs>
+      ${scoreBandRects(y, L, W - R)}
       ${grid}
+      ${currentShade}
       <path d="${area}" fill="url(#tla)"/>
       ${lines}
       ${pts.filter((_, i) => i % 2 === 0).map((p, i) =>
