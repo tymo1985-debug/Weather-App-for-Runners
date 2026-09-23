@@ -55,7 +55,7 @@ const shell = 'http://localhost:8765/';
 stores.set('rw-v4', new Map([[shell + 'index.html', new Response('old shell')]]));
 await lifecycle('install');
 assert(precacheRequests.length > 0 && precacheRequests.every(req => req.cache === 'reload'));
-assert.equal(await (await request(shell + 'index.html')).text(), 'new shell');
+assert.equal(await (await request(shell)).text(), 'new shell');
 stores.set('unrelated-cache', new Map());
 stores.set('rw-v5', new Map());
 stores.set('weather-runner-shell-v4', new Map());
@@ -64,7 +64,7 @@ assert(stores.has('unrelated-cache'));
 assert(!stores.has('rw-v4'));
 assert(!stores.has('rw-v5'));
 assert(!stores.has('weather-runner-shell-v4'));
-assert.equal(await (await request(shell + 'index.html')).text(), 'new shell');
+assert.equal(await (await request(shell)).text(), 'new shell');
 
 network = async () => new Response('good');
 assert.equal(await (await request(api)).text(), 'good');
