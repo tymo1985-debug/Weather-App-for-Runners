@@ -1319,6 +1319,25 @@ function setRadarExpanded(on) {
   setTimeout(() => R.map?.invalidateSize(), 40);
 }
 
+$('#weatherPlace').addEventListener('click', () => go('cities'));
+$('#weatherLocate').addEventListener('click', locate);
+$('.weather-hourly-mode').addEventListener('click', e => {
+  const b = e.target.closest('[data-weather-mode]'); if (!b) return;
+  S.weatherMode = b.dataset.weatherMode;
+  if (S.bundle) renderWeatherHourly();
+});
+$('#weatherHourly').addEventListener('click', e => {
+  const b = e.target.closest('[data-hour]'); if (!b) return;
+  const h = S.hours.find(x => x.iso === b.dataset.hour); if (h) openHourSheet(h);
+});
+$('#weatherDaily').addEventListener('click', e => {
+  const b = e.target.closest('[data-day]'); if (b) openDaySheet(b.dataset.day);
+});
+$('#weatherRadarExpand').addEventListener('click', () => setRadarExpanded(!S.radarExpanded));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && S.radarExpanded) { e.preventDefault(); setRadarExpanded(false); }
+});
+
 // // ── 9. РАДАР ───────────────────────────────────────────────────────────────
 // Публичный API RainViewer с 2026 года не отдаёт тайлы выше 7-го зума:
 // вместо осадков приходит серая заглушка «Zoom Level Not Supported» с кодом 200,
@@ -1793,7 +1812,7 @@ $('#cityList').addEventListener('click', e => {
   const d = e.target.closest('[data-delcity]');
   if (d) { const c = loadCities(); c.splice(+d.dataset.delcity, 1); saveCities(c); renderCities(); return; }
   const c = e.target.closest('[data-city]');
-  if (c) { S.place = loadCities()[+c.dataset.city]; load(); go('home'); }
+  if (c) { S.place = loadCities()[+c.dataset.city]; load(); back(); }
 });
 let searchTimer, searchRequestId = 0, searchController;
 $('#cityQ').addEventListener('input', e => {
@@ -1824,7 +1843,7 @@ $('#cityQ').addEventListener('input', e => {
         saveCities(cities); S.place = city;
         ++searchRequestId; searchController?.abort();
         $('#cityQ').value = ''; $('#cityRes').replaceChildren();
-        load(); go('home');
+        load(); back();
       };
     } catch {
       if (id !== searchRequestId || $('#cityQ').value.trim() !== q) return;
