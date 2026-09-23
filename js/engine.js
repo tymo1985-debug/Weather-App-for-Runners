@@ -46,7 +46,7 @@ export async function fetchAll(place, signal) {
   const fUrl = `${FORECAST}?${q}&forecast_days=10&current=temperature_2m,relative_humidity_2m,` +
     `apparent_temperature,precipitation,weather_code,wind_speed_10m,is_day,cloud_cover` +
     `&hourly=temperature_2m,apparent_temperature,relative_humidity_2m,dew_point_2m,precipitation,` +
-    `precipitation_probability,weather_code,wind_speed_10m,wind_gusts_10m,uv_index,is_day,visibility` +
+    `precipitation_probability,weather_code,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,is_day,visibility` +
     `&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,` +
     `sunrise,sunset,uv_index_max,daylight_duration`;
   const aUrl = `${AIR}?${q}&forecast_days=5&hourly=pm10,pm2_5,nitrogen_dioxide,ozone,european_aqi,` +
@@ -229,6 +229,7 @@ export function buildHours(bundle, profile) {
       rh: at(H.relative_humidity_2m, i, 60), dew: at(H.dew_point_2m, i, temp - 5),
       mm: at(H.precipitation, i, 0), pop: at(H.precipitation_probability, i, 0),
       code: H.weather_code?.[i] ?? 0, wind: at(H.wind_speed_10m, i, 5),
+      windDir: Number.isFinite(H.wind_direction_10m?.[i]) ? H.wind_direction_10m[i] : null,
       gust: Number.isFinite(H.wind_gusts_10m?.[i]) ? H.wind_gusts_10m[i] : null,
       uv: at(H.uv_index, i, 0), isDay: H.is_day?.[i] ?? 1,
       vis: Number.isFinite(H.visibility?.[i]) ? H.visibility[i] : null,
