@@ -693,8 +693,8 @@ input{font:inherit}
 .weather-card__link{min-height:44px;padding:0 3px 0 10px;color:var(--blue);display:flex;align-items:center;gap:4px;font-size:12px;font-weight:680}
 .weather-card__link--icon{width:44px;padding:0;justify-content:center;color:var(--ink-2)}
 
-.weather-radar-card{padding-bottom:12px}
-.weather-radar__map{position:relative;height:clamp(255px,64vw,310px);border-radius:16px;overflow:hidden;background:#22303B}
+.weather-radar-card{padding-bottom:11px}
+.weather-radar__map{position:relative;height:clamp(176px,46vw,190px);border-radius:15px;overflow:hidden;background:#22303B}
 .weather-radar__map #map{position:absolute;inset:0!important;bottom:0!important;z-index:0;background:#22303B}
 .weather-radar__map .map-base--standard{filter:saturate(.72) contrast(.92) brightness(1.03)}
 .weather-radar__map .map-base--light{filter:grayscale(.82) saturate(.18) brightness(1.14) contrast(.76) opacity(.82)}
@@ -726,7 +726,20 @@ input{font:inherit}
 .weather-radar__map .radar__forecast-state{min-height:13px;margin:-1px 42px 0;color:var(--muted);font-size:8.5px;font-weight:650;text-align:center}
 .weather-radar__map .radar__forecast-state.is-ready{color:#276749}.weather-radar__map .radar__forecast-state.is-retry{color:#9A5B16}
 .weather-radar__map .radar__ticks{height:15px;margin:0 2px;font-size:8.5px}.weather-radar__map .radar__ticks span{padding:1px 2px}
+.weather-radar-card:not(.is-expanded) .radarpanel,
+.weather-radar-card:not(.is-expanded) .mapctl,
+.weather-radar-card:not(.is-expanded) .mapchip__live,
+.weather-radar-card:not(.is-expanded) .map-layer-menu{display:none!important}
+.weather-radar-card:not(.is-expanded) .mapchip{right:10px}
 .weather-radar-card:not(.is-expanded) .radar__grad,.weather-radar-card:not(.is-expanded) .radar__legend{display:none}
+.radar-quick{padding:9px 1px 0}
+.radar-quick__choices{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.radar-quick__choices button{min-height:34px;border-radius:9px;background:#F1F5F9;color:var(--ink-2);
+  font-size:10px;font-weight:680;white-space:nowrap}
+.radar-quick__choices button.is-on{background:#E6F0FF;color:var(--blue);box-shadow:inset 0 0 0 1px #BFD6FA}
+.radar-quick__choices button:disabled{opacity:.42}
+.radar-quick__status{display:block;min-height:14px;margin-top:5px;text-align:right;color:var(--muted);font-size:9px;font-weight:620}
+.radar-quick__status.is-ready{color:#276749}.radar-quick__status.is-retry{color:#9A5B16}
 body.radar-expanded{overflow:hidden}
 body.radar-expanded .weather-run-score{display:none}
 .weather-radar-card.is-expanded{position:fixed;inset:0;z-index:1000;margin:0;padding:0;border-radius:0;background:#14213A;overflow:hidden}
@@ -749,6 +762,7 @@ body.radar-expanded .weather-run-score{display:none}
 .weather-radar-card.is-expanded .radar__now b{font-size:14px}.weather-radar-card.is-expanded .radar__now small{font-size:10.5px}
 .weather-radar-card.is-expanded .radar__grad,.weather-radar-card.is-expanded .radar__legend{display:flex}
 .weather-radar-card.is-expanded .radar__grad{display:block}
+.weather-radar-card.is-expanded .radar-quick{display:none}
 body.radar-expanded .tabbar{display:none}
 
 .weather-hourly-mode{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:#E9EEF5;border-radius:11px;padding:3px;margin-bottom:9px}
@@ -793,7 +807,8 @@ body.radar-expanded .tabbar{display:none}
   .weather-hero__minmax{margin-left:59px}.weather-hub__body{padding-left:10px;padding-right:10px}
   .weather-run-score{width:calc(100% - 20px);padding-left:12px;padding-right:12px}
   .weather-run-score__copy small{font-size:9.5px}.weather-run-score__copy b{font-size:18px}.weather-run-score__copy>span{font-size:9.5px}
-  .weather-radar__map{height:255px}.weather-day{grid-template-columns:minmax(66px,1fr) 34px 70px 46px 10px;gap:5px}
+  .weather-radar__map{height:174px}.radar-quick__choices{gap:4px}.radar-quick__choices button{font-size:9px;padding:0 2px}
+  .weather-day{grid-template-columns:minmax(66px,1fr) 34px 70px 46px 10px;gap:5px}
   .weather-card{padding-left:10px;padding-right:10px}.weather-air{gap:6px}.weather-air__item{padding:8px;grid-template-columns:29px 1fr}
   .weather-air__ic{width:28px;height:28px}
 }
