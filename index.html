@@ -400,8 +400,12 @@
 
 <!-- ГОРОДА -->
 <section class="screen" data-screen="cities">
-  <div class="sheet sheet--flat safe-top">
-    <h1 class="bigtitle" id="citiesTitle"></h1>
+  <header class="topbar safe-top">
+    <button class="iconbtn" data-back></button>
+    <div class="topbar__title"><b id="citiesTitle"></b></div>
+    <span class="topbar__spacer"></span>
+  </header>
+  <div class="sheet sheet--flat">
     <label class="visually-hidden" for="cityQ" id="cityQLabel">Search city</label>
     <input class="searchbox" id="cityQ" autocomplete="off">
     <ul class="reslist" id="cityRes"></ul>
