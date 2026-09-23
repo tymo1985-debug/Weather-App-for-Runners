@@ -257,6 +257,7 @@ function renderHome() {
   $('#cardScore').className = 'scorecard' + (b === 'good' ? '' : ' is-' + b);
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
+  $('#scoreWhy').textContent = T.whyScoreShort(sc);
   $('#cardScore').setAttribute('aria-label', T.scoreExplanation(sc, bandText(sc)));
   const w = recommendation.later;
   $('#scoreSub').textContent = w
