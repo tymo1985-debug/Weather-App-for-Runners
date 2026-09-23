@@ -4,6 +4,8 @@ import { readFile } from 'node:fs/promises';
 
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const css = await readFile(new URL('../css/styles.css', import.meta.url), 'utf8');
+const app = await readFile(new URL('../js/app.js', import.meta.url), 'utf8');
+const i18n = await readFile(new URL('../js/i18n.js', import.meta.url), 'utf8');
 
 test('Home presents one primary run card', () => {
   const start = html.indexOf('<section class="run-card"');
@@ -22,4 +24,17 @@ test('Home run card retains existing interactive hooks', () => {
   assert.equal((html.match(/data-horizon=/g) || []).length, 2);
   assert.match(css, /RUN PLANNER ROADMAP · PHASE A/);
   assert.match(css, /\.run-card__scoreline/);
+});
+
+
+test('Home explains the visible score in the Why label', () => {
+  assert.match(app, /scoreWhy'\)\.textContent = T\.whyScoreShort\(sc\)/);
+  assert.match(i18n, /whyScoreShort: score => `Why \$\{score\}\?`/);
+  assert.match(i18n, /whyScoreShort: score => `Почему \$\{score\}\?`/);
+});
+
+test('run mini timeline keeps its rail above time labels', () => {
+  assert.match(css, /\.run-mini__point\{[^}]*padding-top:17px/);
+  assert.match(css, /\.run-mini__point:not\(:last-child\)::after\{[^}]*left:6px;right:-6px;top:5px/);
+  assert.doesNotMatch(css, /\.run-mini__point\{[^}]*padding-left:13px/);
 });
