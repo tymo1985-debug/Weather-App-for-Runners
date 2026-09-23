@@ -12,7 +12,7 @@ test('Home presents one primary run card', () => {
   const end = html.indexOf('</section>', start);
   assert.ok(start >= 0 && end > start);
   const card = html.slice(start, end);
-  for (const id of ['cardScore','factWindow','factDuration','factUv','nearTermAdvice','runAdvice','quickDurationLabel']) {
+  for (const id of ['cardScore','factWindow','factDuration','factUv','runScenario','nearTermAdvice','runAdvice','quickDurationLabel','quickDurationHint']) {
     assert.match(card, new RegExp('id="' + id + '"'));
   }
   assert.doesNotMatch(html, /<div class="grid2">/);
@@ -37,4 +37,20 @@ test('run mini timeline keeps its rail above time labels', () => {
   assert.match(css, /\.run-mini__point\{[^}]*padding-top:17px/);
   assert.match(css, /\.run-mini__point:not\(:last-child\)::after\{[^}]*left:6px;right:-6px;top:5px/);
   assert.doesNotMatch(css, /\.run-mini__point\{[^}]*padding-left:13px/);
+});
+
+
+test('Home makes start time and duration relationship explicit', () => {
+  assert.match(app, /lblBestTime'\)\.textContent = T\.recommendedStart/);
+  assert.doesNotMatch(app, /lblBestTime'\)\.textContent = w \? T\.betterLater/);
+  assert.match(app, /runScenario'\)\.textContent = recommendation\.nowScore == null \? '' : T\.currentScoreScenario\(runDuration\(\)\)/);
+  assert.match(app, /quickDurationHint'\)\.textContent = T\.runDurationHint/);
+  assert.match(i18n, /recommendedStart: 'Рекомендуемый старт'/);
+  assert.match(i18n, /Оценка выше рассчитана для старта сейчас и пробежки на/);
+});
+
+test('Profile duration is explicitly the same setting used on Home', () => {
+  assert.match(app, /\['duration', T\.usualRunDuration, glyph\.clock\]/);
+  assert.match(i18n, /usualRunDuration: 'Обычная длительность'/);
+  assert.match(i18n, /Это то же значение, что на Главной/);
 });
