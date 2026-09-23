@@ -97,13 +97,13 @@ async function load() {
   controller = new AbortController();
   const cached = cachedBundle(place);
   S.bundle = null; S.hours = [];
-  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); checkWatch(); }
+  if (cached) { S.bundle = cached; S.cached = true; recompute(); paint(); dataError(false); if (typeof checkWatch === 'function') checkWatch(); }
   else dataError('loading');
   try {
     const bundle = await fetchAll(place, controller.signal);
     if (id !== requestId) return;
     S.bundle = bundle; S.cached = false;
-    recompute(); paint(); dataError(false); checkWatch();
+    recompute(); paint(); dataError(false); if (typeof checkWatch === 'function') checkWatch();
   } catch {
     if (id !== requestId) return;
     if (cached && !expireDisplayedBundle()) { paint(); toast(T.offline); }
