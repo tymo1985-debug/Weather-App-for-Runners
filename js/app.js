@@ -27,6 +27,7 @@ const S = {
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
+  weatherMode: 'cards', radarExpanded: false,
   factor: 'temp',
   screen: 'home', stack: []
 };
@@ -54,15 +55,15 @@ function toast(msg) {
 const RENDER = {
   home: renderHome, hourly: renderHourly, daily: renderDaily, analysis: renderAnalysis,
   why: renderWhy, factor: renderFactor, timeline: renderTimeline, air: renderAir,
-  details: renderDetails, cities: renderCities, radar: initRadar
+  details: renderDetails, cities: renderCities, radar: renderWeatherHub
 };
 const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', why: 'home',
-  factor: 'home', timeline: 'home', air: 'home', radar: 'radar', cities: 'cities', details: 'details' };
+  factor: 'home', timeline: 'home', air: 'radar', radar: 'radar', cities: 'radar', details: 'details' };
 
 function go(name, push = true) {
   if (name === S.screen) return;
   const oldFocus = document.activeElement;
-  if (S.screen === 'radar' && name !== 'radar') stopPlay();   // не крутим кадры в фоне
+  if (S.screen === 'radar' && name !== 'radar') { stopPlay(); setRadarExpanded(false); }   // не крутим радар в фоне
   if (push) { S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20); }
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
@@ -204,6 +205,24 @@ function staticText() {
   $('#tlOptIc').innerHTML = glyph.checkCircle;
   $('#tlOptK').textContent = T.differentWeather;
   $('#tlOptV').textContent = T.seeOptions;
+  $('#weatherPlacePin').innerHTML = glyph.pin;
+  $('#weatherLocate').innerHTML = glyph.navigate;
+  $('#weatherRunIcon').innerHTML = glyph.runner;
+  $('#weatherRunTitle').textContent = T.weatherRunNow;
+  $('#weatherRunAction').textContent = T.weatherRunAction;
+  $('#weatherRadarTitle').textContent = T.weatherRadarTitle;
+  $('#weatherRadarSubtitle').textContent = T.weatherRadarSubtitle;
+  $('#weatherHourlyTitle').textContent = T.weatherHourlyTitle;
+  $('#weatherHourlyMore').textContent = T.weatherHourlyMore;
+  $('#weatherDailyTitle').textContent = T.weatherDailyTitle;
+  $('#weatherDailyMore').textContent = T.weatherDailyMore;
+  $('#weatherAirTitle').textContent = T.weatherAirTitle;
+  $('[data-weather-mode]').forEach(b => {
+    b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
+  });
+  $('#weatherPlace').setAttribute('aria-label', T.cities);
+  $('#weatherLocate').setAttribute('aria-label', T.myLocation);
+  updateRadarExpandControl();
   $('#mapPin').innerHTML = glyph.pin;
   $('#mapLive').textContent = T.liveRadar;
   $('#btnLayers').innerHTML = glyph.layers;
