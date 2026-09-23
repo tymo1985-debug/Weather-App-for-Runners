@@ -46,7 +46,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v25/);
+  assert.match(sw, /shell-v26/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -55,4 +55,23 @@ test('hourly Weather Hub supports cards and graph without a new fetch path', () 
   assert.match(app, /S\.weatherMode === 'cards'/);
   assert.match(app, /weather-hourly__graph/);
   assert.doesNotMatch(app.slice(app.indexOf('function renderWeatherHourly()'), app.indexOf('function renderWeatherDaily()')), /fetch\(/);
+});
+
+
+test('Weather Hub static text iterates the full mode button list', () => {
+  assert.match(app, /\$\$\('\[data-weather-mode\]'\)\.forEach/);
+  assert.doesNotMatch(app, /\n\s*\$\('\[data-weather-mode\]'\)\.forEach/);
+});
+
+test('internal Weather city picker has an explicit back path', () => {
+  const start = html.indexOf('data-screen="cities"');
+  const end = html.indexOf('<nav class="tabbar', start);
+  const cities = html.slice(start, end);
+  assert.match(cities, /data-back/);
+  assert.match(cities, /id="cityQ"/);
+});
+
+test('Weather Hub accessibility labels are localized through staticText', () => {
+  assert.match(app, /weather-hourly-mode'\)\.setAttribute\('aria-label', T\.weatherHourlyTitle\)/);
+  assert.match(app, /weather-air-card \.weather-card__link'\)\.setAttribute\('aria-label', T\.weatherAirTitle\)/);
 });
