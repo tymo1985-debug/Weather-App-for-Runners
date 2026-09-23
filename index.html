@@ -265,30 +265,100 @@
   </div>
 </section>
 
-<!-- 9 - РАДАР -->
-<section class="screen screen--map" data-screen="radar">
-  <div id="map"></div>
-  <div class="mapstate" id="mapState" role="status" aria-live="polite" hidden></div>
-  <div class="visually-hidden" id="radarStatus" role="status" aria-live="polite"></div>
-  <div class="mapchip safe-top">
-    <span class="mapchip__pin" id="mapPin"></span>
-    <span class="mapchip__city" id="mapCity">—</span>
-    <button class="mapchip__live" id="mapLive"></button>
-  </div>
-  <div class="mapctl">
-    <button class="mapbtn" id="btnLayers"></button>
-    <button class="mapbtn" id="btnMapLocate"></button>
-    <div class="mapzoom"><button id="btnZoomIn"></button><button id="btnZoomOut"></button></div>
-  </div>
-  <div class="radarpanel safe-bottom">
-    <div class="radarpanel__row">
-      <button class="radar__play" id="radarPlay" disabled></button>
-      <span class="radar__now" id="radarLabel">—</span>
-      <input type="range" id="radarTime" min="0" max="0" value="0" disabled>
+<!-- 9 - ПОГОДА / WEATHER HUB -->
+<section class="screen screen--weather" data-screen="radar">
+  <div class="weather-hub">
+    <header class="weather-hero safe-top" id="weatherHero">
+      <div class="weather-hero__backdrop"></div>
+      <div class="weather-hero__shade"></div>
+      <div class="weather-hero__top">
+        <button class="weather-hero__place" id="weatherPlace" type="button">
+          <span class="weather-hero__pin" id="weatherPlacePin"></span>
+          <span id="weatherPlaceName">—</span>
+          <svg viewBox="0 0 24 24" class="i14 chev" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+        <button class="weather-hero__locate" id="weatherLocate" type="button"></button>
+      </div>
+      <p class="weather-hero__date" id="weatherHeroDate">&nbsp;</p>
+      <div class="weather-hero__now">
+        <div class="weather-hero__icon" id="weatherHeroIcon"></div>
+        <div class="weather-hero__temp"><span id="weatherHeroTemp">—</span><span>°</span></div>
+        <div class="weather-hero__copy">
+          <b id="weatherHeroCond"></b>
+          <span id="weatherHeroFeels"></span>
+        </div>
+      </div>
+      <div class="weather-hero__minmax" id="weatherHeroMinMax"></div>
+    </header>
+
+    <div class="weather-hub__body">
+      <button class="weather-run-score" id="weatherRunScore" type="button" data-go="home">
+        <span class="weather-run-score__ic" id="weatherRunIcon"></span>
+        <span class="weather-run-score__copy"><small id="weatherRunTitle"></small><b><span id="weatherRunValue">—</span><em>/100</em></b><span id="weatherRunBand"></span></span>
+        <span class="weather-run-score__action" id="weatherRunAction"></span>
+        <svg viewBox="0 0 24 24" class="i18" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
+      </button>
+
+      <section class="weather-card weather-radar-card" id="weatherRadarCard">
+        <div class="weather-card__head weather-radar-card__head">
+          <div><b id="weatherRadarTitle"></b><small id="weatherRadarSubtitle"></small></div>
+          <button class="weather-card__action weather-radar-expand" id="weatherRadarExpand" type="button"></button>
+        </div>
+        <div class="weather-radar__map">
+          <div id="map"></div>
+          <div class="mapstate" id="mapState" role="status" aria-live="polite" hidden></div>
+          <div class="visually-hidden" id="radarStatus" role="status" aria-live="polite"></div>
+          <div class="mapchip">
+            <span class="mapchip__pin" id="mapPin"></span>
+            <span class="mapchip__city" id="mapCity">—</span>
+            <button class="mapchip__live" id="mapLive"></button>
+          </div>
+          <div class="mapctl">
+            <button class="mapbtn" id="btnLayers"></button>
+            <button class="mapbtn" id="btnMapLocate"></button>
+            <div class="mapzoom"><button id="btnZoomIn"></button><button id="btnZoomOut"></button></div>
+          </div>
+          <div class="radarpanel">
+            <div class="radarpanel__row">
+              <button class="radar__play" id="radarPlay" disabled></button>
+              <span class="radar__now" id="radarLabel">—</span>
+              <input type="range" id="radarTime" min="0" max="0" value="0" disabled>
+            </div>
+            <div class="radar__ticks" id="radarTicks"></div>
+            <div class="radar__grad"></div>
+            <div class="radar__legend" id="radarLegend"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="weather-card">
+        <div class="weather-card__head">
+          <b id="weatherHourlyTitle"></b>
+          <button class="weather-card__link" type="button" data-go="hourly"><span id="weatherHourlyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+        </div>
+        <div class="weather-hourly-mode" role="group" aria-label="Hourly weather view">
+          <button type="button" data-weather-mode="cards" class="is-on" aria-pressed="true"></button>
+          <button type="button" data-weather-mode="graph" aria-pressed="false"></button>
+        </div>
+        <div id="weatherHourly" class="weather-hourly"></div>
+      </section>
+
+      <section class="weather-card">
+        <div class="weather-card__head">
+          <b id="weatherDailyTitle"></b>
+          <button class="weather-card__link" type="button" data-go="daily"><span id="weatherDailyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
+        </div>
+        <div id="weatherDaily" class="weather-daily"></div>
+      </section>
+
+      <section class="weather-card weather-air-card">
+        <div class="weather-card__head">
+          <b id="weatherAirTitle"></b>
+          <button class="weather-card__link weather-card__link--icon" type="button" data-go="air" aria-label="Air and pollen details"><svg viewBox="0 0 24 24" class="i18"><path d="M9 5l7 7-7 7z"/></svg></button>
+        </div>
+        <div id="weatherAir" class="weather-air"></div>
+      </section>
     </div>
-    <div class="radar__ticks" id="radarTicks"></div>
-    <div class="radar__grad"></div>
-    <div class="radar__legend" id="radarLegend"></div>
   </div>
 </section>
 
@@ -341,8 +411,7 @@
 
 <nav class="tabbar safe-bottom">
   <button class="tab is-on" data-go="home"><span class="tab__ic" data-ic="house"></span><span data-t="tabHome"></span></button>
-  <button class="tab" data-go="radar"><span class="tab__ic" data-ic="globe"></span><span data-t="tabMap"></span></button>
-  <button class="tab" data-go="cities"><span class="tab__ic" data-ic="star"></span><span data-t="tabFav"></span></button>
+  <button class="tab" data-go="radar"><span class="tab__ic" data-ic="globe"></span><span data-t="tabWeather"></span></button>
   <button class="tab" data-go="details"><span class="tab__ic" data-ic="person"></span><span data-t="tabProfile"></span></button>
 </nav>
 </div>
