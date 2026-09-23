@@ -46,7 +46,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v27/);
+  assert.match(sw, /shell-v28/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -81,4 +81,19 @@ test('Weather Hub spells out air quality instead of showing an unexplained AQI a
   assert.equal(LANGS.en.weatherAqiLabel, 'Air quality');
   assert.equal(LANGS.ru.weatherAqiLabel, 'Качество воздуха');
   assert.match(app, /<small>\$\{T\.weatherAqiLabel\}<\/small><b>\$\{aqi == null \? '—' : `\$\{T\.aqiWord\} \$\{Math\.round\(aqi\)\}`\}/);
+});
+
+
+test('radar basemap no longer depends on keyed CARTO tiles', () => {
+  assert.match(app, /https:\/\/tile\.openstreetmap\.org\/\{z\}\/\{x\}\/\{y\}\.png/);
+  assert.doesNotMatch(app, /basemaps\.cartocdn\.com/);
+  assert.match(app, /© OpenStreetMap contributors · © RainViewer/);
+});
+
+test('Weather Hub uses a more compact hero, run score pill and radar preview', () => {
+  assert.match(css, /\.weather-hero\{[^}]*min-height:204px/);
+  assert.match(css, /\.weather-run-score\{[^}]*width:min\(100%,252px\)[^}]*min-height:58px/);
+  assert.match(css, /\.weather-run-score__action\{display:none\}/);
+  assert.match(css, /\.weather-radar__map\{[^}]*height:clamp\(255px,64vw,310px\)/);
+  assert.match(css, /\.weather-radar-card\.is-expanded \.weather-radar__map\{height:100dvh/);
 });
