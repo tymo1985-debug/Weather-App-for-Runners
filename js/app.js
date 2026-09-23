@@ -224,6 +224,8 @@ function staticText() {
   });
   $('#weatherPlace').setAttribute('aria-label', T.cities);
   $('#weatherLocate').setAttribute('aria-label', T.myLocation);
+  $('.weather-hourly-mode').setAttribute('aria-label', T.weatherHourlyTitle);
+  $('.weather-air-card .weather-card__link').setAttribute('aria-label', T.weatherAirTitle);
   updateRadarExpandControl();
   $('#mapPin').innerHTML = glyph.pin;
   $('#mapLive').textContent = T.liveRadar;
