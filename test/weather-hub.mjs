@@ -57,7 +57,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v40/);
+  assert.match(sw, /shell-v41/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
