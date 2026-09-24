@@ -1035,6 +1035,13 @@ body.radar-expanded .tabbar{display:none}
 .more-about ul{padding-left:20px;color:#566274;font-size:12px;line-height:1.45}
 .more-about .app-update-card__head{display:flex;align-items:center;justify-content:space-between}
 .more-about .app-update-card__head p{margin:0;font-size:13px;font-weight:650}
+.more-route{margin-top:12px;padding-top:12px;border-top:1px solid var(--hair)}
+.more-route__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.more-route__head>b{font-size:13px}.more-route__head .route-clear{min-height:36px;color:var(--blue);font-size:11px;font-weight:680}
+.more-route .route-import{display:flex;align-items:center;justify-content:center;min-height:46px;border-radius:13px;background:#F2F6FA;
+  color:var(--blue);font-size:12px;font-weight:700;cursor:pointer}
+.more-route .route-summary{margin-top:8px;font-size:11.5px;color:var(--ink-2)}
+.more-about .btn--ghost{width:100%;margin-top:10px}
 
 @media(max-width:370px){
   .stats-page,.run-details-page,.planner-page,.more-page{padding-left:10px;padding-right:10px}
