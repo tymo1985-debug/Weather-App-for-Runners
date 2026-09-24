@@ -18,10 +18,11 @@
 <div id="app">
 
 <!-- 1 - ГЛАВНАЯ -->
-<section class="screen is-active" data-screen="home">
-  <header class="hero">
+<section class="screen is-active screen--home" data-screen="home">
+  <header class="hero home-hero">
     <div class="hero__sky"></div>
     <div class="hero__scene" aria-hidden="true"></div>
+
     <div class="hero__top safe-top">
       <div>
         <button class="hero__place" id="btnPlace">
@@ -32,49 +33,80 @@
         <p class="hero__date" id="heroDate">&nbsp;</p>
       </div>
       <div class="hero__actions">
-        <button class="round-btn" id="btnLocate"></button>
-        <button class="round-btn" id="btnAddCity"></button>
+        <button class="round-btn" id="btnLocate" hidden></button>
+        <button class="round-btn home-hero__settings" id="btnAddCity"></button>
       </div>
     </div>
-    <div class="hero__now">
-      <div class="hero__icon" id="heroIcon"></div>
-      <div class="hero__temp">
-        <div class="hero__deg"><span id="heroTemp">—</span><span class="deg">°</span></div>
-        <div class="hero__cond" id="heroCond"></div>
-        <div class="hero__feels" id="heroFeels">&nbsp;</div>
-      </div>
+
+    <div class="home-hero__status">
+      <span class="home-hero__runner" id="scoreRunIc"></span>
+      <span id="scoreHeadLbl"></span>
     </div>
-    <div class="hero__minmax" id="heroMinMax"></div>
+
+    <button class="home-score" id="cardScore" type="button">
+      <span class="home-score__ring" aria-hidden="true"></span>
+      <span class="home-score__value" id="scoreBig">—</span>
+    </button>
+
+    <div class="home-hero__bottom">
+      <div class="home-hero__temp"><span id="heroTemp">—</span><span>°</span></div>
+      <div class="home-hero__summary" id="homeConditions">—</div>
+    </div>
+
+    <div class="home-hidden-data" aria-hidden="true">
+      <span id="heroIcon"></span><span id="heroCond"></span><span id="heroFeels"></span><span id="heroMinMax"></span>
+    </div>
   </header>
 
-  <div class="sheet">
-    <section class="run-card" aria-labelledby="scoreHeadLbl">
-      <button class="scorecard" id="cardScore">
-        <div class="scorecard__head"><span class="scorecard__ic" id="scoreRunIc"></span><span id="scoreHeadLbl"></span></div>
-        <div class="run-card__scoreline">
-          <div class="scorecard__value" id="scoreBig">—</div>
-          <div>
-            <div class="scorecard__label"><svg viewBox="0 0 24 24" class="i16"><path d="M9.5 16.2 5.3 12l-1.4 1.4 5.6 5.6L20.1 8.4 18.7 7Z"/></svg><span id="scoreLabel"></span></div>
-            <div class="scorecard__sub" id="scoreSub"></div>
-          </div>
-        </div>
-        <div class="scorecard__why"><span id="scoreWhy"></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></div>
-      </button>
-
-      <div class="run-card__facts">
-        <div class="fact"><span class="fact__ic" id="icBest"></span>
-          <div><span class="fact__k" id="lblBestTime"></span><span class="fact__v" id="factWindow">—</span></div></div>
-        <div class="fact"><span class="fact__ic" id="icDur"></span>
-          <div><span class="fact__k" id="lblDuration"></span><span class="fact__v" id="factDuration">—</span></div></div>
-        <div class="fact"><span class="fact__ic" id="icUv"></span>
-          <div><span class="fact__k" id="lblUv"></span><span class="fact__v" id="factUv">—</span></div></div>
+  <div class="home-sheet">
+    <section class="home-today" aria-labelledby="homeTodayLabel">
+      <div class="home-today__head">
+        <h2 id="homeTodayLabel"></h2>
+        <span class="home-best-badge" id="homeBestBadge"></span>
       </div>
-      <p class="run-card__scenario" id="runScenario"></p>
+      <div class="home-timeline" id="homeTimeline"></div>
+    </section>
 
-      <div class="run-mini" id="runMiniTimeline" aria-live="polite"></div>
-      <div class="routewx" id="routeWeatherHome" aria-live="polite" hidden></div>
+    <section class="home-metrics" aria-label="Current running weather">
+      <div class="home-metric">
+        <span class="home-metric__icon" id="homeFeelsIcon"></span>
+        <div><b id="homeFeelsValue">—</b><span id="homeFeelsLabel"></span></div>
+      </div>
+      <div class="home-metric">
+        <span class="home-metric__icon" id="homeWindIcon"></span>
+        <div><b id="homeWindValue">—</b><span id="homeWindLabel"></span></div>
+      </div>
+      <div class="home-metric">
+        <span class="home-metric__icon" id="homeRainIcon"></span>
+        <div><b id="homeRainValue">—</b><span id="homeRainLabel"></span></div>
+      </div>
+    </section>
 
-      <div class="run-mode" role="group" aria-labelledby="runModeLabel">
+    <section class="home-advice">
+      <span class="home-advice__icon" id="homeAdviceIcon"></span>
+      <p id="homeAdvice"></p>
+    </section>
+
+    <button class="home-details" type="button" data-go="analysis">
+      <span id="homeDetailsLabel"></span>
+      <svg viewBox="0 0 24 24" class="i20" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
+    </button>
+
+    <div class="updated home-updated" id="updatedAt"></div>
+    <div class="visually-hidden" id="recommendationStatus" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <div class="home-legacy" hidden aria-hidden="true">
+      <span id="scoreLabel"></span><span id="scoreSub"></span><span id="scoreWhy"></span>
+      <span id="lblBestTime"></span><span id="factWindow"></span>
+      <span id="lblDuration"></span><span id="factDuration"></span>
+      <span id="lblUv"></span><span id="factUv"></span>
+      <span id="icBest"></span><span id="icDur"></span><span id="icUv"></span>
+      <p id="runScenario"></p>
+
+      <div class="run-mini" id="runMiniTimeline"></div>
+      <div class="routewx" id="routeWeatherHome" hidden></div>
+
+      <div class="run-mode">
         <span id="runModeLabel"></span>
         <div class="run-mode__choices">
           <button type="button" data-run-mode="duration"></button>
@@ -82,18 +114,18 @@
         </div>
       </div>
 
-      <div class="near-term" aria-labelledby="nearTermLabel">
+      <div class="near-term">
         <div class="near-term__top"><span id="nearTermLabel"></span>
-          <div class="near-term__choices" role="group" aria-labelledby="nearTermLabel">
+          <div class="near-term__choices">
             <button type="button" data-horizon="1">1 h</button>
             <button type="button" data-horizon="2">2 h</button>
           </div>
         </div>
-        <div id="nearTermAdvice" class="near-term__advice" role="status" aria-live="polite"></div>
-        <p id="runAdvice" class="near-term__tip" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+        <div id="nearTermAdvice" class="near-term__advice"></div>
+        <p id="runAdvice" class="near-term__tip" hidden></p>
       </div>
 
-      <div class="duration-quick" role="group" aria-labelledby="quickDurationLabel">
+      <div class="duration-quick">
         <span id="quickDurationLabel"></span>
         <small class="duration-quick__hint" id="quickDurationHint"></small>
         <div class="duration-quick__choices">
@@ -106,7 +138,7 @@
       </div>
 
       <div class="distance-plan" id="distancePlan" hidden>
-        <div class="distance-plan__presets" role="group" aria-label="Distance">
+        <div class="distance-plan__presets">
           <button type="button" data-distance="3">3 km</button>
           <button type="button" data-distance="5">5 km</button>
           <button type="button" data-distance="10">10 km</button>
@@ -114,8 +146,8 @@
           <button type="button" data-distance="20">20 km</button>
         </div>
         <div class="distance-plan__inputs">
-          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5" inputmode="decimal"></label>
-          <label><span id="paceLabel"></span><input id="paceInput" type="text" inputmode="numeric" placeholder="6:00"></label>
+          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5"></label>
+          <label><span id="paceLabel"></span><input id="paceInput" type="text"></label>
         </div>
         <div class="distance-plan__summary" id="distanceSummary"></div>
       </div>
@@ -131,20 +163,14 @@
         <p class="watch-status" id="watchStatus" hidden></p>
       </div>
 
-      <button class="linkrow" data-go="analysis"><span id="lblViewDetails"></span>
-        <svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
       <button class="run-log" id="logRunFeedback" type="button"></button>
-    </section>
-    <div class="updated" id="updatedAt"></div>
-    <div class="visually-hidden" id="recommendationStatus" role="status" aria-live="polite" aria-atomic="true"></div>
-
-    <div class="segmented">
-      <button class="seg is-on" data-range="hours"></button>
-      <button class="seg" data-range="today"></button>
-      <button class="seg" data-range="days"></button>
+      <div class="segmented">
+        <button class="seg is-on" data-range="hours"></button>
+        <button class="seg" data-range="today"></button>
+        <button class="seg" data-range="days"></button>
+      </div>
+      <div class="hstrip" id="strip"></div>
     </div>
-
-    <div class="hstrip" id="strip"></div>
   </div>
 </section>
 
