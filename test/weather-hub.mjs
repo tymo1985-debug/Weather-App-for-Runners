@@ -11,12 +11,13 @@ const [html, css, app, sw] = await Promise.all([
   readFile(new URL('../sw.js', import.meta.url), 'utf8')
 ]);
 
-test('bottom navigation is Home Weather Profile', () => {
+test('bottom navigation follows approved Run Weather Stats More structure', () => {
   const nav = html.slice(html.indexOf('<nav class="tabbar'), html.indexOf('</nav>') + 6);
-  assert.equal((nav.match(/<button class="tab/g) || []).length, 3);
+  assert.equal((nav.match(/<button class="tab/g) || []).length, 4);
   assert.match(nav, /data-go="home"/);
   assert.match(nav, /data-go="radar"[^>]*>.*data-t="tabWeather"/s);
-  assert.match(nav, /data-go="details"/);
+  assert.match(nav, /data-go="stats"[^>]*>.*data-t="tabStats"/s);
+  assert.match(nav, /data-go="details"[^>]*>.*data-t="tabMore"/s);
   assert.doesNotMatch(nav, /data-go="cities"/);
   assert.equal(LANGS.en.tabWeather, 'Weather');
   assert.equal(LANGS.ru.tabWeather, 'Погода');
@@ -56,7 +57,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v32/);
+  assert.match(sw, /shell-v33/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -148,7 +149,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.32.0');
+  assert.equal(APP_VERSION, '0.33.0');
   assert.equal(RELEASE_DATE, '2026-09-24');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
