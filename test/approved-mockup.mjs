@@ -38,3 +38,10 @@ test('weather tabs and stats are localized and styled', () => {
   assert.match(css, /\.planner-slot/);
   assert.match(css, /\.more-row/);
 });
+
+
+test('collection selectors use the multi-element helper before forEach', () => {
+  assert.doesNotMatch(app, /(?<!\$)\$\('[^']+'\)\.forEach/);
+  assert.match(app, /\$\$\('\[data-stats-tab\]'\)\.forEach/);
+  assert.match(app, /\$\$\('\[data-weather-section\]'\)\.forEach/);
+});
