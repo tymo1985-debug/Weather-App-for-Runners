@@ -2031,7 +2031,7 @@ function formatPeriodDay(d) {
 function renderStats() {
   const now = placeNow(S.bundle);
 
-  $('[data-stats-tab]').forEach(b => {
+  $$('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
