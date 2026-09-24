@@ -2159,7 +2159,7 @@ function statsBarHtml(items, valueText, heightFor, colorFor) {
 
 function renderStats() {
   normalizeStatsPeriodForTab();
-  $('[data-stats-tab]').forEach(b => {
+  $$('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
@@ -2512,7 +2512,7 @@ $('#routeClear').addEventListener('click', () => {
   saveRoute(null); if (S.bundle) paint();
 });
 
-$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+$$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
   S.statsTab = b.dataset.statsTab;
   if (S.statsTab === 'runs') S.statsWeekOffset = Math.min(0, S.statsWeekOffset);
   else S.statsWeekOffset = Math.max(0, S.statsWeekOffset);
@@ -2542,7 +2542,7 @@ $('#plannerSlots').addEventListener('click', e => {
   const b = e.target.closest('[data-planner-choice]'); if (!b) return;
   const choice = S.plannerChoices?.[Number(b.dataset.plannerChoice)];
   if (!choice) return; S.plannerChoice = choice;
-  $('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
+  $$('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
   const best = bestStartOption(S.plannerChoices || []);
   $('#plannerExplain').innerHTML = plannerExplanation(choice, best, S.plannerChoices || []);
 });
