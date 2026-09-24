@@ -54,3 +54,21 @@ test('location pin uses device geolocation while city text keeps the picker', ()
   assert.match(app, /locationDenied/);
   assert.match(css, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
 });
+
+test('Stats tabs and period arrows drive distinct functional views', () => {
+  assert.match(app, /statsWeekOffset: 0/);
+  assert.match(app, /if \(S\.statsTab === 'runs'\)/);
+  assert.match(app, /if \(S\.statsTab === 'weather'\)/);
+  assert.match(app, /#statsPrev'\)\.addEventListener/);
+  assert.match(app, /#statsNext'\)\.addEventListener/);
+  assert.match(html, /id="statsOverviewCard"/);
+  assert.match(html, /id="statsHistoryCard"/);
+});
+
+test('Planner shows a full recommendation set around the best time', () => {
+  assert.match(app, /const limit = 10/);
+  assert.match(app, /const candidateHours = S\.hours\.filter/);
+  assert.match(app, /bestIndex - 3/);
+  assert.match(css, /\.planner-slot\{min-height:60px\}/);
+});
+
