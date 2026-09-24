@@ -1,0 +1,27 @@
+name: Production smoke
+
+on:
+  workflow_run:
+    workflows: ["Deploy Cloudflare full-stack"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check production shell
+        run: |
+          set -euo pipefail
+          base="https://run-weather-watch.tymo1985.workers.dev"
+          curl -fsS --retry 5 --retry-delay 2 --max-time 20 "$base/" -o index.html
+          curl -fsS --retry 5 --retry-delay 2 --max-time 20 "$base/js/app.js" -o app.js
+          curl -fsS --retry 5 --retry-delay 2 --max-time 20 "$base/css/styles.css" -o styles.css
+          grep -q '<div id="app">' index.html
+          grep -q 'function renderHome()' app.js
+          grep -q 'APPROVED SIX-SCREEN MOCKUP' styles.css
+          echo "Production shell is reachable and serving the current app."
