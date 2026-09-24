@@ -72,3 +72,30 @@ test('Planner shows a full recommendation set around the best time', () => {
   assert.match(css, /\.planner-slot\{min-height:60px\}/);
 });
 
+test('Stats forecast periods are limited to available forecast coverage', () => {
+  assert.match(app, /function statsForecastCoverage\(period\)/);
+  assert.match(app, /function statsMaxForecastOffset\(\)/);
+  assert.match(app, /S\.statsTab === 'runs' \? -8 : 0/);
+  assert.match(app, /T\.statsCoverage\(coverage\)/);
+});
+
+test('Training empty state explains how history is created', () => {
+  assert.match(app, /statsRunsEmptyHelp/);
+  assert.match(app, /data-go="run-details"/);
+  assert.match(css, /\.stats-empty/);
+});
+
+test('Planner explains the selected window and confirms calendar export', () => {
+  assert.match(html, /id="plannerExplain"/);
+  assert.match(app, /function plannerExplanation\(/);
+  assert.match(app, /T\.plannerReason/);
+  assert.match(app, /toast\(T\.calendarPrepared\(windowText\(o\)\)\)/);
+  assert.match(css, /\.planner-explain/);
+});
+
+test('Frequent controls meet a 44px touch target', () => {
+  assert.match(css, /\.stats-period button\{min-width:44px;min-height:44px\}/);
+  assert.match(css, /\.stats-tabs button,[\s\S]*\.planner-tabs button\{min-height:44px\}/);
+  assert.match(css, /\.planner-date button\{min-width:44px;min-height:44px\}/);
+});
+
