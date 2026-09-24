@@ -32,10 +32,6 @@
         </button>
         <p class="hero__date" id="heroDate">&nbsp;</p>
       </div>
-      <div class="hero__actions">
-        <button class="round-btn" id="btnLocate" hidden></button>
-        <button class="round-btn home-hero__settings" id="btnAddCity"></button>
-      </div>
     </div>
 
     <div class="home-hero__status">
@@ -258,7 +254,6 @@
           <span id="weatherPlaceName">—</span>
           <svg viewBox="0 0 24 24" class="i14 chev" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
-        <button class="weather-hero__locate" id="weatherLocate" type="button"></button>
       </div>
       <p class="weather-hero__date" id="weatherHeroDate">&nbsp;</p>
       <div class="weather-hero__now">
@@ -391,21 +386,21 @@
       <button type="button" data-stats-tab="weather"></button>
       <button type="button" data-stats-tab="runs"></button>
     </div>
-    <section class="stats-card">
+    <section class="stats-card" id="statsOverviewCard">
       <small id="statsAverageLabel"></small>
       <div class="stats-average"><b id="statsAverage">—</b><span id="statsTrend"></span></div>
       <div class="stats-bars" id="statsBars"></div>
     </section>
-    <section class="stats-card stats-best">
+    <section class="stats-card stats-best" id="statsBestCard">
       <b id="statsBestTitle"></b>
       <div class="stats-best__value"><span id="statsBestIcon"></span><strong id="statsBestValue">—</strong></div>
       <small id="statsBestSub"></small>
     </section>
-    <section class="stats-card">
+    <section class="stats-card" id="statsConditionsCard">
       <b id="statsConditionsTitle"></b>
       <div class="stats-conditions" id="statsConditions"></div>
     </section>
-    <section class="stats-card">
+    <section class="stats-card" id="statsHistoryCard">
       <div class="stats-card__head"><b id="statsHistoryTitle"></b><button type="button" id="statsHistoryAll"></button></div>
       <div class="stats-history" id="statsHistory"></div>
     </section>
