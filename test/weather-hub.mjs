@@ -57,7 +57,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v38/);
+  assert.match(sw, /shell-v39/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -66,6 +66,13 @@ test('hourly Weather Hub supports cards and graph without a new fetch path', () 
   assert.match(app, /S\.weatherMode === 'cards'/);
   assert.match(app, /weather-hourly__graph/);
   assert.doesNotMatch(app.slice(app.indexOf('function renderWeatherHourly()'), app.indexOf('function renderWeatherDaily()')), /fetch\(/);
+});
+
+test('Hourly and 10-day views fill the Weather screen with real data', () => {
+  assert.match(app, /const cardList = S\.hours\.slice\(n, n \+ 10\)/);
+  assert.match(app, /const graphList = S\.hours\.slice\(n, n \+ 12\)/);
+  assert.match(app, /D\.time\.slice\(0, 10\)/);
+  assert.match(css, /grid-template-rows:repeat\(10,minmax\(56px,1fr\)\)/);
 });
 
 
@@ -149,7 +156,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.33.4');
+  assert.equal(APP_VERSION, '0.34.0');
   assert.equal(RELEASE_DATE, '2026-09-24');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
