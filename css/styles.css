@@ -1442,3 +1442,98 @@ body.radar-expanded .weather-hub__body{z-index:8}
   .weather-hour>b{font-size:15px}
   .weather-hour small{font-size:9px}
 }
+
+/* ── AUDIT FIXES · 0.34.1 ───────────────────────────────────────── */
+/* Touch targets: preserve the compact visual language while making frequent
+   controls easier to hit on a moving phone. */
+.stats-period{min-height:44px;height:44px}
+.stats-period button{min-width:44px;min-height:44px}
+.stats-tabs button,
+.weather-hub-tabs button,
+.planner-tabs button{min-height:44px}
+.planner-date{min-height:48px;height:48px}
+.planner-date button{min-width:44px;min-height:44px}
+.home-hero .hero__place{min-height:44px}
+
+/* Hourly graph: six primary time labels, larger typography and a selected-hour
+   summary replace the dense wall of tiny labels. */
+.weather-hourly__graph{display:flex;flex-direction:column;min-height:0}
+.weather-graph__summary{
+  display:grid;
+  grid-template-columns:42px repeat(3,minmax(0,1fr));
+  align-items:center;
+  gap:8px;
+  min-height:62px;
+  margin:2px 0 6px;
+  padding:8px 10px;
+  border-radius:14px;
+  background:#F5F8FC;
+  border:1px solid #E5ECF5;
+}
+.weather-graph__summary-icon{width:38px;height:38px}
+.weather-graph__summary-icon svg{width:100%;height:100%}
+.weather-graph__summary>span:not(.weather-graph__summary-icon){min-width:0;display:flex;flex-direction:column;gap:2px}
+.weather-graph__summary small{font-size:10.5px;color:var(--muted);font-weight:650;white-space:nowrap}
+.weather-graph__summary b{font-size:13px;line-height:1.1;font-weight:740;white-space:nowrap}
+.weather-hourly__graph svg{width:100%;height:auto;min-height:440px;overflow:visible}
+.weather-graph__temp{font-size:10.5px;fill:#24344F;font-weight:720}
+.weather-graph__time{font-size:10.5px;fill:#65758C;font-weight:650}
+.weather-graph__section{font-size:10.5px;fill:#5A6A82;font-weight:720}
+.weather-graph__selected-line{stroke:#9FB8D7;stroke-width:1.2;stroke-dasharray:4 4}
+.weather-graph__dot{fill:#2F80ED}
+.weather-graph__dot.is-selected{fill:#1F66DA;stroke:#fff;stroke-width:2.4}
+.weather-graph__rain{fill:#58A8F6;opacity:.55}
+.weather-graph__rain.is-selected{fill:#2F80ED;opacity:.9}
+.weather-hourly__graph [data-weather-graph-index]:focus-visible{
+  outline:none;
+  stroke:#17385D;
+  stroke-width:1.4;
+}
+
+/* Statistics: explain sparse data instead of leaving a blank card. */
+.stats-average>span{
+  max-width:70%;
+  line-height:1.2;
+  text-align:center;
+  white-space:normal;
+}
+.stats-empty{
+  min-height:210px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:24px 18px;
+  color:var(--ink-2);
+}
+.stats-empty>b{font-size:15px;color:var(--ink)}
+.stats-empty p{max-width:310px;margin:8px 0 16px;font-size:12px;line-height:1.45;color:var(--muted)}
+.stats-empty button{
+  min-height:44px;
+  padding:0 16px;
+  border-radius:13px;
+  background:#EAF6EF;
+  color:var(--mock-green);
+  font-size:12px;
+  font-weight:720;
+}
+
+/* Planner: make the rationale for the selected recommendation visible. */
+.planner-explain{
+  margin-top:9px;
+  padding:11px 13px;
+  border-radius:15px;
+  background:#EEF7F1;
+  border:1px solid #D7EBDD;
+}
+.planner-explain>b{display:block;font-size:12.5px;color:#155D43}
+.planner-explain p{margin:4px 0 0;font-size:11.5px;line-height:1.38;color:#344E43}
+.planner-explain small{display:block;margin-top:5px;font-size:10px;line-height:1.35;color:#61766C}
+.planner-explain[hidden]{display:none!important}
+
+@media(max-width:390px){
+  .weather-graph__summary{grid-template-columns:38px repeat(3,minmax(0,1fr));gap:5px;padding-left:7px;padding-right:7px}
+  .weather-graph__summary small{font-size:10px}
+  .weather-graph__summary b{font-size:12px}
+}
