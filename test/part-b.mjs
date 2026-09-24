@@ -66,6 +66,6 @@ test('horizon toggling computes from existing hours without fetching', async () 
   assert.equal(toggle(1).later.score, 80);
   assert.equal(toggle(2).later.score, 92);
   const app = await readFile(new URL('../js/app.js', import.meta.url), 'utf8');
-  const handler = app.slice(app.indexOf("$('.near-term__choices').addEventListener"), app.indexOf('function locate()'));
+  const handler = app.slice(app.indexOf("$('.near-term__choices').addEventListener"), app.indexOf('function locate('));
   assert.doesNotMatch(handler, /\b(load|fetchAll)\s*\(/);
 });
