@@ -1198,3 +1198,56 @@ body.radar-expanded .tabbar{display:none}
     url("../assets/prague-weather-hero.svg") center 43%/cover no-repeat;
 }
 .home-hero.is-prague .hero__scene{display:none}
+
+
+/* ── RADAR FORECAST CLARITY + SCORE OPTICS · 0.33.3 ─────────── */
+/* Optical centering for two- and three-digit Run Score values. */
+.home-score__value{
+  width:100%;
+  text-align:center;
+  line-height:.9;
+  letter-spacing:-1.35px;
+  font-kerning:none;
+  transform:translate(1px,-1.5px);
+  transform-origin:center;
+}
+.home-score__value[data-digits="3"]{
+  font-size:46px;
+  letter-spacing:-1.9px;
+  transform:translate(0,-1.5px);
+}
+.home-score__value[data-digits="1"]{transform:translate(.5px,-1.5px)}
+
+/* Lighter, cleaner settings mark in the hero. */
+.home-hero__settings{width:36px;height:36px}
+.home-hero__settings svg{width:25px;height:25px;filter:drop-shadow(0 1px 4px rgba(0,0,0,.22))}
+.weather-hero__locate svg{width:24px;height:24px}
+
+/* Explicit visual separation between observed radar and modeled precipitation. */
+.radar-model-badge{
+  position:absolute;
+  right:10px;
+  bottom:10px;
+  z-index:530;
+  padding:6px 9px 5px;
+  border-radius:9px;
+  border:1px dashed rgba(123,82,0,.58);
+  background:rgba(255,247,222,.96);
+  color:#7A5600;
+  box-shadow:0 4px 12px rgba(20,33,58,.16);
+  font-size:9.5px;
+  line-height:1;
+  font-weight:800;
+  letter-spacing:.55px;
+  pointer-events:none;
+}
+.weather-radar-card.is-model-frame .weather-radar__map{
+  box-shadow:inset 0 0 0 1px rgba(230,171,45,.22);
+}
+.weather-radar-card.is-expanded .radar-model-badge{
+  right:14px;
+  bottom:max(112px,calc(env(safe-area-inset-bottom) + 108px));
+  padding:7px 11px 6px;
+  border-radius:10px;
+  font-size:10.5px;
+}
