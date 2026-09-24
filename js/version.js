@@ -1,9 +1,10 @@
-export const APP_VERSION = '0.33.1';
-export const APP_BUILD = 34;
+export const APP_VERSION = '0.33.2';
+export const APP_BUILD = 35;
 export const RELEASE_DATE = '2026-09-24';
 
 export const RELEASE_NOTES = {
   en: [
+    '0.33.2 calibrates the Run, Stats and More screens to the approved phone mockups and restores GPS behavior on location pins.',
     'Hotfix 0.33.1 fixes a startup crash in the new tabs and planner navigation.',
     'The approved six-screen design is now the app structure: Run, Weather, Stats and More with dedicated Run Details and Planner screens.',
     'Weather Watch and planning controls now live in Planner and remain fully functional.',
@@ -16,6 +17,7 @@ export const RELEASE_NOTES = {
     'Play, the full timeline and map controls now live only in full-screen radar.'
   ],
   ru: [
+    '0.33.2 подгоняет экраны Бег, Статистика и Ещё под утверждённые телефонные макеты и восстанавливает GPS по нажатию на значок местоположения.',
     'Исправление 0.33.1 устраняет падение при запуске в новых вкладках и Планировщике.',
     'Утверждённый шестииэкранный макет стал основой приложения: Бег, Погода, Статистика и Ещё, плюс отдельные Подробности для бега и Планировщик.',
     'Weather Watch и настройки планирования перенесены в Планировщик и остаются рабочими.',
