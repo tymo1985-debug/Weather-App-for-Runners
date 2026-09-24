@@ -7,15 +7,18 @@ const css = await readFile(new URL('../css/styles.css', import.meta.url), 'utf8'
 const app = await readFile(new URL('../js/app.js', import.meta.url), 'utf8');
 const i18n = await readFile(new URL('../js/i18n.js', import.meta.url), 'utf8');
 
-test('Home presents one primary run card', () => {
-  const start = html.indexOf('<section class="run-card"');
-  const end = html.indexOf('</section>', start);
+test('Home presents one focused run-first dashboard', () => {
+  const start = html.indexOf('<section class="screen is-active screen--home"');
+  const end = html.indexOf('<!-- 2 - ПОЧАСОВОЙ -->', start);
   assert.ok(start >= 0 && end > start);
-  const card = html.slice(start, end);
-  for (const id of ['cardScore','factWindow','factDuration','factUv','runScenario','nearTermAdvice','runAdvice','quickDurationLabel','quickDurationHint']) {
-    assert.match(card, new RegExp('id="' + id + '"'));
+  const home = html.slice(start, end);
+  for (const id of ['cardScore','scoreBig','homeConditions','homeTimeline','homeBestBadge',
+    'homeFeelsValue','homeWindValue','homeRainValue','homeAdvice','homeDetailsLabel']) {
+    assert.match(home, new RegExp('id="' + id + '"'));
   }
-  assert.doesNotMatch(html, /<div class="grid2">/);
+  assert.match(home, /class="home-metrics"/);
+  assert.match(home, /class="home-advice"/);
+  assert.doesNotMatch(home, /<div class="grid2">/);
 });
 
 test('Home run card retains existing interactive hooks', () => {
