@@ -157,9 +157,9 @@ const currentRun = () => currentRunSummary(S.hours, runDuration());
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
-const settingsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <circle cx="12" cy="12" r="3.15"/>
-  <path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.78 5.78l1.55 1.55M16.67 16.67l1.55 1.55M18.22 5.78l-1.55 1.55M7.33 16.67l-1.55 1.55"/>
+const settingsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="12" r="3.2"/>
+  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/>
 </svg>`;
 
 function staticText() {
@@ -295,7 +295,8 @@ function staticText() {
   $('.weather-air-card .weather-card__link').setAttribute('aria-label', T.weatherAirTitle);
   updateRadarExpandControl();
   $('#mapPin').innerHTML = glyph.pin;
-  $('#mapLive').textContent = T.liveRadar;
+  $('#mapLive').textContent = T.now;
+  $('#mapLive').setAttribute('aria-label', T.liveRadar);
   $('#btnLayers').innerHTML = glyph.layers;
   $('#btnMapLocate').innerHTML = glyph.navigate;
   $('#btnZoomIn').innerHTML = glyph.plus;
@@ -1557,7 +1558,7 @@ const BASEMAPS = [
 ];
 const R = { map: null, base: null, baseIdx: 1, marker: null, frames: [], layers: new Map(),
   idx: 0, timer: null, ready: false, placeKey: '', nowIdx: 0, modelToldOnce: false,
-  modelReady: false, modelLoading: false, modelRetryAt: 0 };
+  modelReady: false, modelLoading: false, modelRetryAt: 0, frameSeq: 0 };
 
 const placeKey = p => `${p.lat.toFixed(3)},${p.lon.toFixed(3)}`;
 
@@ -1779,7 +1780,9 @@ const PRECIP_STOPS = [
 ];
 
 function precipColor(mm) {
-  if (!(mm > 0.08)) return [0, 0, 0, 0];
+  // Use a soft alpha ramp at the edge of modeled precipitation so the forecast
+  // reads as a continuous field rather than a set of hard-edged polygons.
+  if (!(mm > 0.035)) return [0, 0, 0, 0];
   let col = PRECIP_STOPS[PRECIP_STOPS.length - 1][1];
   for (let i = 0; i < PRECIP_STOPS.length; i++) {
     const [lim, colour] = PRECIP_STOPS[i];
@@ -1790,12 +1793,15 @@ function precipColor(mm) {
       break;
     }
   }
-  const vivid = col.map(v => Math.max(0, Math.min(255, Math.round(128 + (v - 128) * 1.14))));
-  return [vivid[0], vivid[1], vivid[2], Math.round(255 * Math.min(.96, .52 + mm / 2.3))];
+  const vivid = col.map(v => Math.max(0, Math.min(255, Math.round(128 + (v - 128) * 1.10))));
+  const edge = Math.max(0, Math.min(1, (mm - .035) / .085));
+  const strength = Math.min(.90, .42 + mm / 2.6);
+  const alpha = edge * edge * (3 - 2 * edge) * strength;
+  return [vivid[0], vivid[1], vivid[2], Math.round(255 * alpha)];
 }
 
 function paintGrid(vals) {
-  const N = 128, cv = document.createElement('canvas');
+  const N = 256, cv = document.createElement('canvas');
   cv.width = cv.height = N;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(N, N);
   const field = new Float32Array(N * N);
@@ -1812,9 +1818,9 @@ function paintGrid(vals) {
   }
   ctx.putImageData(img, 0, 0);
 
-  // Forecast confidence cue: outline the modeled precipitation footprint with a dashed boundary.
-  // This makes the forecast clearer without pretending the model has radar-level precision.
-  const threshold = .12, step = 2;
+  // Forecast confidence cue: keep a quiet dashed footprint, but avoid the
+  // heavy light/dark "pixel halo" that made model areas appear to float.
+  const threshold = .12, step = 3;
   ctx.beginPath();
   for (let y = 0; y < N - step; y += step) {
     for (let x = 0; x < N - step; x += step) {
@@ -1825,13 +1831,10 @@ function paintGrid(vals) {
       if (here !== down) { const yy = y + step / 2; ctx.moveTo(x, yy); ctx.lineTo(x + step, yy); }
     }
   }
-  ctx.setLineDash([4, 3]);
+  ctx.setLineDash([5, 5]);
   ctx.lineCap = 'round';
-  ctx.strokeStyle = 'rgba(17,45,61,.72)';
-  ctx.lineWidth = 3.1;
-  ctx.stroke();
-  ctx.strokeStyle = 'rgba(255,255,255,.96)';
-  ctx.lineWidth = 1.25;
+  ctx.strokeStyle = 'rgba(20,48,62,.48)';
+  ctx.lineWidth = 1.35;
   ctx.stroke();
   ctx.setLineDash([]);
   return cv.toDataURL('image/png');
@@ -1959,11 +1962,21 @@ function layerFor(i) {
 
 function showFrame(i) {
   if (!R.frames[i]) return;
+  const previous = R.idx;
   R.idx = i;
-  const cur = layerFor(i);
-  R.layers.forEach((l, k) => l.setOpacity(k === i ? frameOpacity(k) : 0));
-  cur.setOpacity(frameOpacity(i));
-  layerFor((i + 1) % R.frames.length);            // подгружаем следующий заранее
+  layerFor(i);
+  if (i + 1 < R.frames.length) layerFor(i + 1);  // подгружаем соседние кадры заранее
+  if (i - 1 >= 0) layerFor(i - 1);
+
+  // Leaflet changes opacity synchronously. Deferring the new value by two
+  // animation frames lets the CSS transition interpolate between cached layers.
+  const seq = ++R.frameSeq;
+  const applyOpacity = () => {
+    if (seq !== R.frameSeq) return;
+    R.layers.forEach((l, k) => l.setOpacity(k === i ? frameOpacity(k) : 0));
+  };
+  if (previous === i) applyOpacity();
+  else requestAnimationFrame(() => requestAnimationFrame(applyOpacity));
 
   const f = R.frames[i];
   const isModel = f.kind === 'model';
