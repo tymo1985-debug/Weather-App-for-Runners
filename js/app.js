@@ -28,7 +28,8 @@ const S = {
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
-  weatherMode: 'cards', radarExpanded: false,
+  weatherMode: 'cards', weatherSection: 'radar', radarExpanded: false,
+  statsTab: 'score', plannerTab: 'best', plannerDayOffset: 0, runDetailsRange: 'now',
   factor: 'temp',
   screen: 'home', stack: []
 };
@@ -56,10 +57,12 @@ function toast(msg) {
 const RENDER = {
   home: renderHome, hourly: renderHourly, daily: renderDaily, analysis: renderAnalysis,
   why: renderWhy, factor: renderFactor, timeline: renderTimeline, air: renderAir,
+  stats: renderStats, 'run-details': renderRunDetails, planner: renderPlanner,
   details: renderDetails, cities: renderCities, radar: renderWeatherHub
 };
 const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', why: 'home',
-  factor: 'home', timeline: 'home', air: 'radar', radar: 'radar', cities: 'radar', details: 'details' };
+  factor: 'home', timeline: 'home', 'run-details': 'home', planner: 'details', stats: 'stats',
+  air: 'radar', radar: 'radar', cities: 'details', details: 'details' };
 const tabFor = name => (['hourly', 'daily'].includes(name) && S.stack.at(-1) === 'radar') ? 'radar' : TAB_OF[name];
 
 function go(name, push = true) {
@@ -161,7 +164,7 @@ function staticText() {
   $('#btnAddCity').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
   $('#btnLocate').setAttribute('aria-label', T.myLocation);
-  $('#btnAddCity').setAttribute('aria-label', T.yourProfile);
+  $('#btnAddCity').setAttribute('aria-label', T.tabMore);
   $$('[data-back]').forEach(b => b.setAttribute('aria-label', T.back));
   $$('[data-share]').forEach(b => b.setAttribute('aria-label', T.share));
   $('#scoreRunIc').innerHTML = glyph.runner;
@@ -231,6 +234,47 @@ function staticText() {
   $('#weatherDailyTitle').textContent = T.weatherDailyTitle;
   $('#weatherDailyMore').textContent = T.weatherDailyMore;
   $('#weatherAirTitle').textContent = T.weatherAirTitle;
+  $('[data-weather-section]').forEach(b => {
+    b.textContent = b.dataset.weatherSection === 'radar' ? T.weatherTabRadar
+      : b.dataset.weatherSection === 'hourly' ? T.weatherTabHourly : T.weatherTabForecast;
+  });
+  $('#weatherNowTitle').textContent = T.weatherNowTitle;
+  $('#weatherNowWindIcon').innerHTML = glyph.wind;
+  $('#weatherNowRainIcon').innerHTML = glyph.rain;
+  $('#weatherNowWindLabel').textContent = T.fWind;
+  $('#weatherNowRainLabel').textContent = T.fRain;
+
+  $('#statsTitle').textContent = T.statsTitle;
+  $('[data-stats-tab]').forEach(b => {
+    b.textContent = b.dataset.statsTab === 'score' ? T.statsScore : b.dataset.statsTab === 'weather' ? T.statsWeather : T.statsRuns;
+  });
+  $('#statsAverageLabel').textContent = T.statsAverage;
+  $('#statsBestTitle').textContent = T.statsBestTime;
+  $('#statsConditionsTitle').textContent = T.statsConditions;
+  $('#statsHistoryTitle').textContent = T.statsHistory;
+  $('#statsHistoryAll').textContent = T.statsAll;
+  $('#statsBestIcon').innerHTML = glyph.clockG;
+
+  $('#runDetailsTitle').textContent = T.runDetailsTitle;
+  $('[data-run-details-range]').forEach(b => {
+    b.textContent = b.dataset.runDetailsRange === 'now' ? T.runDetailsNow
+      : b.dataset.runDetailsRange === 'today' ? T.runDetailsToday : T.runDetailsTomorrow;
+  });
+  $('#runDetailsPlanLabel').textContent = T.runDetailsPlan;
+
+  $('#plannerTitle').textContent = T.plannerTitle;
+  $('[data-planner-tab]').forEach(b => b.textContent = b.dataset.plannerTab === 'best' ? T.plannerBest : T.plannerMyPlan);
+  $('#plannerCalendarLabel').textContent = T.plannerCalendar;
+
+  $('#moreTitle').textContent = T.moreTitle;
+  $('#morePaceTitle').textContent = T.morePaceTitle; $('#morePaceSub').textContent = T.morePaceSub;
+  $('#moreScoreTitle').textContent = T.moreScoreTitle; $('#moreScoreSub').textContent = T.moreScoreSub;
+  $('#moreWatchTitle').textContent = T.moreWatchTitle; $('#moreWatchSub').textContent = T.moreWatchSub;
+  $('#morePlacesTitle').textContent = T.morePlacesTitle; $('#morePlacesSub').textContent = T.morePlacesSub;
+  $('#moreSettingsTitle').textContent = T.moreSettingsTitle; $('#moreSettingsSub').textContent = T.moreSettingsSub;
+  $('#moreAboutTitle').textContent = T.moreAboutTitle; $('#moreAboutSub').textContent = T.moreAboutSub;
+  $('#moreSettingsPanelTitle').textContent = T.moreSettingsTitle;
+  $('#moreAboutPanelTitle').textContent = T.moreAboutTitle;
   $$('[data-weather-mode]').forEach(b => {
     b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
   });
@@ -281,7 +325,7 @@ function staticText() {
     b.querySelector('[data-t]').textContent = T[b.querySelector('[data-t]').dataset.t];
   });
   $$('.tab').forEach(t => t.setAttribute('aria-current', t.dataset.go === tabFor(S.screen) ? 'page' : 'false'));
-  ['.seg', '.utab[data-dcol]', '.utab[data-btab]'].forEach(syncPressed);
+  ['.seg', '.utab[data-dcol]', '.utab[data-btab]', '[data-weather-section]', '[data-stats-tab]', '[data-run-details-range]', '[data-planner-tab]'].forEach(syncPressed);
 }
 
 // ── 1. ГЛАВНАЯ ─────────────────────────────────────────────────────────────
