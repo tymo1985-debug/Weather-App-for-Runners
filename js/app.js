@@ -302,6 +302,7 @@ function renderHome() {
   const recommendation = currentRun();
   const sc = recommendation.score ?? 0, b = band(sc);
   $('#cardScore').className = 'home-score is-' + b;
+  $('#cardScore').style.setProperty('--score-angle', `${Math.max(0, Math.min(100, sc)) * 3.6}deg`);
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
   $('#scoreHeadLbl').textContent = T.runStatusTitle(bandText(sc));
