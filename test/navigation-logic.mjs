@@ -9,15 +9,15 @@ const [html, app] = await Promise.all([
 ]);
 
 test('home score opens why and remains an accessible button', () => {
-  assert.match(html, /<button class="scorecard" id="cardScore">/);
+  assert.match(html, /<button class="home-score" id="cardScore" type="button">/);
   assert.match(html, /id="scoreWhy"/);
   assert.match(app, /\$\('#cardScore'\)\.addEventListener\('click', \(\) => go\('why'\)\)/);
   assert.match(app, /\$\('#cardScore'\)\.setAttribute\('aria-label', T\.scoreExplanation\(sc, bandText\(sc\)\)\)/);
 });
 
 test('day overview opens analysis and its bottom action opens why', () => {
-  assert.match(html, /<button class="linkrow" data-go="analysis"><span id="lblViewDetails"><\/span>/);
-  assert.match(app, /\$\('#lblViewDetails'\)\.textContent = T\.dayOverview/);
+  assert.match(html, /<button class="home-details" type="button" data-go="analysis">[\s\S]*id="homeDetailsLabel"/);
+  assert.match(app, /\$\('#homeDetailsLabel'\)\.textContent = T\.runDetails/);
   assert.match(app, /<button class="btnwide" data-go="why">\$\{T\.whyScore\}/);
 });
 
