@@ -1,9 +1,10 @@
-export const APP_VERSION = '0.33.3';
-export const APP_BUILD = 36;
+export const APP_VERSION = '0.33.4';
+export const APP_BUILD = 37;
 export const RELEASE_DATE = '2026-09-24';
 
 export const RELEASE_NOTES = {
   en: [
+    '0.33.4 locks the Run Score number to the geometric center, uses a true gear for settings, smooths modeled radar edges and frame transitions, and keeps Weather tabs out of the full-screen radar.',
     '0.33.3 improves Run Score optical centering, simplifies the settings icon, and makes modeled radar precipitation clearer with stronger fill, a dashed boundary and an explicit Forecast badge.',
     '0.33.2 calibrates the Run, Stats and More screens to the approved phone mockups and restores GPS behavior on location pins.',
     'Hotfix 0.33.1 fixes a startup crash in the new tabs and planner navigation.',
@@ -18,6 +19,7 @@ export const RELEASE_NOTES = {
     'Play, the full timeline and map controls now live only in full-screen radar.'
   ],
   ru: [
+    '0.33.4 фиксирует Run Score по геометрическому центру, ставит настоящую шестерёнку настроек, сглаживает края и переходы модельного радара и убирает вкладки Погоды из полноэкранного радара.',
     '0.33.3 точнее центрирует Run Score, упрощает значок настроек и делает модельный прогноз осадков заметнее: насыщенная заливка, пунктирный контур и явная метка «Прогноз».',
     '0.33.2 подгоняет экраны Бег, Статистика и Ещё под утверждённые телефонные макеты и восстанавливает GPS по нажатию на значок местоположения.',
     'Исправление 0.33.1 устраняет падение при запуске в новых вкладках и Планировщике.',
