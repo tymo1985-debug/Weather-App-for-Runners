@@ -158,12 +158,22 @@ function staticText() {
   document.documentElement.lang = S.langCode;
   $('#pinIcon').innerHTML = glyph.pin;
   $('#btnLocate').innerHTML = glyph.navigate.replace('#2C3E56', 'currentColor');
-  $('#btnAddCity').innerHTML = glyph.plus;
+  $('#btnAddCity').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
   $('#btnLocate').setAttribute('aria-label', T.myLocation);
-  $('#btnAddCity').setAttribute('aria-label', T.addCity);
+  $('#btnAddCity').setAttribute('aria-label', T.yourProfile);
   $$('[data-back]').forEach(b => b.setAttribute('aria-label', T.back));
   $$('[data-share]').forEach(b => b.setAttribute('aria-label', T.share));
   $('#scoreRunIc').innerHTML = glyph.runner;
+  $('#homeFeelsIcon').innerHTML = glyph.temp;
+  $('#homeWindIcon').innerHTML = glyph.wind;
+  $('#homeRainIcon').innerHTML = glyph.rain;
+  $('#homeAdviceIcon').innerHTML = glyph.runner;
+  $('#homeTodayLabel').textContent = T.today;
+  $('#homeFeelsLabel').textContent = T.feelsLike;
+  $('#homeWindLabel').textContent = T.fWind;
+  $('#homeRainLabel').textContent = T.fRain;
+  $('#homeDetailsLabel').textContent = T.runDetails;
   $('#icBest').innerHTML = glyph.alarm;
   $('#icDur').innerHTML = glyph.target;
   $('#icUv').innerHTML = glyph.uv;
@@ -291,9 +301,14 @@ function renderHome() {
 
   const recommendation = currentRun();
   const sc = recommendation.score ?? 0, b = band(sc);
-  $('#cardScore').className = 'scorecard' + (b === 'good' ? '' : ' is-' + b);
+  $('#cardScore').className = 'home-score is-' + b;
   $('#scoreBig').textContent = sc;
   $('#scoreLabel').textContent = bandText(sc);
+  $('#scoreHeadLbl').textContent = T.runStatusTitle(bandText(sc));
+  $('#homeConditions').textContent = mainConditions(h);
+  $('#homeFeelsValue').textContent = `${round(h?.feels ?? cur.apparent_temperature)}°`;
+  $('#homeWindValue').textContent = h ? `${round(h.wind)} km/h` : '—';
+  $('#homeRainValue').textContent = h ? `${h.pop}%` : '—';
   $('#scoreWhy').textContent = T.whyScoreShort(sc);
   $('#cardScore').setAttribute('aria-label', T.scoreExplanation(sc, bandText(sc)));
   const w = recommendation.later;
@@ -320,6 +335,10 @@ function renderHome() {
   const adviceText = [...tips.map(key => T.runTips[key]), personalText].filter(Boolean).join(' ');
   $('#runAdvice').textContent = adviceText;
   $('#runAdvice').hidden = !adviceText;
+  const nearText = !near ? T.nearTermUnavailable : near.later
+    ? T.nearTermWait(near.nowScore, near.later.score,
+      T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
+  $('#homeAdvice').textContent = [nearText, tips[0] ? T.runTips[tips[0]] : ''].filter(Boolean).join(' ');
   $$('[data-horizon]').forEach(b => {
     const active = Number(b.dataset.horizon) === S.horizon;
     b.classList.toggle('is-on', active);
@@ -332,6 +351,7 @@ function renderHome() {
   });
   $('#factUv').textContent = `${(h?.uv ?? 0).toFixed(0)} (${uvWord(h?.uv ?? 0)})`;
   renderPlanControls();
+  renderHomeTimeline();
   renderRunMiniTimeline();
   renderRouteWeatherHome();
   renderStartCompare();
@@ -355,6 +375,42 @@ function renderPlanControls() {
   $('#availableFrom').value = S.plan.availableFrom;
   $('#availableTo').value = S.plan.availableTo;
   $('#clearAvailability').hidden = !hasAvailability(S.plan);
+}
+
+function renderHomeTimeline() {
+  const box = $('#homeTimeline');
+  if (!box || !S.hours.length) return;
+  const n = Math.max(0, nowIndex());
+  const upcoming = S.hours.slice(n, n + 10);
+  if (!upcoming.length) { box.innerHTML = ''; $('#homeBestBadge').textContent = ''; return; }
+
+  let bestIndex = 0;
+  for (let i = 1; i < upcoming.length; i++) {
+    if ((upcoming[i].score ?? -1) > (upcoming[bestIndex].score ?? -1)) bestIndex = i;
+  }
+
+  const wanted = [0, 2, 4, 6, 8].filter(i => i < upcoming.length);
+  if (!wanted.includes(bestIndex)) {
+    const replaceAt = Math.min(2, Math.max(0, wanted.length - 1));
+    wanted[replaceAt] = bestIndex;
+  }
+  const indices = [...new Set(wanted)].sort((a, b) => a - b);
+  for (let i = 0; indices.length < Math.min(5, upcoming.length) && i < upcoming.length; i++) {
+    if (!indices.includes(i)) indices.push(i);
+  }
+  indices.sort((a, b) => a - b);
+
+  const best = upcoming[bestIndex];
+  $('#homeBestBadge').textContent = T.bestTimeAt(hhmm(best.t));
+  box.innerHTML = indices.slice(0, 5).map((idx, pos) => {
+    const hour = upcoming[idx], isBest = idx === bestIndex;
+    return `<div class="home-time${isBest ? ' is-best' : ''}">
+      <span class="home-time__label">${pos === 0 ? T.now : hhmm(hour.t)}</span>
+      <span class="home-time__dot"></span>
+      <b>${hour.score}</b>
+      <span class="home-time__weather">${weatherIcon(hour.code, hour.isDay)}</span>
+    </div>`;
+  }).join('');
 }
 
 function renderRunMiniTimeline() {
@@ -609,7 +665,7 @@ $$('.seg[data-range]').forEach(b => b.addEventListener('click', () => {
 $('#cardScore').addEventListener('click', () => go('why'));
 $('#strip').addEventListener('click', () => go(S.range === 'days' ? 'daily' : 'hourly'));
 $('#btnPlace').addEventListener('click', () => go('cities'));
-$('#btnAddCity').addEventListener('click', () => go('cities'));
+$('#btnAddCity').addEventListener('click', () => go('details'));
 $('#btnLocate').addEventListener('click', locate);
 $('.duration-quick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick-duration]');
