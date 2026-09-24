@@ -1050,3 +1050,135 @@ body.radar-expanded .tabbar{display:none}
   .weather-now__main>b{font-size:28px}.weather-now__metric>b{font-size:15px}
   .planner-slot{grid-template-columns:22px 1fr 30px 38px;gap:5px}
 }
+
+
+/* ── SCREENSHOT CALIBRATION · 0.33.2 ─────────────────────────── */
+/* The approved mockup is intentionally denser than the first implementation.
+   These overrides calibrate real 390–430px phone viewports to that composition. */
+.tabbar{
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  height:calc(60px + env(safe-area-inset-bottom));
+  padding:2px 4px env(safe-area-inset-bottom);
+}
+.tabbar .tab{min-width:0;min-height:52px;gap:2px;font-size:10px}
+.tabbar .tab__ic{width:21px;height:21px}
+.tabbar .tab span:last-child{font-size:10px}
+.screen{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+.screen--home{padding-bottom:calc(70px + env(safe-area-inset-bottom))}
+
+/* Home: reduce the oversized hero/card rhythm visible in the phone screenshots. */
+.home-hero{
+  min-height:338px;
+  padding:0 20px 30px;
+}
+.home-hero .hero__sky{
+  background:
+    linear-gradient(90deg,rgba(7,24,25,.48) 0%,rgba(8,28,27,.24) 40%,rgba(8,24,25,.02) 72%),
+    linear-gradient(180deg,rgba(7,24,36,.08),rgba(7,20,23,.03) 48%,rgba(4,17,18,.20)),
+    url("../assets/prague-weather-hero.svg") center 43%/cover no-repeat;
+}
+.home-hero .hero__top{padding-top:max(12px,env(safe-area-inset-top))}
+.home-hero .hero__place{font-size:19px;min-height:38px}
+.home-hero .hero__date{margin-top:1px;font-size:11.5px}
+.home-hero__settings{width:38px;height:38px}
+.home-hero__settings svg{width:27px;height:27px}
+.home-hero__status{gap:10px;margin-top:17px;font-size:19px;letter-spacing:-.35px}
+.home-hero__runner{width:44px;height:44px}
+.home-hero__runner svg{width:27px;height:27px}
+.home-score{width:108px;height:108px;margin-top:4px}
+.home-score__value{font-size:56px;letter-spacing:-3px}
+.home-hero__bottom{margin-top:0}
+.home-hero__temp{font-size:43px;letter-spacing:-2px}
+.home-hero__temp span:last-child{font-size:23px}
+.home-hero__summary{margin-top:5px;font-size:15px}
+.home-sheet{
+  margin-top:-17px;
+  padding:12px 12px 10px;
+  border-radius:24px 24px 0 0;
+}
+.home-today{border-radius:20px;padding:13px 12px 11px}
+.home-today__head{margin-bottom:10px}
+.home-today__head h2{font-size:18px}
+.home-best-badge{padding:6px 10px;font-size:10.5px}
+.home-timeline::before{top:37px}
+.home-time__label{min-height:17px;font-size:10.5px}
+.home-time__dot{width:10px;height:10px;margin:10px 0 6px;box-shadow:0 0 0 2px #fff}
+.home-time b{font-size:18px;letter-spacing:-.5px}
+.home-time__weather{width:25px;height:25px;margin-top:5px}
+.home-time.is-best{margin:-3px 2px;padding:3px 1px;border-radius:13px}
+.home-metrics{margin-top:10px;padding:13px 5px;border-radius:19px}
+.home-metric{gap:6px;padding:0 7px}
+.home-metric__icon{width:26px;height:26px}
+.home-metric b{font-size:17px}
+.home-metric span:not(.home-metric__icon){margin-top:3px;font-size:10px}
+.home-advice{margin-top:10px;padding:11px 13px;border-radius:18px;gap:10px}
+.home-advice__icon{width:39px;height:39px}
+.home-advice__icon svg{width:24px;height:24px}
+.home-advice p{font-size:12.5px;line-height:1.32}
+.home-details{min-height:50px;margin-top:10px;border-radius:17px;font-size:15px}
+.home-updated{display:none}
+
+/* Statistics: make the page match the compact reference instead of large dashboard cards. */
+.stats-page{padding:0 12px 12px}
+.stats-page>h1,.more-page>h1{margin:0 2px 9px;font-size:24px;letter-spacing:-.6px}
+.stats-period{height:37px;margin-bottom:8px;border-radius:12px;grid-template-columns:38px 1fr 38px}
+.stats-period button{font-size:23px}
+.stats-period b{font-size:11.5px}
+.stats-tabs{margin-bottom:8px;border-radius:12px}
+.stats-tabs button{min-height:34px;border-radius:9px;font-size:10.5px}
+.stats-card{border-radius:17px;padding:12px 14px;margin-bottom:8px}
+.stats-card>small{font-size:11px}
+.stats-average{gap:9px;margin:1px 0 8px}
+.stats-average>b{font-size:30px}
+.stats-average>span{font-size:9.5px;padding:3px 7px}
+.stats-bars{height:91px;gap:6px}
+.stats-bar{grid-template-rows:17px 1fr 15px}
+.stats-bar__value{font-size:9.5px}
+.stats-bar__track{height:55px;width:18px;border-radius:5px}
+.stats-bar small{font-size:8.5px}
+.stats-best__value{gap:8px;margin:7px 0 0}
+.stats-best__value span{width:27px;height:27px}
+.stats-best__value strong{font-size:20px}
+.stats-best>small{margin-left:35px;font-size:9.5px}
+.stats-conditions{margin-top:6px}
+.stats-condition{grid-template-columns:23px 1fr auto;gap:8px;padding:7px 0}
+.stats-condition>span{width:20px;height:20px}
+.stats-condition small{font-size:10.5px}
+.stats-condition b{font-size:11.5px}
+.stats-card__head button{font-size:10px}
+.stats-history-row{padding:7px 0}
+.stats-history-row b{font-size:10.5px}
+.stats-history-row small{font-size:9.5px}
+.stats-history-row strong{font-size:16px}
+.stats-history .history-empty{margin:5px 0 0;font-size:11px}
+
+/* More: the reference uses a short settings list, not six oversized tiles. */
+.more-page{padding:0 12px 12px}
+.more-menu{border-radius:18px}
+.more-row{
+  grid-template-columns:36px 1fr 16px;
+  gap:9px;
+  min-height:60px;
+  padding:7px 12px;
+}
+.more-row b{font-size:13px}
+.more-row small{margin-top:1px;font-size:10px}
+.more-row em{font-size:18px}
+.more-row__ic{width:30px;height:30px;border-radius:9px;font-size:15px}
+.more-row__ic svg{width:19px;height:19px}
+.more-settings,.more-about{border-radius:18px;padding:10px 12px;margin-top:9px}
+
+/* Prevent fixed navigation from visually covering the final card/action. */
+.home-sheet,.stats-page,.more-page,.planner-page,.run-details-page{scroll-margin-bottom:72px}
+
+@media(max-width:390px){
+  .home-hero{min-height:330px;padding-left:16px;padding-right:16px}
+  .home-hero__status{margin-top:14px;font-size:18px}
+  .home-score{width:103px;height:103px}
+  .home-score__value{font-size:53px}
+  .home-hero__temp{font-size:41px}
+  .home-sheet{padding-left:9px;padding-right:9px}
+  .home-today{padding-left:10px;padding-right:10px}
+  .home-metric{padding:0 4px}
+  .stats-page,.more-page{padding-left:9px;padding-right:9px}
+}
