@@ -22,7 +22,7 @@ test('Home presents one focused run-first dashboard', () => {
 });
 
 test('Home run card retains existing interactive hooks', () => {
-  assert.match(html, /data-go="analysis"/);
+  assert.match(html, /data-go="run-details"/);
   assert.equal((html.match(/data-quick-duration=/g) || []).length, 5);
   assert.equal((html.match(/data-horizon=/g) || []).length, 2);
   assert.match(css, /RUN PLANNER ROADMAP · PHASE A/);
