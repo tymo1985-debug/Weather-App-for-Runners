@@ -45,3 +45,12 @@ test('collection selectors use the multi-element helper before forEach', () => {
   assert.match(app, /\$\$\('\[data-stats-tab\]'\)\.forEach/);
   assert.match(app, /\$\$\('\[data-weather-section\]'\)\.forEach/);
 });
+
+
+test('location pin uses device geolocation while city text keeps the picker', () => {
+  assert.match(app, /btnPlace'\)\.addEventListener\('click', e => \{[\s\S]*hero__pin[\s\S]*locate\(\)[\s\S]*go\('cities'\)/);
+  assert.match(app, /navigator\.geolocation\.getCurrentPosition/);
+  assert.match(app, /btnMapLocate'\)\.addEventListener\('click', \(\) => locate\(\{ recenterMap: true \}\)\)/);
+  assert.match(app, /locationDenied/);
+  assert.match(css, /grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+});
