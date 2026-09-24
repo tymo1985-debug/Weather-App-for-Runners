@@ -338,6 +338,8 @@ function staticText() {
 
 // ── 1. ГЛАВНАЯ ─────────────────────────────────────────────────────────────
 function renderHome() {
+  const homeHero = $('.home-hero');
+  homeHero.classList.toggle('is-prague', isPraguePlace(S.place));
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
   $('#placeName').textContent = S.place.name;
   $('#heroDate').textContent = `${dowOf(d)}, ${dateOf(d)} • ${hhmm(d)}`;
