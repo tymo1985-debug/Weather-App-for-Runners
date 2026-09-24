@@ -240,7 +240,7 @@ function staticText() {
   $('#weatherNowRainLabel').textContent = T.fRain;
 
   $('#statsTitle').textContent = T.statsTitle;
-  $$$('[data-stats-tab]').forEach(b => {
+  $('[data-stats-tab]').forEach(b => {
     b.textContent = b.dataset.statsTab === 'score' ? T.statsScore : b.dataset.statsTab === 'weather' ? T.statsWeather : T.statsRuns;
   });
   $('#statsAverageLabel').textContent = T.statsAverage;
