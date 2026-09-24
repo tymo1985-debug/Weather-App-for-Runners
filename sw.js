@@ -1,5 +1,5 @@
 const PREFIX = 'weather-runner-';
-const SHELL_CACHE = `${PREFIX}shell-v37`;
+const SHELL_CACHE = `${PREFIX}shell-v38`;
 const API_CACHE = `${PREFIX}api-v6`;
 const API_TTL_MS = 5 * 60 * 1000;
 const API_MAX_ENTRIES = 20;
