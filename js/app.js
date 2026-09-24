@@ -240,7 +240,7 @@ function staticText() {
   $('#weatherNowRainLabel').textContent = T.fRain;
 
   $('#statsTitle').textContent = T.statsTitle;
-  $('[data-stats-tab]').forEach(b => {
+  $$('[data-stats-tab]').forEach(b => {
     b.textContent = b.dataset.statsTab === 'score' ? T.statsScore : b.dataset.statsTab === 'weather' ? T.statsWeather : T.statsRuns;
   });
   $('#statsAverageLabel').textContent = T.statsAverage;
@@ -2438,7 +2438,7 @@ $('#routeClear').addEventListener('click', () => {
   saveRoute(null); if (S.bundle) paint();
 });
 
-$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+$$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
   S.statsTab = b.dataset.statsTab; if (S.bundle) renderStats();
 }));
 $('#statsPrev').addEventListener('click', () => {
