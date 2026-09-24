@@ -1337,8 +1337,47 @@ function renderWeatherHub() {
   renderWeatherHourly();
   renderWeatherDaily();
   renderWeatherAir();
+  renderWeatherNow();
+  syncWeatherSection();
   updateRadarExpandControl();
   initRadar().then(() => setTimeout(() => R.map?.invalidateSize(), 0)).catch(() => {});
+}
+
+function syncWeatherSection() {
+  $('[data-weather-section]').forEach(b => {
+    const active = b.dataset.weatherSection === S.weatherSection;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-selected', String(active));
+  });
+  $('[data-weather-panel]').forEach(panel => {
+    panel.hidden = panel.dataset.weatherPanel !== S.weatherSection;
+  });
+  if (S.weatherSection === 'radar') setTimeout(() => R.map?.invalidateSize(), 30);
+}
+
+function renderWeatherNow() {
+  const h = nowHour(), cur = S.bundle.weather.current, n = Math.max(0, nowIndex());
+  if (!h) return;
+  $('#weatherNowIcon').innerHTML = weatherIcon(h.code, h.isDay);
+  $('#weatherNowTemp').textContent = `${round(h.temp)}°`;
+  $('#weatherNowFeels').textContent = `${T.feelsLike} ${round(h.feels)}°`;
+  $('#weatherNowWind').textContent = `${round(h.wind)} km/h`;
+  $('#weatherNowRain').textContent = `${h.pop}%`;
+
+  const list = S.hours.slice(n, n + 6);
+  if (list.length < 2) { $('#weatherNowChart').innerHTML = ''; return; }
+  const W = 330, H = 112, L = 18, R = 18, top = 20, base = 72;
+  const temps = list.map(x => x.temp), lo = Math.min(...temps) - 1, hi = Math.max(...temps) + 1;
+  const span = Math.max(3, hi - lo), step = (W - L - R) / (list.length - 1);
+  const y = v => top + (hi - v) / span * 42;
+  const pts = list.map((x, i) => [L + i * step, y(x.temp)]);
+  const path = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  $('#weatherNowChart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.weatherHourlyTitle}">
+    <path d="${path}" fill="none" stroke="#F2A900" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map((p,i)=>`<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#F2A900"/>
+      <text x="${p[0]}" y="${Math.max(12,p[1]-9)}" text-anchor="middle" class="weather-now-chart__temp">${round(list[i].temp)}°</text>
+      <text x="${p[0]}" y="${base+28}" text-anchor="middle" class="weather-now-chart__time">${i===0?T.now:hhmm(list[i].t)}</text>`).join('')}
+  </svg>`;
 }
 
 function renderWeatherHourly() {
@@ -1443,6 +1482,11 @@ function setRadarExpanded(on) {
 
 $('#weatherPlace').addEventListener('click', () => go('cities'));
 $('#weatherLocate').addEventListener('click', locate);
+$('.weather-hub-tabs').addEventListener('click', e => {
+  const b = e.target.closest('[data-weather-section]'); if (!b) return;
+  S.weatherSection = b.dataset.weatherSection;
+  syncWeatherSection();
+});
 $('.weather-hourly-mode').addEventListener('click', e => {
   const b = e.target.closest('[data-weather-mode]'); if (!b) return;
   S.weatherMode = b.dataset.weatherMode;
@@ -1955,6 +1999,166 @@ function loadLeaflet() {
   });
 }
 
+// ── APPROVED MOCKUP SCREENS ────────────────────────────────────────────────
+function formatPeriodDay(d) {
+  return d.toLocaleDateString(T.lang, { day: 'numeric', month: 'short' });
+}
+
+function renderStats() {
+  const now = placeNow(S.bundle);
+  const weekday = (now.getDay() + 6) % 7;
+  const start = new Date(now); start.setDate(now.getDate() - weekday);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  $('#statsPeriodLabel').textContent = `${formatPeriodDay(start)} – ${formatPeriodDay(end)}`;
+
+  $('[data-stats-tab]').forEach(b => {
+    const active = b.dataset.statsTab === S.statsTab;
+    b.classList.toggle('is-on', active);
+    b.setAttribute('aria-selected', String(active));
+  });
+
+  let entries = S.history.slice(0, 7).reverse().map(item => ({
+    label: new Date(item.savedAt).toLocaleDateString(T.lang, { weekday: 'short' }),
+    score: Number(item.score) || 0,
+    saved: true
+  }));
+  if (!entries.length) {
+    const seen = new Set();
+    entries = [];
+    for (const h of S.hours) {
+      const iso = h.iso.slice(0,10);
+      if (seen.has(iso)) continue;
+      seen.add(iso);
+      const bw = bestWindowOfDay(S.hours, iso, runDuration());
+      if (bw) entries.push({ label: dowOf(new Date(iso + 'T12:00')), score: bw.score, saved: false });
+      if (entries.length >= 7) break;
+    }
+  }
+  const avg = entries.length ? Math.round(entries.reduce((a,x)=>a+x.score,0)/entries.length) : null;
+  $('#statsAverage').textContent = avg ?? '—';
+  $('#statsTrend').textContent = entries.length ? (entries.some(x=>x.saved) ? T.statsHistory : T.statsCurrentConditions) : '';
+  $('#statsBars').innerHTML = entries.length ? entries.map(x => `<div class="stats-bar">
+      <span class="stats-bar__value">${x.score}</span>
+      <span class="stats-bar__track"><i style="height:${Math.max(8,x.score)}%;background:${bandColor(x.score)}"></i></span>
+      <small>${x.label}</small>
+    </div>`).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+
+  const best = bestWindow(S.hours, runDuration());
+  $('#statsBestValue').textContent = best ? windowText(best) : '—';
+  $('#statsBestSub').textContent = best ? T.today : T.statsNoHistory;
+
+  const h = nowHour();
+  $('#statsConditions').innerHTML = h ? [
+    [glyph.temp, T.statsTemp, `${round(h.temp)}°`],
+    [glyph.wind, T.statsWind, `${round(h.wind)} km/h`],
+    [glyph.rain, T.statsRain, `${h.pop}%`]
+  ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('') : '';
+
+  $('#statsHistory').innerHTML = S.history.length ? S.history.slice(0, 5).map(item => {
+    const d = new Date(item.savedAt);
+    const detail = Number.isFinite(item.distanceKm) ? `${item.distanceKm.toFixed(1)} km` : T.min(item.duration);
+    return `<div class="stats-history-row">
+      <span><b>${d.toLocaleDateString(T.lang,{weekday:'short',day:'numeric',month:'short'})}</b><small>${item.place || '—'} · ${detail}</small></span>
+      <strong style="color:${bandColor(item.score)}">${item.score}</strong>
+    </div>`;
+  }).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+}
+
+function selectedRunDetailsHour() {
+  if (S.runDetailsRange === 'now') return nowHour();
+  const d = placeNow(S.bundle);
+  if (S.runDetailsRange === 'tomorrow') d.setDate(d.getDate() + 1);
+  const iso = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const w = bestWindowOfDay(S.hours, iso, runDuration());
+  return w?.slice?.[0] || S.hours.find(h => h.iso.startsWith(iso)) || nowHour();
+}
+
+function renderRunDetails() {
+  $('[data-run-details-range]').forEach(b => {
+    const active = b.dataset.runDetailsRange === S.runDetailsRange;
+    b.classList.toggle('is-on', active); b.setAttribute('aria-selected', String(active));
+  });
+  const h = selectedRunDetailsHour();
+  if (!h) return;
+  $('#runDetailsScore').textContent = h.score;
+  $('#runDetailsScore').style.background = bandColor(h.score);
+  $('#runDetailsBand').textContent = bandText(h.score);
+  const aqiText = h.aqi == null ? '—' : `${T.aqiWord} ${Math.round(h.aqi)}`;
+  $('#runDetailsList').innerHTML = [
+    [glyph.temp, T.temperature, `${round(h.temp)}°`],
+    [glyph.feels, T.feelsLike, `${round(h.feels)}°`],
+    [glyph.wind, T.fWind, `${round(h.wind)} km/h`],
+    [glyph.humid, T.fHumid, `${round(h.rh)}%`],
+    [glyph.rain, T.fRain, `${h.pop}%`],
+    [glyph.uv, T.uvIndex, `${round(h.uv)} (${uvWord(h.uv)})`],
+    [glyph.dew, T.dewPoint, `${round(h.dew)}°`],
+    [glyph.eye, T.visibility, h.vis == null ? '—' : `${(h.vis/1000).toFixed(0)} km`],
+    [glyph.air, T.fAir, aqiText]
+  ].map(([ic,k,v]) => `<div class="run-detail-row"><span class="run-detail-row__ic">${ic}</span><span class="run-detail-row__k">${k}</span><b>${v}</b></div>`).join('');
+}
+
+function plannerTargetDate() {
+  const d = placeNow(S.bundle, Date.now() + S.plannerDayOffset * 86400e3);
+  return { d, iso: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` };
+}
+
+function renderPlanner() {
+  $('[data-planner-tab]').forEach(b => {
+    const active = b.dataset.plannerTab === S.plannerTab;
+    b.classList.toggle('is-on', active); b.setAttribute('aria-selected', String(active));
+  });
+  const { d, iso } = plannerTargetDate();
+  $('#plannerDate').textContent = `${dowOf(d)}, ${dateOf(d)}`;
+  $('#plannerPrev').disabled = S.plannerDayOffset <= 0;
+  $('#plannerNext').disabled = S.plannerDayOffset >= 6;
+
+  const dayHours = S.hours.filter(h => h.iso.slice(0,10) === iso);
+  const now = S.plannerDayOffset === 0 ? Date.now() : (dayHours[0]?.ts ?? Date.now());
+  const options = runStartOptions(dayHours, runDuration(), { now, horizonHours: 24 });
+  const best = bestStartOption(options);
+  const shown = options.filter((_,i)=>i%2===0).slice(0,6);
+  if (best && !shown.includes(best) && shown.length) shown[Math.min(2,shown.length-1)] = best;
+  shown.sort((a,b)=>a.slice[0].ts-b.slice[0].ts);
+  S.plannerChoices = shown;
+  S.plannerChoice = best && shown.includes(best) ? best : shown[0] || null;
+
+  $('#plannerSlots').innerHTML = shown.length ? shown.map(o => {
+    const selected = o === best;
+    const first = o.slice[0];
+    return `<button type="button" class="planner-slot${selected?' is-best':''}" data-planner-choice="${shown.indexOf(o)}">
+      <span class="planner-slot__radio"></span>
+      <span class="planner-slot__time">${windowText(o)}</span>
+      <span class="planner-slot__weather">${weatherIcon(first.code, first.isDay)}</span>
+      <strong style="color:${bandColor(o.score)}">${o.score}</strong>
+    </button>`;
+  }).join('') : `<p class="planner-empty">${T.plannerNoSlots}</p>`;
+
+  const bestMode = S.plannerTab === 'best';
+  $('#plannerSlots').hidden = !bestMode;
+  $('.planner-date').hidden = !bestMode;
+  $('.planner-controls').hidden = bestMode;
+  $('#plannerCalendar').hidden = !bestMode || !shown.length;
+  renderPlanControls();
+  renderStartCompare();
+  renderWatchControl();
+}
+
+function addPlannerToCalendar() {
+  const o = S.plannerChoice || bestStartOption(S.plannerChoices || []);
+  if (!o?.slice?.length) return;
+  const start = o.slice[0].ts;
+  const end = start + runDuration() * 60000;
+  const stamp = ms => new Date(ms).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}Z$/,'Z');
+  const text = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Run Weather//Planner//EN','BEGIN:VEVENT',
+    `UID:run-weather-${start}@local`,`DTSTAMP:${stamp(Date.now())}`,`DTSTART:${stamp(start)}`,`DTEND:${stamp(end)}`,
+    `SUMMARY:${T.plannerTitle} — ${S.place.name}`,`DESCRIPTION:Run Score ${o.score}/100`,'END:VEVENT','END:VCALENDAR'
+  ].join('\r\n');
+  const url = URL.createObjectURL(new Blob([text], {type:'text/calendar;charset=utf-8'}));
+  const a = document.createElement('a'); a.href=url; a.download='run-weather.ics'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 // ── 10. ДЕТАЛИ И ПРОФИЛЬ ───────────────────────────────────────────────────
 function renderDetails() {
   const h = nowHour(), D = S.bundle.weather.daily;
@@ -2024,6 +2228,9 @@ function renderDetails() {
   $('#appVersionBadge').textContent = T.updateCurrent;
   $('#whatsNewList').innerHTML = (RELEASE_NOTES[S.langCode] || RELEASE_NOTES.en)
     .map(note => `<li>${note}</li>`).join('');
+  $('#moreAboutSub').textContent = `v${APP_VERSION}`;
+  const watchOn = !!S.watch?.enabled || !!S.backgroundWatch?.active;
+  $('#moreWatchSub').textContent = watchOn ? T.watchActive : T.moreWatchSub;
 }
 $('#profileList').addEventListener('click', e => {
   const b = e.target.closest('[data-opt]'); if (b) openProfileSheet(b.dataset.opt);
@@ -2053,6 +2260,33 @@ $('#routeClear').addEventListener('click', () => {
   S.routeWeatherLoading = false; S.routeWeatherError = false;
   saveRoute(null); if (S.bundle) paint();
 });
+
+$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+  S.statsTab = b.dataset.statsTab; if (S.bundle) renderStats();
+}));
+$('[data-run-details-range]').forEach(b => b.addEventListener('click', () => {
+  S.runDetailsRange = b.dataset.runDetailsRange; if (S.bundle) renderRunDetails();
+}));
+$('[data-planner-tab]').forEach(b => b.addEventListener('click', () => {
+  S.plannerTab = b.dataset.plannerTab; if (S.bundle) renderPlanner();
+}));
+$('#plannerPrev').addEventListener('click', () => {
+  S.plannerDayOffset = Math.max(0, S.plannerDayOffset - 1); if (S.bundle) renderPlanner();
+});
+$('#plannerNext').addEventListener('click', () => {
+  S.plannerDayOffset = Math.min(6, S.plannerDayOffset + 1); if (S.bundle) renderPlanner();
+});
+$('#plannerSlots').addEventListener('click', e => {
+  const b = e.target.closest('[data-planner-choice]'); if (!b) return;
+  const choice = S.plannerChoices?.[Number(b.dataset.plannerChoice)];
+  if (!choice) return; S.plannerChoice = choice;
+  $('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
+});
+$('#plannerCalendar').addEventListener('click', addPlannerToCalendar);
+$('#moreSettingsRow').addEventListener('click', () => { $('#moreSettingsPanel').hidden = false; $('#moreAboutPanel').hidden = true; });
+$('#moreAboutRow').addEventListener('click', () => { $('#moreAboutPanel').hidden = false; $('#moreSettingsPanel').hidden = true; });
+$('#moreSettingsClose').addEventListener('click', () => { $('#moreSettingsPanel').hidden = true; });
+$('#moreAboutClose').addEventListener('click', () => { $('#moreAboutPanel').hidden = true; });
 
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
 function renderCities() {
