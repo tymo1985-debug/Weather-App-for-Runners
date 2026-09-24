@@ -57,7 +57,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v36/);
+  assert.match(sw, /shell-v37/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -149,11 +149,24 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.33.2');
+  assert.equal(APP_VERSION, '0.33.3');
   assert.equal(RELEASE_DATE, '2026-09-24');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
   assert.match(html, /id="whatsNewList"/);
   assert.match(app, /RELEASE_NOTES\[S\.langCode\]/);
   assert.match(sw, /\.\/js\/version\.js/);
+});
+
+
+test('model forecast is visually distinct from observed radar', () => {
+  assert.match(html, /id="radarModelBadge"/);
+  assert.equal(LANGS.en.forecastBadge, 'FORECAST');
+  assert.equal(LANGS.ru.forecastBadge, 'ПРОГНОЗ');
+  assert.match(app, /ctx\.setLineDash\(\[4, 3\]\)/);
+  assert.match(app, /kind === 'model' \? \.82 : \.78/);
+  assert.match(app, /radarModelBadge'\)\.hidden = !isModel/);
+  assert.match(app, /classList\.toggle\('is-model-frame', isModel\)/);
+  assert.match(css, /\.radar-model-badge\{/);
+  assert.match(css, /border:1px dashed/);
 });
