@@ -1182,3 +1182,19 @@ body.radar-expanded .tabbar{display:none}
   .home-metric{padding:0 4px}
   .stats-page,.more-page{padding-left:9px;padding-right:9px}
 }
+
+
+/* ── LOCATION-AWARE HOME HERO ─────────────────────────────────── */
+.home-hero .hero__sky{
+  background:
+    linear-gradient(90deg,rgba(8,28,42,.34),rgba(20,65,83,.12) 52%,rgba(255,255,255,.02)),
+    linear-gradient(180deg,#4A9CDA 0%,#76B8E2 55%,#BDD9DF 100%);
+}
+.home-hero .hero__scene{display:block;opacity:.42;filter:saturate(.65)}
+.home-hero.is-prague .hero__sky{
+  background:
+    linear-gradient(90deg,rgba(7,24,25,.48) 0%,rgba(8,28,27,.24) 40%,rgba(8,24,25,.02) 72%),
+    linear-gradient(180deg,rgba(7,24,36,.08),rgba(7,20,23,.03) 48%,rgba(4,17,18,.20)),
+    url("../assets/prague-weather-hero.svg") center 43%/cover no-repeat;
+}
+.home-hero.is-prague .hero__scene{display:none}
