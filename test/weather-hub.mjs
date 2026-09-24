@@ -47,7 +47,7 @@ test('Weather Hub reuses running score and keeps city search internal', () => {
   assert.match(app, /radar: renderWeatherHub/);
   assert.match(app, /currentRun\(\)\.score/);
   assert.match(app, /weatherMode: 'cards'/);
-  assert.match(app, /weatherPlace'\)\.addEventListener\('click', \(\) => go\('cities'\)\)/);
+  assert.match(app, /weatherPlace'\)\.addEventListener\('click', e => \{[\s\S]*weather-hero__pin[\s\S]*locate\(\)[\s\S]*go\('cities'\)/);
   assert.match(html, /data-screen="cities"/);
   assert.match(app, /load\(\); back\(\);/);
 });
