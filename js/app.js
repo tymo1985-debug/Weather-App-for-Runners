@@ -29,7 +29,7 @@ const S = {
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
   weatherMode: 'cards', weatherSection: 'radar', radarExpanded: false,
-  statsTab: 'score', plannerTab: 'best', plannerDayOffset: 0, runDetailsRange: 'now',
+  statsTab: 'score', statsWeekOffset: 0, plannerTab: 'best', plannerDayOffset: 0, runDetailsRange: 'now',
   factor: 'temp',
   screen: 'home', stack: []
 };
@@ -157,18 +157,10 @@ const currentRun = () => currentRunSummary(S.hours, runDuration());
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
-const settingsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-  <circle cx="12" cy="12" r="3.2"/>
-  <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/>
-</svg>`;
 
 function staticText() {
   document.documentElement.lang = S.langCode;
   $('#pinIcon').innerHTML = glyph.pin;
-  $('#btnLocate').innerHTML = glyph.navigate.replace('#2C3E56', 'currentColor');
-  $('#btnAddCity').innerHTML = settingsIcon;
-  $('#btnLocate').setAttribute('aria-label', T.myLocation);
-  $('#btnAddCity').setAttribute('aria-label', T.tabMore);
   $$('[data-back]').forEach(b => b.setAttribute('aria-label', T.back));
   $$('[data-share]').forEach(b => b.setAttribute('aria-label', T.share));
   $('#scoreRunIc').innerHTML = glyph.runner;
@@ -227,7 +219,6 @@ function staticText() {
   $('#tlOptK').textContent = T.differentWeather;
   $('#tlOptV').textContent = T.seeOptions;
   $('#weatherPlacePin').innerHTML = glyph.pin;
-  $('#weatherLocate').innerHTML = settingsIcon;
   $('#weatherRunIcon').innerHTML = glyph.runner;
   $('#weatherRunTitle').textContent = T.weatherRunNow;
   $('#weatherRunAction').textContent = T.weatherRunAction;
@@ -290,7 +281,6 @@ function staticText() {
     b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
   });
   $('#weatherPlace').setAttribute('aria-label', T.cities);
-  $('#weatherLocate').setAttribute('aria-label', T.tabMore);
   $('.weather-hourly-mode').setAttribute('aria-label', T.weatherHourlyTitle);
   $('.weather-air-card .weather-card__link').setAttribute('aria-label', T.weatherAirTitle);
   updateRadarExpandControl();
@@ -729,8 +719,6 @@ $('#btnPlace').addEventListener('click', e => {
   if (e.target.closest('.hero__pin')) return locate();
   go('cities');
 });
-$('#btnAddCity').addEventListener('click', () => go('details'));
-$('#btnLocate').addEventListener('click', () => locate());
 $('.duration-quick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick-duration]');
   if (!b) return;
@@ -1411,43 +1399,50 @@ function renderWeatherNow() {
 
 function renderWeatherHourly() {
   const box = $('#weatherHourly'), n = Math.max(0, nowIndex());
-  const list = S.hours.slice(n, n + 8);
+  const cardList = S.hours.slice(n, n + 10);
+  const graphList = S.hours.slice(n, n + 12);
   $$('[data-weather-mode]').forEach(b => {
     const active = b.dataset.weatherMode === S.weatherMode;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-pressed', String(active));
   });
-  if (!list.length) { box.innerHTML = ''; return; }
+  if (!cardList.length) { box.innerHTML = ''; return; }
 
   if (S.weatherMode === 'cards') {
-    box.innerHTML = `<div class="weather-hourly__cards">${list.map((h, i) => `
+    box.innerHTML = `<div class="weather-hourly__cards">${cardList.map((h, i) => `
       <button class="weather-hour" type="button" data-hour="${h.iso}">
         <span class="weather-hour__time">${i === 0 ? T.now : hhmm(h.t)}</span>
         <span class="weather-hour__icon">${weatherIcon(h.code, h.isDay)}</span>
+        <span class="weather-hour__condition">${T.weather[h.code] || ''}</span>
         <b>${round(h.temp)}°</b>
-        <small>${glyph.rain}<span>${h.pop}%</span></small>
+        <small class="weather-hour__rain">${glyph.rain}<span>${h.pop}%</span></small>
+        <small class="weather-hour__wind">${glyph.wind}<span>${round(h.wind)} km/h</span></small>
       </button>`).join('')}</div>`;
     return;
   }
 
-  const W = 340, H = 166, L = 18, RGT = 18, TOP = 24, BASE = 118;
+  const list = graphList;
+  const W = 340, H = 500, L = 22, RGT = 18, TOP = 54, LINE_BASE = 265, RAIN_BASE = 408;
   const temps = list.map(h => h.temp);
   const lo = Math.floor(Math.min(...temps) - 2), hi = Math.ceil(Math.max(...temps) + 2);
   const span = Math.max(4, hi - lo);
   const step = (W - L - RGT) / Math.max(1, list.length - 1);
-  const y = v => TOP + (hi - v) / span * 62;
+  const y = v => TOP + (hi - v) / span * (LINE_BASE - TOP - 22);
   const pts = list.map((h, i) => [L + i * step, y(h.temp)]);
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+  const guides = [TOP, (TOP + LINE_BASE) / 2, LINE_BASE].map(gy =>
+    `<line x1="${L}" x2="${W-RGT}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}" class="weather-graph__guide"/>`).join('');
   box.innerHTML = `<div class="weather-hourly__graph">
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.weatherHourlyTitle}">
-      <path d="${line}" fill="none" stroke="#2F80ED" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-      ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4" fill="#2F80ED"/>
-        <text x="${p[0].toFixed(1)}" y="${Math.max(13,p[1]-10).toFixed(1)}" text-anchor="middle" class="weather-graph__temp">${round(list[i].temp)}°</text>`).join('')}
+      ${guides}
+      <path d="${line}" fill="none" stroke="#2F80ED" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2" fill="#2F80ED"/>
+        <text x="${p[0].toFixed(1)}" y="${Math.max(16,p[1]-11).toFixed(1)}" text-anchor="middle" class="weather-graph__temp">${round(list[i].temp)}°</text>`).join('')}
       ${list.map((h, i) => {
-        const x = L + i * step, bh = Math.max(2, h.pop * .30);
-        return `<rect x="${(x-9).toFixed(1)}" y="${(BASE-bh).toFixed(1)}" width="18" height="${bh.toFixed(1)}" rx="4" fill="#58A8F6" opacity=".72"/>
-          <text x="${x.toFixed(1)}" y="${BASE+14}" text-anchor="middle" class="weather-graph__pop">${h.pop}%</text>
-          <text x="${x.toFixed(1)}" y="${H-6}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:`${pad(h.t.getHours())}:00`}</text>`;
+        const x = L + i * step, bh = Math.max(4, h.pop * 1.05);
+        return `<rect x="${(x-8).toFixed(1)}" y="${(RAIN_BASE-bh).toFixed(1)}" width="16" height="${bh.toFixed(1)}" rx="5" fill="#58A8F6" opacity=".76"/>
+          <text x="${x.toFixed(1)}" y="${RAIN_BASE+18}" text-anchor="middle" class="weather-graph__pop">${h.pop}%</text>
+          <text x="${x.toFixed(1)}" y="${H-18}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:`${pad(h.t.getHours())}:00`}</text>`;
       }).join('')}
     </svg>
     <div class="weather-graph__legend"><span><i class="is-temp"></i>${T.temperature}</span><span><i class="is-rain"></i>${T.colPrecip}</span></div>
@@ -1456,7 +1451,7 @@ function renderWeatherHourly() {
 
 function renderWeatherDaily() {
   const D = S.bundle.weather.daily;
-  $('#weatherDaily').innerHTML = D.time.slice(0, 6).map((iso, i) => {
+  $('#weatherDaily').innerHTML = D.time.slice(0, 10).map((iso, i) => {
     const dt = new Date(iso + 'T12:00');
     return `<button type="button" class="weather-day" data-day="${iso}">
       <span class="weather-day__date"><b>${i === 0 ? T.today : dowOf(dt)}</b><small>${dateOf(dt)}</small></span>
@@ -1513,7 +1508,6 @@ $('#weatherPlace').addEventListener('click', e => {
   if (e.target.closest('.weather-hero__pin')) return locate();
   go('cities');
 });
-$('#weatherLocate').addEventListener('click', () => go('details'));
 $('.weather-hub-tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-weather-section]'); if (!b) return;
   S.weatherSection = b.dataset.weatherSection;
@@ -2077,68 +2071,169 @@ function formatPeriodDay(d) {
   return d.toLocaleDateString(T.lang, { day: 'numeric', month: 'short' });
 }
 
-function renderStats() {
-  const now = placeNow(S.bundle);
+function statsIso(d) {
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
 
+function statsPeriod() {
+  const start = placeNow(S.bundle, Date.now() + S.statsWeekOffset * 7 * 86400e3);
+  start.setHours(12, 0, 0, 0);
+  const dates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(start); d.setDate(start.getDate() + i); return d;
+  });
+  return { start: dates[0], end: dates[6], dates, isos: dates.map(statsIso) };
+}
+
+function statsRunsFor(isos) {
+  const set = new Set(isos);
+  return S.history.filter(item => set.has(statsIso(new Date(item.savedAt))));
+}
+
+function statsBestForDay(iso, currentIso) {
+  const dayHours = S.hours.filter(h => h.iso.slice(0,10) === iso);
+  if (!dayHours.length) return null;
+  if (iso === currentIso) {
+    return bestStartOption(runStartOptions(dayHours, runDuration(), { now: Date.now(), horizonHours: 24 }));
+  }
+  return bestWindowOfDay(S.hours, iso, runDuration());
+}
+
+function statsBarHtml(items, valueText, heightFor, colorFor) {
+  if (!items.length) return `<p class="history-empty">${T.statsNoPeriodData}</p>`;
+  return items.map((x, i) => `<div class="stats-bar">
+      <span class="stats-bar__value">${valueText(x)}</span>
+      <span class="stats-bar__track"><i style="height:${heightFor(x,i)}%;background:${colorFor(x,i)}"></i></span>
+      <small>${x.label}</small>
+    </div>`).join('');
+}
+
+function renderStats() {
   $$('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
   });
 
-  let entries = S.history.slice(0, 7).reverse().map(item => ({
-    label: new Date(item.savedAt).toLocaleDateString(T.lang, { weekday: 'short' }),
-    score: Number(item.score) || 0,
-    saved: true
-  }));
-  if (!entries.length) {
-    const seen = new Set();
-    entries = [];
-    for (const h of S.hours) {
-      const iso = h.iso.slice(0,10);
-      if (seen.has(iso)) continue;
-      seen.add(iso);
-      const bw = bestWindowOfDay(S.hours, iso, runDuration());
-      if (bw) entries.push({ label: dowOf(new Date(iso + 'T12:00')), score: bw.score, saved: false });
-      if (entries.length >= 7) break;
-    }
+  const period = statsPeriod();
+  const currentIso = statsIso(placeNow(S.bundle));
+  const dateSet = new Set(period.isos);
+  const D = S.bundle.weather.daily;
+  const dailyIndex = new Map((D.time || []).map((iso, i) => [iso, i]));
+  const periodHours = S.hours.filter(h => dateSet.has(h.iso.slice(0,10)));
+  const periodRuns = statsRunsFor(period.isos);
+  $('#statsPeriodLabel').textContent = `${formatPeriodDay(period.start)} – ${formatPeriodDay(period.end)}`;
+  $('#statsPrev').disabled = S.statsWeekOffset <= -8;
+  $('#statsNext').disabled = S.statsWeekOffset >= 1;
+  $('#statsHistoryAll').hidden = true;
+
+  const overview = $('#statsOverviewCard');
+  const bestCard = $('#statsBestCard');
+  const conditionsCard = $('#statsConditionsCard');
+  const historyCard = $('#statsHistoryCard');
+  overview.hidden = false;
+
+  if (S.statsTab === 'runs') {
+    bestCard.hidden = true;
+    conditionsCard.hidden = true;
+    historyCard.hidden = false;
+    $('#statsAverageLabel').textContent = T.statsRunsThisPeriod;
+    $('#statsAverage').textContent = periodRuns.length;
+    $('#statsTrend').textContent = T.statsRuns;
+    const byDay = period.isos.map((iso, i) => {
+      const runs = periodRuns.filter(item => statsIso(new Date(item.savedAt)) === iso);
+      return {
+        label: dowOf(period.dates[i]),
+        minutes: runs.reduce((a, item) => a + (Number(item.duration) || 0), 0),
+        count: runs.length
+      };
+    });
+    const maxMinutes = Math.max(1, ...byDay.map(x => x.minutes));
+    $('#statsBars').innerHTML = statsBarHtml(byDay, x => x.minutes ? `${x.minutes}m` : '0',
+      x => x.minutes ? Math.max(12, Math.round(x.minutes / maxMinutes * 100)) : 5,
+      () => '#1594AD');
+    $('#statsHistoryTitle').textContent = T.statsHistory;
+    $('#statsHistory').innerHTML = periodRuns.length ? periodRuns.map(item => {
+      const d = new Date(item.savedAt);
+      const detail = Number.isFinite(item.distanceKm) ? `${item.distanceKm.toFixed(1)} km` : T.min(item.duration);
+      return `<div class="stats-history-row">
+        <span><b>${d.toLocaleDateString(T.lang,{weekday:'short',day:'numeric',month:'short'})}</b><small>${item.place || '—'} · ${detail}</small></span>
+        <strong style="color:${bandColor(item.score)}">${item.score}</strong>
+      </div>`;
+    }).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+    return;
   }
-  const usingHistory = entries.some(x => x.saved);
-  const periodStart = usingHistory ? (() => {
-    const d = new Date(now); const weekday = (d.getDay() + 6) % 7; d.setDate(d.getDate() - weekday); return d;
-  })() : new Date(now);
-  const periodEnd = new Date(periodStart); periodEnd.setDate(periodEnd.getDate() + 6);
-  $('#statsPeriodLabel').textContent = `${formatPeriodDay(periodStart)} – ${formatPeriodDay(periodEnd)}`;
-  $('#statsAverageLabel').textContent = usingHistory ? T.statsAverage : T.statsForecastScore;
 
-  const avg = entries.length ? Math.round(entries.reduce((a,x)=>a+x.score,0)/entries.length) : null;
+  historyCard.hidden = true;
+  bestCard.hidden = false;
+  conditionsCard.hidden = false;
+
+  if (S.statsTab === 'weather') {
+    const days = period.isos.map((iso, i) => {
+      const di = dailyIndex.get(iso);
+      if (di == null) return null;
+      const min = Number(D.temperature_2m_min?.[di]), max = Number(D.temperature_2m_max?.[di]);
+      return {
+        iso, di, label: dowOf(period.dates[i]),
+        temp: Number.isFinite(min) && Number.isFinite(max) ? (min + max) / 2 : null,
+        min, max, rain: Number(D.precipitation_probability_max?.[di] ?? 0)
+      };
+    }).filter(Boolean);
+    const temps = days.map(x => x.temp).filter(Number.isFinite);
+    const avgTemp = temps.length ? Math.round(temps.reduce((a,v)=>a+v,0)/temps.length) : null;
+    $('#statsAverageLabel').textContent = T.statsTemp;
+    $('#statsAverage').textContent = avgTemp == null ? '—' : `${avgTemp}°`;
+    $('#statsTrend').textContent = T.statsWeather;
+    const lo = temps.length ? Math.min(...temps) : 0, hi = temps.length ? Math.max(...temps) : 1, span = Math.max(1, hi - lo);
+    $('#statsBars').innerHTML = statsBarHtml(days, x => `${round(x.temp)}°`,
+      x => Math.round(24 + (x.temp - lo) / span * 76), () => '#4A9FE8');
+
+    const driest = days.reduce((best, x) => !best || x.rain < best.rain ? x : best, null);
+    $('#statsBestTitle').textContent = T.statsDriestDay;
+    $('#statsBestIcon').innerHTML = glyph.rain;
+    $('#statsBestValue').textContent = driest ? `${driest.label} · ${driest.rain}%` : '—';
+    $('#statsBestSub').textContent = driest ? dateOf(new Date(driest.iso + 'T12:00')) : T.statsNoPeriodData;
+
+    const avgWind = periodHours.length ? Math.round(periodHours.reduce((a,h)=>a+(Number(h.wind)||0),0)/periodHours.length) : null;
+    const avgRain = days.length ? Math.round(days.reduce((a,x)=>a+x.rain,0)/days.length) : null;
+    const minTemp = days.length ? Math.min(...days.map(x=>x.min).filter(Number.isFinite)) : null;
+    const maxTemp = days.length ? Math.max(...days.map(x=>x.max).filter(Number.isFinite)) : null;
+    $('#statsConditionsTitle').textContent = T.statsConditions;
+    $('#statsConditions').innerHTML = [
+      [glyph.temp, T.statsTempRange, minTemp == null || maxTemp == null ? '—' : `${round(minTemp)}° – ${round(maxTemp)}°`],
+      [glyph.wind, T.statsAvgWind, avgWind == null ? '—' : `${avgWind} km/h`],
+      [glyph.rain, T.statsAvgRain, avgRain == null ? '—' : `${avgRain}%`]
+    ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('');
+    return;
+  }
+
+  const scoreDays = period.isos.map((iso, i) => {
+    const option = statsBestForDay(iso, currentIso);
+    return option ? { iso, option, score: option.score, label: dowOf(period.dates[i]) } : null;
+  }).filter(Boolean);
+  const avg = scoreDays.length ? Math.round(scoreDays.reduce((a,x)=>a+x.score,0)/scoreDays.length) : null;
+  $('#statsAverageLabel').textContent = T.statsForecastScore;
   $('#statsAverage').textContent = avg ?? '—';
-  $('#statsTrend').textContent = entries.length ? (usingHistory ? T.statsHistory : T.statsForecast) : '';
-  $('#statsBars').innerHTML = entries.length ? entries.map(x => `<div class="stats-bar">
-      <span class="stats-bar__value">${x.score}</span>
-      <span class="stats-bar__track"><i style="height:${Math.max(8,x.score)}%;background:${bandColor(x.score)}"></i></span>
-      <small>${x.label}</small>
-    </div>`).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+  $('#statsTrend').textContent = scoreDays.length ? T.statsForecast : '';
+  $('#statsBars').innerHTML = statsBarHtml(scoreDays, x => x.score,
+    x => Math.max(8, x.score), x => bandColor(x.score));
 
-  const best = bestWindow(S.hours, runDuration());
-  $('#statsBestValue').textContent = best ? windowText(best) : '—';
-  $('#statsBestSub').textContent = best ? T.today : T.statsNoHistory;
+  const best = scoreDays.reduce((a,x)=>!a || x.score>a.score ? x : a,null);
+  $('#statsBestTitle').textContent = T.statsBestTime;
+  $('#statsBestIcon').innerHTML = glyph.clockG;
+  $('#statsBestValue').textContent = best ? `${best.label} · ${windowText(best.option)}` : '—';
+  $('#statsBestSub').textContent = best ? dateOf(new Date(best.iso + 'T12:00')) : T.statsNoPeriodData;
 
-  const h = nowHour();
-  $('#statsConditions').innerHTML = h ? [
-    [glyph.temp, T.statsTemp, `${round(h.temp)}°`],
-    [glyph.wind, T.statsWind, `${round(h.wind)} km/h`],
-    [glyph.rain, T.statsRain, `${h.pop}%`]
-  ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('') : '';
-
-  $('#statsHistory').innerHTML = S.history.length ? S.history.slice(0, 5).map(item => {
-    const d = new Date(item.savedAt);
-    const detail = Number.isFinite(item.distanceKm) ? `${item.distanceKm.toFixed(1)} km` : T.min(item.duration);
-    return `<div class="stats-history-row">
-      <span><b>${d.toLocaleDateString(T.lang,{weekday:'short',day:'numeric',month:'short'})}</b><small>${item.place || '—'} · ${detail}</small></span>
-      <strong style="color:${bandColor(item.score)}">${item.score}</strong>
-    </div>`;
-  }).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+  const weatherDays = period.isos.map(iso => dailyIndex.get(iso)).filter(i => i != null);
+  const avgTemp = weatherDays.length ? Math.round(weatherDays.reduce((a,i)=>
+    a + (Number(D.temperature_2m_min[i]) + Number(D.temperature_2m_max[i])) / 2,0)/weatherDays.length) : null;
+  const avgWind = periodHours.length ? Math.round(periodHours.reduce((a,h)=>a+(Number(h.wind)||0),0)/periodHours.length) : null;
+  const avgRain = weatherDays.length ? Math.round(weatherDays.reduce((a,i)=>a+Number(D.precipitation_probability_max[i]||0),0)/weatherDays.length) : null;
+  $('#statsConditionsTitle').textContent = T.statsConditions;
+  $('#statsConditions').innerHTML = [
+    [glyph.temp, T.statsTemp, avgTemp == null ? '—' : `${avgTemp}°`],
+    [glyph.wind, T.statsWind, avgWind == null ? '—' : `${avgWind} km/h`],
+    [glyph.rain, T.statsRain, avgRain == null ? '—' : `${avgRain}%`]
+  ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('');
 }
 
 function selectedRunDetailsHour() {
@@ -2190,21 +2285,26 @@ function renderPlanner() {
   $('#plannerNext').disabled = S.plannerDayOffset >= 6;
 
   const dayHours = S.hours.filter(h => h.iso.slice(0,10) === iso);
-  const now = S.plannerDayOffset === 0 ? Date.now() : (dayHours[0]?.ts ?? Date.now());
-  const options = runStartOptions(dayHours, runDuration(), { now, horizonHours: 24 });
+  const startMs = S.plannerDayOffset === 0 ? Date.now() : (dayHours[0]?.ts ?? Date.now());
+  const endMs = startMs + 24 * 3600e3;
+  const candidateHours = S.hours.filter(h => h.ts >= startMs - 30 * 60e3 && h.ts <= endMs + runDuration() * 60e3);
+  const options = runStartOptions(candidateHours, runDuration(), { now: startMs, horizonHours: 24 });
   const best = bestStartOption(options);
-  const shown = options.filter((_,i)=>i%2===0).slice(0,6);
-  if (best && !shown.includes(best) && shown.length) shown[Math.min(2,shown.length-1)] = best;
-  shown.sort((a,b)=>a.slice[0].ts-b.slice[0].ts);
+  const limit = 10;
+  const bestIndex = Math.max(0, options.indexOf(best));
+  const sliceStart = Math.max(0, Math.min(Math.max(0, options.length - limit), bestIndex - 3));
+  const shown = options.slice(sliceStart, sliceStart + limit);
   S.plannerChoices = shown;
   S.plannerChoice = best && shown.includes(best) ? best : shown[0] || null;
 
-  $('#plannerSlots').innerHTML = shown.length ? shown.map(o => {
+  $('#plannerSlots').innerHTML = shown.length ? shown.map((o, choiceIndex) => {
     const selected = o === best;
     const first = o.slice[0];
-    return `<button type="button" class="planner-slot${selected?' is-best':''}" data-planner-choice="${shown.indexOf(o)}">
+    const firstIso = first.iso.slice(0,10);
+    const dayMeta = firstIso === iso ? '' : `${dowOf(first.t)} · ${dateOf(first.t)}`;
+    return `<button type="button" class="planner-slot${selected?' is-best':''}" data-planner-choice="${choiceIndex}">
       <span class="planner-slot__radio"></span>
-      <span class="planner-slot__time">${windowText(o)}</span>
+      <span class="planner-slot__time"><b>${windowText(o)}</b>${dayMeta ? `<small>${dayMeta}</small>` : ''}</span>
       <span class="planner-slot__weather">${weatherIcon(first.code, first.isDay)}</span>
       <strong style="color:${bandColor(o.score)}">${o.score}</strong>
     </button>`;
@@ -2338,9 +2438,15 @@ $('#routeClear').addEventListener('click', () => {
   saveRoute(null); if (S.bundle) paint();
 });
 
-$$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
   S.statsTab = b.dataset.statsTab; if (S.bundle) renderStats();
 }));
+$('#statsPrev').addEventListener('click', () => {
+  S.statsWeekOffset = Math.max(-8, S.statsWeekOffset - 1); if (S.bundle) renderStats();
+});
+$('#statsNext').addEventListener('click', () => {
+  S.statsWeekOffset = Math.min(1, S.statsWeekOffset + 1); if (S.bundle) renderStats();
+});
 $$('[data-run-details-range]').forEach(b => b.addEventListener('click', () => {
   S.runDetailsRange = b.dataset.runDetailsRange; if (S.bundle) renderRunDetails();
 }));
