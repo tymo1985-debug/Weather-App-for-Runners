@@ -28,7 +28,7 @@ const S = {
   langCode: pickLang(),
   bundle: null, hours: [], cached: false,
   range: 'hours', dcol: 'score', btab: 'score', horizon: 1,
-  weatherMode: 'cards', weatherSection: 'radar', radarExpanded: false,
+  weatherMode: 'cards', weatherGraphIndex: 0, weatherSection: 'radar', radarExpanded: false,
   statsTab: 'score', statsWeekOffset: 0, plannerTab: 'best', plannerDayOffset: 0, runDetailsRange: 'now',
   factor: 'temp',
   screen: 'home', stack: []
@@ -244,7 +244,7 @@ function staticText() {
     b.textContent = b.dataset.statsTab === 'score' ? T.statsScore : b.dataset.statsTab === 'weather' ? T.statsWeather : T.statsRuns;
   });
   $('#statsAverageLabel').textContent = T.statsAverage;
-  $('#statsBestTitle').textContent = T.statsBestTime;
+  $('#statsBestTitle').textContent = T.statsBestPeriod;
   $('#statsConditionsTitle').textContent = T.statsConditions;
   $('#statsHistoryTitle').textContent = T.statsHistory;
   $('#statsHistoryAll').textContent = T.statsAll;
@@ -1415,14 +1415,16 @@ function renderWeatherHourly() {
         <span class="weather-hour__icon">${weatherIcon(h.code, h.isDay)}</span>
         <span class="weather-hour__condition">${T.weather[h.code] || ''}</span>
         <b>${round(h.temp)}°</b>
-        <small class="weather-hour__rain">${glyph.rain}<span>${h.pop}%</span></small>
+        <small class="weather-hour__rain">${glyph.rain}<span>${Math.round(h.pop)}%</span></small>
         <small class="weather-hour__wind">${glyph.wind}<span>${round(h.wind)} km/h</span></small>
       </button>`).join('')}</div>`;
     return;
   }
 
   const list = graphList;
-  const W = 340, H = 500, L = 22, RGT = 18, TOP = 54, LINE_BASE = 265, RAIN_BASE = 408;
+  S.weatherGraphIndex = Math.max(0, Math.min(list.length - 1, Number(S.weatherGraphIndex) || 0));
+  const selected = list[S.weatherGraphIndex] || list[0];
+  const W = 340, H = 440, L = 24, RGT = 20, TOP = 44, LINE_BASE = 235, RAIN_TOP = 286, RAIN_BASE = 382;
   const temps = list.map(h => h.temp);
   const lo = Math.floor(Math.min(...temps) - 2), hi = Math.ceil(Math.max(...temps) + 2);
   const span = Math.max(4, hi - lo);
@@ -1432,20 +1434,34 @@ function renderWeatherHourly() {
   const line = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
   const guides = [TOP, (TOP + LINE_BASE) / 2, LINE_BASE].map(gy =>
     `<line x1="${L}" x2="${W-RGT}" y1="${gy.toFixed(1)}" y2="${gy.toFixed(1)}" class="weather-graph__guide"/>`).join('');
+  const selectedX = pts[S.weatherGraphIndex]?.[0] ?? L;
+  const majorLabel = i => i === 0 || i === list.length - 1 || i % 2 === 0;
+  const selectedLabel = i => i === S.weatherGraphIndex || majorLabel(i);
+
   box.innerHTML = `<div class="weather-hourly__graph">
+    <div class="weather-graph__summary">
+      <span class="weather-graph__summary-icon">${weatherIcon(selected.code, selected.isDay)}</span>
+      <span><small>${S.weatherGraphIndex === 0 ? T.now : hhmm(selected.t)}</small><b>${round(selected.temp)}°</b></span>
+      <span><small>${T.colPrecip}</small><b>${Math.round(selected.pop)}%</b></span>
+      <span><small>${T.fWind}</small><b>${round(selected.wind)} km/h</b></span>
+    </div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.weatherHourlyTitle}">
       ${guides}
-      <path d="${line}" fill="none" stroke="#2F80ED" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-      ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="4.2" fill="#2F80ED"/>
-        <text x="${p[0].toFixed(1)}" y="${Math.max(16,p[1]-11).toFixed(1)}" text-anchor="middle" class="weather-graph__temp">${round(list[i].temp)}°</text>`).join('')}
+      <text x="${L}" y="18" class="weather-graph__section">${T.temperature}</text>
+      <text x="${L}" y="${RAIN_TOP-12}" class="weather-graph__section">${T.colPrecip}</text>
+      <line x1="${selectedX.toFixed(1)}" x2="${selectedX.toFixed(1)}" y1="${TOP-8}" y2="${RAIN_BASE+8}" class="weather-graph__selected-line"/>
+      <path d="${line}" fill="none" stroke="#2F80ED" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+      ${pts.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === S.weatherGraphIndex ? 5.2 : 3.6}" class="${i === S.weatherGraphIndex ? 'weather-graph__dot is-selected' : 'weather-graph__dot'}"/>
+        ${selectedLabel(i) ? `<text x="${p[0].toFixed(1)}" y="${Math.max(30,p[1]-12).toFixed(1)}" text-anchor="middle" class="weather-graph__temp">${round(list[i].temp)}°</text>` : ''}`).join('')}
       ${list.map((h, i) => {
-        const x = L + i * step, bh = Math.max(4, h.pop * 1.05);
-        return `<rect x="${(x-8).toFixed(1)}" y="${(RAIN_BASE-bh).toFixed(1)}" width="16" height="${bh.toFixed(1)}" rx="5" fill="#58A8F6" opacity=".76"/>
-          <text x="${x.toFixed(1)}" y="${RAIN_BASE+18}" text-anchor="middle" class="weather-graph__pop">${h.pop}%</text>
-          <text x="${x.toFixed(1)}" y="${H-18}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:`${pad(h.t.getHours())}:00`}</text>`;
+        const x = L + i * step, bh = Math.max(5, h.pop * .78);
+        const label = majorLabel(i) ? `<text x="${x.toFixed(1)}" y="${H-16}" text-anchor="middle" class="weather-graph__time">${i===0?T.now:`${pad(h.t.getHours())}:00`}</text>` : '';
+        const hitX = i === 0 ? L - step/2 : x - step/2;
+        return `<rect x="${(x-7).toFixed(1)}" y="${(RAIN_BASE-bh).toFixed(1)}" width="14" height="${bh.toFixed(1)}" rx="4" class="${i === S.weatherGraphIndex ? 'weather-graph__rain is-selected' : 'weather-graph__rain'}"/>
+          ${label}
+          <rect x="${Math.max(0,hitX).toFixed(1)}" y="${(TOP-14).toFixed(1)}" width="${step.toFixed(1)}" height="${(RAIN_BASE-TOP+28).toFixed(1)}" fill="transparent" data-weather-graph-index="${i}" tabindex="0" role="button" aria-label="${hhmm(h.t)}, ${round(h.temp)}°, ${Math.round(h.pop)}%, ${round(h.wind)} km/h"/>`;
       }).join('')}
     </svg>
-    <div class="weather-graph__legend"><span><i class="is-temp"></i>${T.temperature}</span><span><i class="is-rain"></i>${T.colPrecip}</span></div>
   </div>`;
 }
 
@@ -1519,8 +1535,20 @@ $('.weather-hourly-mode').addEventListener('click', e => {
   if (S.bundle) renderWeatherHourly();
 });
 $('#weatherHourly').addEventListener('click', e => {
+  const point = e.target.closest('[data-weather-graph-index]');
+  if (point) {
+    S.weatherGraphIndex = Number(point.dataset.weatherGraphIndex) || 0;
+    return renderWeatherHourly();
+  }
   const b = e.target.closest('[data-hour]'); if (!b) return;
   const h = S.hours.find(x => x.iso === b.dataset.hour); if (h) openHourSheet(h);
+});
+$('#weatherHourly').addEventListener('keydown', e => {
+  const point = e.target.closest('[data-weather-graph-index]');
+  if (!point || !['Enter',' '].includes(e.key)) return;
+  e.preventDefault();
+  S.weatherGraphIndex = Number(point.dataset.weatherGraphIndex) || 0;
+  renderWeatherHourly();
 });
 $('#weatherDaily').addEventListener('click', e => {
   const b = e.target.closest('[data-day]'); if (b) openDaySheet(b.dataset.day);
@@ -1976,11 +2004,12 @@ function showFrame(i) {
   const isModel = f.kind === 'model';
   $('#radarModelBadge').hidden = !isModel;
   $('#weatherRadarCard').classList.toggle('is-model-frame', isModel);
-  const word = isModel ? T.modelWord : f.forecast ? T.forecastWord : T.pastWord;
+  const stateWord = isModel ? T.modelForecastWord : T.observedWord;
   $('#radarLabel').innerHTML = i === R.nowIdx
-    ? `<b>${T.now}</b>`
-    : `<b>${hhmm(atPlace(f.time))}</b><small>${word}</small>`;
+    ? `<b>${T.now}</b><small>${stateWord}</small>`
+    : `<b>${hhmm(atPlace(f.time))}</b><small>${stateWord}</small>`;
   $('#radarTime').value = i;
+  $('#radarTime').setAttribute('aria-valuetext', `${i === R.nowIdx ? T.now : hhmm(atPlace(f.time))} · ${stateWord}`);
   $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
   updateRadarQuick();
 
@@ -2084,6 +2113,27 @@ function statsPeriod() {
   return { start: dates[0], end: dates[6], dates, isos: dates.map(statsIso) };
 }
 
+function statsForecastCoverage(period) {
+  const available = new Set(S.bundle?.weather?.daily?.time || []);
+  return period.isos.filter(iso => available.has(iso)).length;
+}
+
+function statsMaxForecastOffset() {
+  const current = S.statsWeekOffset;
+  S.statsWeekOffset = 1;
+  const hasNext = statsForecastCoverage(statsPeriod()) > 0;
+  S.statsWeekOffset = current;
+  return hasNext ? 1 : 0;
+}
+
+function normalizeStatsPeriodForTab() {
+  if (S.statsTab === 'runs') {
+    S.statsWeekOffset = Math.max(-8, Math.min(0, S.statsWeekOffset));
+    return;
+  }
+  S.statsWeekOffset = Math.max(0, Math.min(statsMaxForecastOffset(), S.statsWeekOffset));
+}
+
 function statsRunsFor(isos) {
   const set = new Set(isos);
   return S.history.filter(item => set.has(statsIso(new Date(item.savedAt))));
@@ -2108,7 +2158,8 @@ function statsBarHtml(items, valueText, heightFor, colorFor) {
 }
 
 function renderStats() {
-  $$('[data-stats-tab]').forEach(b => {
+  normalizeStatsPeriodForTab();
+  $('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
@@ -2121,9 +2172,15 @@ function renderStats() {
   const dailyIndex = new Map((D.time || []).map((iso, i) => [iso, i]));
   const periodHours = S.hours.filter(h => dateSet.has(h.iso.slice(0,10)));
   const periodRuns = statsRunsFor(period.isos);
+  const coverage = statsForecastCoverage(period);
   $('#statsPeriodLabel').textContent = `${formatPeriodDay(period.start)} – ${formatPeriodDay(period.end)}`;
-  $('#statsPrev').disabled = S.statsWeekOffset <= -8;
-  $('#statsNext').disabled = S.statsWeekOffset >= 1;
+  if (S.statsTab === 'runs') {
+    $('#statsPrev').disabled = S.statsWeekOffset <= -8;
+    $('#statsNext').disabled = S.statsWeekOffset >= 0;
+  } else {
+    $('#statsPrev').disabled = S.statsWeekOffset <= 0;
+    $('#statsNext').disabled = S.statsWeekOffset >= statsMaxForecastOffset();
+  }
   $('#statsHistoryAll').hidden = true;
 
   const overview = $('#statsOverviewCard');
@@ -2159,7 +2216,11 @@ function renderStats() {
         <span><b>${d.toLocaleDateString(T.lang,{weekday:'short',day:'numeric',month:'short'})}</b><small>${item.place || '—'} · ${detail}</small></span>
         <strong style="color:${bandColor(item.score)}">${item.score}</strong>
       </div>`;
-    }).join('') : `<p class="history-empty">${T.statsNoHistory}</p>`;
+    }).join('') : `<div class="stats-empty">
+      <b>${T.statsNoHistory}</b>
+      <p>${T.statsRunsEmptyHelp}</p>
+      <button type="button" data-go="run-details">${T.statsRunsEmptyCta}</button>
+    </div>`;
     return;
   }
 
@@ -2182,7 +2243,7 @@ function renderStats() {
     const avgTemp = temps.length ? Math.round(temps.reduce((a,v)=>a+v,0)/temps.length) : null;
     $('#statsAverageLabel').textContent = T.statsTemp;
     $('#statsAverage').textContent = avgTemp == null ? '—' : `${avgTemp}°`;
-    $('#statsTrend').textContent = T.statsWeather;
+    $('#statsTrend').textContent = coverage ? T.statsCoverage(coverage) : T.statsNoForecastHistory;
     const lo = temps.length ? Math.min(...temps) : 0, hi = temps.length ? Math.max(...temps) : 1, span = Math.max(1, hi - lo);
     $('#statsBars').innerHTML = statsBarHtml(days, x => `${round(x.temp)}°`,
       x => Math.round(24 + (x.temp - lo) / span * 76), () => '#4A9FE8');
@@ -2213,7 +2274,7 @@ function renderStats() {
   const avg = scoreDays.length ? Math.round(scoreDays.reduce((a,x)=>a+x.score,0)/scoreDays.length) : null;
   $('#statsAverageLabel').textContent = T.statsForecastScore;
   $('#statsAverage').textContent = avg ?? '—';
-  $('#statsTrend').textContent = scoreDays.length ? T.statsForecast : '';
+  $('#statsTrend').textContent = coverage ? T.statsCoverage(coverage) : T.statsNoForecastHistory;
   $('#statsBars').innerHTML = statsBarHtml(scoreDays, x => x.score,
     x => Math.max(8, x.score), x => bandColor(x.score));
 
@@ -2274,6 +2335,16 @@ function plannerTargetDate() {
   return { d, iso: `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` };
 }
 
+function plannerExplanation(choice, best, options) {
+  if (!choice?.slice?.length) return '';
+  const first = choice.slice[0];
+  const reason = T.limitReasons?.[choice.limiting?.reason] || T.limitReasons?.conditions || '';
+  const tiedBest = choice === best && (options || []).some(o => o !== choice && o.score === choice.score);
+  return `<b>${T.plannerWhy}</b>
+    <p>${T.plannerReason(round(first.temp), Math.round(first.pop), round(first.wind), reason)}</p>
+    ${tiedBest ? `<small>${T.plannerTieEarlier}</small>` : ''}`;
+}
+
 function renderPlanner() {
   $$('[data-planner-tab]').forEach(b => {
     const active = b.dataset.plannerTab === S.plannerTab;
@@ -2310,8 +2381,10 @@ function renderPlanner() {
     </button>`;
   }).join('') : `<p class="planner-empty">${T.plannerNoSlots}</p>`;
 
+  $('#plannerExplain').innerHTML = plannerExplanation(S.plannerChoice, best, shown);
   const bestMode = S.plannerTab === 'best';
   $('#plannerSlots').hidden = !bestMode;
+  $('#plannerExplain').hidden = !bestMode || !shown.length;
   $('.planner-date').hidden = !bestMode;
   $('.planner-controls').hidden = bestMode;
   $('#plannerCalendar').hidden = !bestMode || !shown.length;
@@ -2333,6 +2406,7 @@ function addPlannerToCalendar() {
   ].join('\r\n');
   const url = URL.createObjectURL(new Blob([text], {type:'text/calendar;charset=utf-8'}));
   const a = document.createElement('a'); a.href=url; a.download='run-weather.ics'; a.click();
+  toast(T.calendarPrepared(windowText(o)));
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
@@ -2438,14 +2512,19 @@ $('#routeClear').addEventListener('click', () => {
   saveRoute(null); if (S.bundle) paint();
 });
 
-$$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
-  S.statsTab = b.dataset.statsTab; if (S.bundle) renderStats();
+$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+  S.statsTab = b.dataset.statsTab;
+  if (S.statsTab === 'runs') S.statsWeekOffset = Math.min(0, S.statsWeekOffset);
+  else S.statsWeekOffset = Math.max(0, S.statsWeekOffset);
+  if (S.bundle) renderStats();
 }));
 $('#statsPrev').addEventListener('click', () => {
-  S.statsWeekOffset = Math.max(-8, S.statsWeekOffset - 1); if (S.bundle) renderStats();
+  const min = S.statsTab === 'runs' ? -8 : 0;
+  S.statsWeekOffset = Math.max(min, S.statsWeekOffset - 1); if (S.bundle) renderStats();
 });
 $('#statsNext').addEventListener('click', () => {
-  S.statsWeekOffset = Math.min(1, S.statsWeekOffset + 1); if (S.bundle) renderStats();
+  const max = S.statsTab === 'runs' ? 0 : statsMaxForecastOffset();
+  S.statsWeekOffset = Math.min(max, S.statsWeekOffset + 1); if (S.bundle) renderStats();
 });
 $$('[data-run-details-range]').forEach(b => b.addEventListener('click', () => {
   S.runDetailsRange = b.dataset.runDetailsRange; if (S.bundle) renderRunDetails();
@@ -2463,7 +2542,9 @@ $('#plannerSlots').addEventListener('click', e => {
   const b = e.target.closest('[data-planner-choice]'); if (!b) return;
   const choice = S.plannerChoices?.[Number(b.dataset.plannerChoice)];
   if (!choice) return; S.plannerChoice = choice;
-  $$('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
+  $('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
+  const best = bestStartOption(S.plannerChoices || []);
+  $('#plannerExplain').innerHTML = plannerExplanation(choice, best, S.plannerChoices || []);
 });
 $('#plannerCalendar').addEventListener('click', addPlannerToCalendar);
 $('#moreSettingsRow').addEventListener('click', () => { $('#moreSettingsPanel').hidden = false; $('#moreAboutPanel').hidden = true; });
