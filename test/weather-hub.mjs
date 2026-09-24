@@ -56,7 +56,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v31/);
+  assert.match(sw, /shell-v32/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -148,8 +148,8 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.31.0');
-  assert.equal(RELEASE_DATE, '2026-09-23');
+  assert.equal(APP_VERSION, '0.32.0');
+  assert.equal(RELEASE_DATE, '2026-09-24');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
   assert.match(html, /id="whatsNewList"/);
