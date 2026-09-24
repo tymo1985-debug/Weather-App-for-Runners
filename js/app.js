@@ -234,7 +234,7 @@ function staticText() {
   $('#weatherDailyTitle').textContent = T.weatherDailyTitle;
   $('#weatherDailyMore').textContent = T.weatherDailyMore;
   $('#weatherAirTitle').textContent = T.weatherAirTitle;
-  $('[data-weather-section]').forEach(b => {
+  $$('[data-weather-section]').forEach(b => {
     b.textContent = b.dataset.weatherSection === 'radar' ? T.weatherTabRadar
       : b.dataset.weatherSection === 'hourly' ? T.weatherTabHourly : T.weatherTabForecast;
   });
@@ -245,7 +245,7 @@ function staticText() {
   $('#weatherNowRainLabel').textContent = T.fRain;
 
   $('#statsTitle').textContent = T.statsTitle;
-  $('[data-stats-tab]').forEach(b => {
+  $$('[data-stats-tab]').forEach(b => {
     b.textContent = b.dataset.statsTab === 'score' ? T.statsScore : b.dataset.statsTab === 'weather' ? T.statsWeather : T.statsRuns;
   });
   $('#statsAverageLabel').textContent = T.statsAverage;
@@ -256,14 +256,14 @@ function staticText() {
   $('#statsBestIcon').innerHTML = glyph.clockG;
 
   $('#runDetailsTitle').textContent = T.runDetailsTitle;
-  $('[data-run-details-range]').forEach(b => {
+  $$('[data-run-details-range]').forEach(b => {
     b.textContent = b.dataset.runDetailsRange === 'now' ? T.runDetailsNow
       : b.dataset.runDetailsRange === 'today' ? T.runDetailsToday : T.runDetailsTomorrow;
   });
   $('#runDetailsPlanLabel').textContent = T.runDetailsPlan;
 
   $('#plannerTitle').textContent = T.plannerTitle;
-  $('[data-planner-tab]').forEach(b => b.textContent = b.dataset.plannerTab === 'best' ? T.plannerBest : T.plannerMyPlan);
+  $$('[data-planner-tab]').forEach(b => b.textContent = b.dataset.plannerTab === 'best' ? T.plannerBest : T.plannerMyPlan);
   $('#plannerCalendarLabel').textContent = T.plannerCalendar;
 
   $('#moreTitle').textContent = T.moreTitle;
@@ -1344,12 +1344,12 @@ function renderWeatherHub() {
 }
 
 function syncWeatherSection() {
-  $('[data-weather-section]').forEach(b => {
+  $$('[data-weather-section]').forEach(b => {
     const active = b.dataset.weatherSection === S.weatherSection;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
   });
-  $('[data-weather-panel]').forEach(panel => {
+  $$('[data-weather-panel]').forEach(panel => {
     panel.hidden = panel.dataset.weatherPanel !== S.weatherSection;
   });
   if (S.weatherSection === 'radar') setTimeout(() => R.map?.invalidateSize(), 30);
@@ -2011,7 +2011,7 @@ function renderStats() {
   const end = new Date(start); end.setDate(start.getDate() + 6);
   $('#statsPeriodLabel').textContent = `${formatPeriodDay(start)} – ${formatPeriodDay(end)}`;
 
-  $('[data-stats-tab]').forEach(b => {
+  $$('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
@@ -2074,7 +2074,7 @@ function selectedRunDetailsHour() {
 }
 
 function renderRunDetails() {
-  $('[data-run-details-range]').forEach(b => {
+  $$('[data-run-details-range]').forEach(b => {
     const active = b.dataset.runDetailsRange === S.runDetailsRange;
     b.classList.toggle('is-on', active); b.setAttribute('aria-selected', String(active));
   });
@@ -2103,7 +2103,7 @@ function plannerTargetDate() {
 }
 
 function renderPlanner() {
-  $('[data-planner-tab]').forEach(b => {
+  $$('[data-planner-tab]').forEach(b => {
     const active = b.dataset.plannerTab === S.plannerTab;
     b.classList.toggle('is-on', active); b.setAttribute('aria-selected', String(active));
   });
@@ -2261,13 +2261,13 @@ $('#routeClear').addEventListener('click', () => {
   saveRoute(null); if (S.bundle) paint();
 });
 
-$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
+$$('[data-stats-tab]').forEach(b => b.addEventListener('click', () => {
   S.statsTab = b.dataset.statsTab; if (S.bundle) renderStats();
 }));
-$('[data-run-details-range]').forEach(b => b.addEventListener('click', () => {
+$$('[data-run-details-range]').forEach(b => b.addEventListener('click', () => {
   S.runDetailsRange = b.dataset.runDetailsRange; if (S.bundle) renderRunDetails();
 }));
-$('[data-planner-tab]').forEach(b => b.addEventListener('click', () => {
+$$('[data-planner-tab]').forEach(b => b.addEventListener('click', () => {
   S.plannerTab = b.dataset.plannerTab; if (S.bundle) renderPlanner();
 }));
 $('#plannerPrev').addEventListener('click', () => {
@@ -2280,7 +2280,7 @@ $('#plannerSlots').addEventListener('click', e => {
   const b = e.target.closest('[data-planner-choice]'); if (!b) return;
   const choice = S.plannerChoices?.[Number(b.dataset.plannerChoice)];
   if (!choice) return; S.plannerChoice = choice;
-  $('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
+  $$('.planner-slot').forEach(x => x.classList.toggle('is-selected', x === b));
 });
 $('#plannerCalendar').addEventListener('click', addPlannerToCalendar);
 $('#moreSettingsRow').addEventListener('click', () => { $('#moreSettingsPanel').hidden = false; $('#moreAboutPanel').hidden = true; });
