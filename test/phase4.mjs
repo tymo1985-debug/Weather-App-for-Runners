@@ -14,9 +14,10 @@ test('viewport allows user zoom and search has a real label', () => {
 });
 
 test('icon buttons get names and keyboard focus remains visible', () => {
-  for (const id of ['btnLocate', 'btnAddCity', 'btnLayers', 'btnMapLocate', 'btnZoomIn', 'btnZoomOut', 'radarTime']) {
+  for (const id of ['btnLayers', 'btnMapLocate', 'btnZoomIn', 'btnZoomOut', 'radarTime']) {
     assert.match(app, new RegExp(`\\$\\('#${id}'\\)\\.setAttribute\\('aria-label'`));
   }
+  assert.doesNotMatch(html, /id="btnLocate"|id="btnAddCity"|id="weatherLocate"/);
   assert.match(app, /\[data-back\].*setAttribute\('aria-label'/);
   assert.match(app, /\[data-share\].*setAttribute\('aria-label'/);
   assert.match(css, /:focus-visible\{outline:/);
