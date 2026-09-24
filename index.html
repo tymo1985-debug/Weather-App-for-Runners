@@ -87,7 +87,7 @@
       <p id="homeAdvice"></p>
     </section>
 
-    <button class="home-details" type="button" data-go="analysis">
+    <button class="home-details" type="button" data-go="run-details">
       <span id="homeDetailsLabel"></span>
       <svg viewBox="0 0 24 24" class="i20" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
     </button>
@@ -103,18 +103,8 @@
       <span id="lblUv"></span><span id="factUv"></span>
       <span id="icBest"></span><span id="icDur"></span><span id="icUv"></span>
       <p id="runScenario"></p>
-
       <div class="run-mini" id="runMiniTimeline"></div>
       <div class="routewx" id="routeWeatherHome" hidden></div>
-
-      <div class="run-mode">
-        <span id="runModeLabel"></span>
-        <div class="run-mode__choices">
-          <button type="button" data-run-mode="duration"></button>
-          <button type="button" data-run-mode="distance"></button>
-        </div>
-      </div>
-
       <div class="near-term">
         <div class="near-term__top"><span id="nearTermLabel"></span>
           <div class="near-term__choices">
@@ -125,45 +115,6 @@
         <div id="nearTermAdvice" class="near-term__advice"></div>
         <p id="runAdvice" class="near-term__tip" hidden></p>
       </div>
-
-      <div class="duration-quick">
-        <span id="quickDurationLabel"></span>
-        <small class="duration-quick__hint" id="quickDurationHint"></small>
-        <div class="duration-quick__choices">
-          <button type="button" data-quick-duration="30">30</button>
-          <button type="button" data-quick-duration="45">45</button>
-          <button type="button" data-quick-duration="60">60</button>
-          <button type="button" data-quick-duration="90">90</button>
-          <button type="button" data-quick-duration="120">120</button>
-        </div>
-      </div>
-
-      <div class="distance-plan" id="distancePlan" hidden>
-        <div class="distance-plan__presets">
-          <button type="button" data-distance="3">3 km</button>
-          <button type="button" data-distance="5">5 km</button>
-          <button type="button" data-distance="10">10 km</button>
-          <button type="button" data-distance="15">15 km</button>
-          <button type="button" data-distance="20">20 km</button>
-        </div>
-        <div class="distance-plan__inputs">
-          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5"></label>
-          <label><span id="paceLabel"></span><input id="paceInput" type="text"></label>
-        </div>
-        <div class="distance-plan__summary" id="distanceSummary"></div>
-      </div>
-
-      <div class="availability">
-        <div class="availability__head"><span id="availabilityLabel"></span><button type="button" id="clearAvailability"></button></div>
-        <div class="availability__inputs">
-          <label><span id="availabilityFromLabel"></span><input id="availableFrom" type="time"></label>
-          <label><span id="availabilityToLabel"></span><input id="availableTo" type="time"></label>
-        </div>
-        <div class="start-compare" id="startCompare"></div>
-        <button class="watch-btn" id="watchBest" type="button"></button>
-        <p class="watch-status" id="watchStatus" hidden></p>
-      </div>
-
       <button class="run-log" id="logRunFeedback" type="button"></button>
       <div class="segmented">
         <button class="seg is-on" data-range="hours"></button>
@@ -172,6 +123,7 @@
       </div>
       <div class="hstrip" id="strip"></div>
     </div>
+
   </div>
 </section>
 
@@ -327,8 +279,14 @@
       <svg viewBox="0 0 24 24" class="i18" aria-hidden="true"><path d="M9 5l7 7-7 7z"/></svg>
     </button>
 
+    <div class="weather-hub-tabs" role="tablist" aria-label="Weather sections">
+      <button type="button" class="is-on" data-weather-section="radar" aria-selected="true"></button>
+      <button type="button" data-weather-section="hourly" aria-selected="false"></button>
+      <button type="button" data-weather-section="forecast" aria-selected="false"></button>
+    </div>
+
     <div class="weather-hub__body">
-      <section class="weather-card">
+      <section class="weather-card weather-panel" data-weather-panel="hourly">
         <div class="weather-card__head">
           <b id="weatherHourlyTitle"></b>
           <button class="weather-card__link" type="button" data-go="hourly"><span id="weatherHourlyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
@@ -340,7 +298,7 @@
         <div id="weatherHourly" class="weather-hourly"></div>
       </section>
 
-      <section class="weather-card weather-radar-card" id="weatherRadarCard">
+      <section class="weather-card weather-radar-card weather-panel" id="weatherRadarCard" data-weather-panel="radar">
         <div class="weather-card__head weather-radar-card__head">
           <div><b id="weatherRadarTitle"></b><small id="weatherRadarSubtitle"></small></div>
           <button class="weather-card__action weather-radar-expand" id="weatherRadarExpand" type="button"></button>
@@ -389,7 +347,17 @@
         </div>
       </section>
 
-      <section class="weather-card">
+      <section class="weather-card weather-now-card weather-panel" data-weather-panel="radar">
+        <div class="weather-card__head"><b id="weatherNowTitle"></b></div>
+        <div class="weather-now">
+          <div class="weather-now__main"><span id="weatherNowIcon"></span><b id="weatherNowTemp">—</b><small id="weatherNowFeels"></small></div>
+          <div class="weather-now__metric"><span id="weatherNowWindIcon"></span><b id="weatherNowWind">—</b><small id="weatherNowWindLabel"></small></div>
+          <div class="weather-now__metric"><span id="weatherNowRainIcon"></span><b id="weatherNowRain">—</b><small id="weatherNowRainLabel"></small></div>
+        </div>
+        <div class="weather-now-chart" id="weatherNowChart"></div>
+      </section>
+
+      <section class="weather-card weather-panel" data-weather-panel="forecast">
         <div class="weather-card__head">
           <b id="weatherDailyTitle"></b>
           <button class="weather-card__link" type="button" data-go="daily"><span id="weatherDailyMore"></span><svg viewBox="0 0 24 24" class="i14"><path d="M13 5l7 7-7 7-1.4-1.4 4.6-4.6H4v-2h12.2L11.6 6.4z"/></svg></button>
@@ -397,7 +365,7 @@
         <div id="weatherDaily" class="weather-daily"></div>
       </section>
 
-      <section class="weather-card weather-air-card">
+      <section class="weather-card weather-air-card weather-panel" data-weather-panel="radar">
         <div class="weather-card__head">
           <b id="weatherAirTitle"></b>
           <button class="weather-card__link weather-card__link--icon" type="button" data-go="air" aria-label="Air and pollen details"><svg viewBox="0 0 24 24" class="i18"><path d="M9 5l7 7-7 7z"/></svg></button>
@@ -408,49 +376,167 @@
   </div>
 </section>
 
-<!-- 10 - ДЕТАЛИ И НАСТРОЙКИ -->
-<section class="screen" data-screen="details">
-  <div class="sheet sheet--flat safe-top">
-    <div class="card">
-      <h3 class="card__h card__h--lg" id="detailsTitle"></h3>
-      <div id="detailsList"></div>
-      <div class="linkgroup" id="detailsLinks"></div>
+<!-- 10 - СТАТИСТИКА -->
+<section class="screen screen--stats" data-screen="stats">
+  <div class="stats-page safe-top">
+    <h1 id="statsTitle"></h1>
+    <div class="stats-period">
+      <button type="button" id="statsPrev" aria-label="Previous period">‹</button>
+      <b id="statsPeriodLabel"></b>
+      <button type="button" id="statsNext" aria-label="Next period">›</button>
     </div>
-    <div class="card">
-      <h3 class="card__h card__h--lg" id="profileTitle"></h3>
-      <div id="profileList"></div>
+    <div class="stats-tabs" role="tablist">
+      <button type="button" class="is-on" data-stats-tab="score"></button>
+      <button type="button" data-stats-tab="weather"></button>
+      <button type="button" data-stats-tab="runs"></button>
     </div>
-    <div class="card">
-      <h3 class="card__h card__h--lg" id="routeTitle"></h3>
-      <div class="route-tools">
-        <label class="route-import" for="gpxFile" id="routeImportLabel"></label>
-        <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml" hidden>
-        <button type="button" class="route-clear" id="routeClear"></button>
+    <section class="stats-card">
+      <small id="statsAverageLabel"></small>
+      <div class="stats-average"><b id="statsAverage">—</b><span id="statsTrend"></span></div>
+      <div class="stats-bars" id="statsBars"></div>
+    </section>
+    <section class="stats-card stats-best">
+      <b id="statsBestTitle"></b>
+      <div class="stats-best__value"><span id="statsBestIcon"></span><strong id="statsBestValue">—</strong></div>
+      <small id="statsBestSub"></small>
+    </section>
+    <section class="stats-card">
+      <b id="statsConditionsTitle"></b>
+      <div class="stats-conditions" id="statsConditions"></div>
+    </section>
+    <section class="stats-card">
+      <div class="stats-card__head"><b id="statsHistoryTitle"></b><button type="button" id="statsHistoryAll"></button></div>
+      <div class="stats-history" id="statsHistory"></div>
+    </section>
+  </div>
+</section>
+
+<!-- 11 - ПОДРОБНОСТИ ДЛЯ БЕГА -->
+<section class="screen screen--run-details" data-screen="run-details">
+  <header class="modal-top safe-top">
+    <h1 id="runDetailsTitle"></h1>
+    <button class="modal-close" type="button" data-back aria-label="Close">×</button>
+  </header>
+  <div class="run-details-page">
+    <div class="run-details-tabs">
+      <button type="button" class="is-on" data-run-details-range="now"></button>
+      <button type="button" data-run-details-range="today"></button>
+      <button type="button" data-run-details-range="tomorrow"></button>
+    </div>
+    <section class="run-details-score">
+      <small>Run Score</small>
+      <div class="run-details-score__row"><span id="runDetailsScore">—</span><b id="runDetailsBand"></b></div>
+    </section>
+    <section class="run-details-list" id="runDetailsList"></section>
+    <button class="run-details-plan" type="button" data-go="planner"><span id="runDetailsPlanLabel"></span><span>›</span></button>
+  </div>
+</section>
+
+<!-- 12 - ПЛАНИРОВЩИК -->
+<section class="screen screen--planner" data-screen="planner">
+  <header class="modal-top safe-top">
+    <h1 id="plannerTitle"></h1>
+    <button class="modal-close" type="button" data-back aria-label="Close">×</button>
+  </header>
+  <div class="planner-page">
+    <div class="planner-tabs">
+      <button type="button" class="is-on" data-planner-tab="best"></button>
+      <button type="button" data-planner-tab="plan"></button>
+    </div>
+    <div class="planner-date">
+      <button type="button" id="plannerPrev">‹</button><b id="plannerDate"></b><button type="button" id="plannerNext">›</button>
+    </div>
+    <div class="planner-slots" id="plannerSlots"></div>
+
+    <div class="planner-controls">
+      <div class="run-mode">
+        <span id="runModeLabel"></span>
+        <div class="run-mode__choices">
+          <button type="button" data-run-mode="duration"></button>
+          <button type="button" data-run-mode="distance"></button>
+        </div>
       </div>
-      <div id="routeSummary" class="route-summary"></div>
-      <div id="routeWeatherDetails" class="routewx routewx--details" aria-live="polite" hidden></div>
+
+      <div class="duration-quick">
+        <span id="quickDurationLabel"></span>
+        <small class="duration-quick__hint" id="quickDurationHint"></small>
+        <div class="duration-quick__choices">
+          <button type="button" data-quick-duration="30">30</button>
+          <button type="button" data-quick-duration="45">45</button>
+          <button type="button" data-quick-duration="60">60</button>
+          <button type="button" data-quick-duration="90">90</button>
+          <button type="button" data-quick-duration="120">120</button>
+        </div>
+      </div>
+
+      <div class="distance-plan" id="distancePlan" hidden>
+        <div class="distance-plan__presets">
+          <button type="button" data-distance="3">3 km</button>
+          <button type="button" data-distance="5">5 km</button>
+          <button type="button" data-distance="10">10 km</button>
+          <button type="button" data-distance="15">15 km</button>
+          <button type="button" data-distance="20">20 km</button>
+        </div>
+        <div class="distance-plan__inputs">
+          <label><span id="distanceLabel"></span><input id="distanceKm" type="number" min="1" max="100" step="0.5"></label>
+          <label><span id="paceLabel"></span><input id="paceInput" type="text"></label>
+        </div>
+        <div class="distance-plan__summary" id="distanceSummary"></div>
+      </div>
+
+      <div class="availability">
+        <div class="availability__head"><span id="availabilityLabel"></span><button type="button" id="clearAvailability"></button></div>
+        <div class="availability__inputs">
+          <label><span id="availabilityFromLabel"></span><input id="availableFrom" type="time"></label>
+          <label><span id="availabilityToLabel"></span><input id="availableTo" type="time"></label>
+        </div>
+        <div class="start-compare" id="startCompare"></div>
+        <button class="watch-btn" id="watchBest" type="button"></button>
+        <p class="watch-status" id="watchStatus" hidden></p>
+      </div>
     </div>
-    <div class="card">
-      <h3 class="card__h card__h--lg" id="historyTitle"></h3>
-      <div id="historyList" class="history-list"></div>
+
+    <button class="planner-calendar" id="plannerCalendar" type="button"><span id="plannerCalendarLabel"></span></button>
+  </div>
+</section>
+
+<!-- 13 - ЕЩЁ -->
+<section class="screen screen--more" data-screen="details">
+  <div class="more-page safe-top">
+    <h1 id="moreTitle"></h1>
+    <div class="more-menu">
+      <button class="more-row" type="button" data-go="planner"><span class="more-row__ic more-row__ic--blue">◉</span><span><b id="morePaceTitle"></b><small id="morePaceSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" data-go="why"><span class="more-row__ic more-row__ic--blue">🏃</span><span><b id="moreScoreTitle"></b><small id="moreScoreSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" data-go="planner"><span class="more-row__ic more-row__ic--amber">♢</span><span><b id="moreWatchTitle"></b><small id="moreWatchSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" data-go="cities"><span class="more-row__ic more-row__ic--amber">★</span><span><b id="morePlacesTitle"></b><small id="morePlacesSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" id="moreSettingsRow"><span class="more-row__ic more-row__ic--blue">⚙</span><span><b id="moreSettingsTitle"></b><small id="moreSettingsSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" id="moreAboutRow"><span class="more-row__ic more-row__ic--blue">ⓘ</span><span><b id="moreAboutTitle"></b><small id="moreAboutSub"></small></span><em>›</em></button>
     </div>
-    <div class="card">
-      <h3 class="card__h card__h--lg" id="langTitle"></h3>
+
+    <div class="more-settings" id="moreSettingsPanel" hidden>
+      <div class="more-settings__head"><b id="moreSettingsPanelTitle"></b><button type="button" id="moreSettingsClose">×</button></div>
+      <div id="profileList"></div>
       <div class="chooser" id="langChooser"></div>
     </div>
-    <div class="card app-update-card">
-      <div class="app-update-card__head">
-        <div><h3 class="card__h card__h--lg" id="appVersionTitle"></h3><p id="appVersionMeta"></p></div>
-        <span class="app-update-card__badge" id="appVersionBadge"></span>
-      </div>
-      <div class="app-update-card__notes">
-        <b id="whatsNewTitle"></b>
-        <ul id="whatsNewList"></ul>
-      </div>
+
+    <div class="more-about" id="moreAboutPanel" hidden>
+      <div class="more-settings__head"><b id="moreAboutPanelTitle"></b><button type="button" id="moreAboutClose">×</button></div>
+      <div class="app-update-card__head"><p id="appVersionMeta"></p><span class="app-update-card__badge" id="appVersionBadge"></span></div>
+      <ul id="whatsNewList"></ul>
     </div>
-    <button class="btn btn--ghost" id="btnInstall" hidden></button>
-    <p class="tagline" id="tagline"></p>
-    <p class="fineprint" id="fineprint"></p>
+
+    <div class="more-legacy" hidden aria-hidden="true">
+      <h3 id="detailsTitle"></h3><div id="detailsList"></div><div id="detailsLinks"></div>
+      <h3 id="profileTitle"></h3>
+      <h3 id="routeTitle"></h3>
+      <label for="gpxFile" id="routeImportLabel"></label>
+      <input id="gpxFile" type="file" accept=".gpx,application/gpx+xml,application/xml,text/xml">
+      <button id="routeClear" type="button"></button><div id="routeSummary"></div><div id="routeWeatherDetails"></div>
+      <h3 id="historyTitle"></h3><div id="historyList"></div>
+      <h3 id="langTitle"></h3>
+      <h3 id="appVersionTitle"></h3><b id="whatsNewTitle"></b>
+      <button id="btnInstall" hidden></button><p id="tagline"></p><p id="fineprint"></p>
+    </div>
   </div>
 </section>
 
@@ -470,9 +556,10 @@
 </section>
 
 <nav class="tabbar safe-bottom">
-  <button class="tab is-on" data-go="home"><span class="tab__ic" data-ic="house"></span><span data-t="tabHome"></span></button>
+  <button class="tab is-on" data-go="home"><span class="tab__ic" data-ic="runner"></span><span data-t="tabRun"></span></button>
   <button class="tab" data-go="radar"><span class="tab__ic" data-ic="globe"></span><span data-t="tabWeather"></span></button>
-  <button class="tab" data-go="details"><span class="tab__ic" data-ic="person"></span><span data-t="tabProfile"></span></button>
+  <button class="tab" data-go="stats"><span class="tab__ic" data-ic="trend"></span><span data-t="tabStats"></span></button>
+  <button class="tab" data-go="details"><span class="tab__ic" data-ic="more"></span><span data-t="tabMore"></span></button>
 </nav>
 </div>
 
