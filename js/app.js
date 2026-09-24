@@ -157,12 +157,16 @@ const currentRun = () => currentRunSummary(S.hours, runDuration());
 const windowText = w => `${hhmm(w.slice[0].t)} – ${hhmm(w.end)}`;
 
 // ── Статические подписи ────────────────────────────────────────────────────
+const settingsIcon = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+  <circle cx="12" cy="12" r="3.15"/>
+  <path d="M12 3.2v2.2M12 18.6v2.2M3.2 12h2.2M18.6 12h2.2M5.78 5.78l1.55 1.55M16.67 16.67l1.55 1.55M18.22 5.78l-1.55 1.55M7.33 16.67l-1.55 1.55"/>
+</svg>`;
+
 function staticText() {
   document.documentElement.lang = S.langCode;
   $('#pinIcon').innerHTML = glyph.pin;
   $('#btnLocate').innerHTML = glyph.navigate.replace('#2C3E56', 'currentColor');
-  $('#btnAddCity').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
+  $('#btnAddCity').innerHTML = settingsIcon;
   $('#btnLocate').setAttribute('aria-label', T.myLocation);
   $('#btnAddCity').setAttribute('aria-label', T.tabMore);
   $$('[data-back]').forEach(b => b.setAttribute('aria-label', T.back));
@@ -223,8 +227,7 @@ function staticText() {
   $('#tlOptK').textContent = T.differentWeather;
   $('#tlOptV').textContent = T.seeOptions;
   $('#weatherPlacePin').innerHTML = glyph.pin;
-  $('#weatherLocate').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-    <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
+  $('#weatherLocate').innerHTML = settingsIcon;
   $('#weatherRunIcon').innerHTML = glyph.runner;
   $('#weatherRunTitle').textContent = T.weatherRunNow;
   $('#weatherRunAction').textContent = T.weatherRunAction;
@@ -307,6 +310,7 @@ function staticText() {
   $('#btnZoomIn').setAttribute('aria-label', T.zoomIn);
   $('#btnZoomOut').setAttribute('aria-label', T.zoomOut);
   $('#radarTime').setAttribute('aria-label', T.radarTime);
+  $('#radarModelBadge').textContent = T.forecastBadge;
   $$('[data-radar-offset]').forEach((b, i) => {
     b.textContent = T.radarQuickLabels[i] || '';
     b.setAttribute('aria-label', T.radarQuickLabels[i] || '');
@@ -358,6 +362,7 @@ function renderHome() {
   $('#cardScore').className = 'home-score is-' + b;
   $('#cardScore').style.setProperty('--score-angle', `${Math.max(0, Math.min(100, sc)) * 3.6}deg`);
   $('#scoreBig').textContent = sc;
+  $('#scoreBig').dataset.digits = String(sc).length;
   $('#scoreLabel').textContent = bandText(sc);
   $('#scoreHeadLbl').textContent = T.runStatusTitle(bandText(sc));
   $('#homeConditions').textContent = mainConditions(h);
@@ -1785,24 +1790,50 @@ function precipColor(mm) {
       break;
     }
   }
-  return [col[0], col[1], col[2], Math.round(255 * Math.min(1, .3 + mm / 3))];
+  const vivid = col.map(v => Math.max(0, Math.min(255, Math.round(128 + (v - 128) * 1.14))));
+  return [vivid[0], vivid[1], vivid[2], Math.round(255 * Math.min(.96, .52 + mm / 2.3))];
 }
 
 function paintGrid(vals) {
   const N = 128, cv = document.createElement('canvas');
   cv.width = cv.height = N;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(N, N);
+  const field = new Float32Array(N * N);
   for (let y = 0; y < N; y++) {
     const gy = y / (N - 1) * (GRID - 1), y0 = Math.floor(gy), y1 = Math.min(GRID - 1, y0 + 1), ty = gy - y0;
     for (let x = 0; x < N; x++) {
       const gx = x / (N - 1) * (GRID - 1), x0 = Math.floor(gx), x1 = Math.min(GRID - 1, x0 + 1), tx = gx - x0;
       const v = vals[y0][x0] * (1 - tx) * (1 - ty) + vals[y0][x1] * tx * (1 - ty)
               + vals[y1][x0] * (1 - tx) * ty + vals[y1][x1] * tx * ty;
+      field[y * N + x] = v;
       const colour = precipColor(v), p = (y * N + x) * 4;
       img.data[p] = colour[0]; img.data[p + 1] = colour[1]; img.data[p + 2] = colour[2]; img.data[p + 3] = colour[3];
     }
   }
   ctx.putImageData(img, 0, 0);
+
+  // Forecast confidence cue: outline the modeled precipitation footprint with a dashed boundary.
+  // This makes the forecast clearer without pretending the model has radar-level precision.
+  const threshold = .12, step = 2;
+  ctx.beginPath();
+  for (let y = 0; y < N - step; y += step) {
+    for (let x = 0; x < N - step; x += step) {
+      const here = field[y * N + x] > threshold;
+      const right = field[y * N + x + step] > threshold;
+      const down = field[(y + step) * N + x] > threshold;
+      if (here !== right) { const xx = x + step / 2; ctx.moveTo(xx, y); ctx.lineTo(xx, y + step); }
+      if (here !== down) { const yy = y + step / 2; ctx.moveTo(x, yy); ctx.lineTo(x + step, yy); }
+    }
+  }
+  ctx.setLineDash([4, 3]);
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = 'rgba(17,45,61,.72)';
+  ctx.lineWidth = 3.1;
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.96)';
+  ctx.lineWidth = 1.25;
+  ctx.stroke();
+  ctx.setLineDash([]);
   return cv.toDataURL('image/png');
 }
 
@@ -1905,7 +1936,7 @@ async function loadModel() {
 }
 
 // Слои кешируются: кадр не пересоздаётся каждый раз, поэтому нет мигания.
-const frameOpacity = i => R.frames[i] && R.frames[i].kind === 'model' ? .55 : .78;
+const frameOpacity = i => R.frames[i] && R.frames[i].kind === 'model' ? .82 : .78;
 
 function layerFor(i) {
   if (R.layers.has(i)) return R.layers.get(i);
@@ -1935,7 +1966,10 @@ function showFrame(i) {
   layerFor((i + 1) % R.frames.length);            // подгружаем следующий заранее
 
   const f = R.frames[i];
-  const word = f.kind === 'model' ? T.modelWord : f.forecast ? T.forecastWord : T.pastWord;
+  const isModel = f.kind === 'model';
+  $('#radarModelBadge').hidden = !isModel;
+  $('#weatherRadarCard').classList.toggle('is-model-frame', isModel);
+  const word = isModel ? T.modelWord : f.forecast ? T.forecastWord : T.pastWord;
   $('#radarLabel').innerHTML = i === R.nowIdx
     ? `<b>${T.now}</b>`
     : `<b>${hhmm(atPlace(f.time))}</b><small>${word}</small>`;
