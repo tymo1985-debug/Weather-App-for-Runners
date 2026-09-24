@@ -322,7 +322,7 @@
           <div class="radarpanel">
             <div class="radarpanel__row">
               <button class="radar__play" id="radarPlay" disabled></button>
-              <span class="radar__now" id="radarLabel">—</span>
+              <span class="radar__now" id="radarLabel" aria-live="polite">—</span>
               <input type="range" id="radarTime" min="0" max="0" value="0" disabled>
             </div>
             <div class="radar__forecast-state" id="radarForecastState" aria-live="polite"></div>
@@ -443,6 +443,7 @@
       <button type="button" id="plannerPrev">‹</button><b id="plannerDate"></b><button type="button" id="plannerNext">›</button>
     </div>
     <div class="planner-slots" id="plannerSlots"></div>
+    <div class="planner-explain" id="plannerExplain" aria-live="polite"></div>
 
     <div class="planner-controls">
       <div class="run-mode">
