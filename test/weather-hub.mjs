@@ -57,7 +57,7 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v39/);
+  assert.match(sw, /shell-v40/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
 });
 
@@ -156,7 +156,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.34.0');
+  assert.equal(APP_VERSION, '0.34.1');
   assert.equal(RELEASE_DATE, '2026-09-24');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
@@ -177,3 +177,20 @@ test('model forecast is visually distinct from observed radar', () => {
   assert.match(css, /\.radar-model-badge\{/);
   assert.match(css, /border:1px dashed/);
 });
+
+test('Hourly graph reduces label density and exposes a selected-hour summary', () => {
+  assert.match(app, /weatherGraphIndex: 0/);
+  assert.match(app, /const majorLabel = i =>/);
+  assert.match(app, /data-weather-graph-index/);
+  assert.match(app, /weather-graph__summary/);
+  assert.match(css, /weather-graph__summary/);
+  assert.match(css, /weather-graph__time\{font-size:10\.5px/);
+});
+
+test('Radar announces observed versus model forecast state', () => {
+  assert.equal(LANGS.en.observedWord, 'Observation');
+  assert.equal(LANGS.ru.modelForecastWord, 'Модельный прогноз');
+  assert.match(app, /const stateWord = isModel \? T\.modelForecastWord : T\.observedWord/);
+  assert.match(app, /aria-valuetext/);
+});
+
