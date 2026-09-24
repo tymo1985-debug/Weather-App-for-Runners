@@ -15,8 +15,8 @@ test('home score opens why and remains an accessible button', () => {
   assert.match(app, /\$\('#cardScore'\)\.setAttribute\('aria-label', T\.scoreExplanation\(sc, bandText\(sc\)\)\)/);
 });
 
-test('day overview opens analysis and its bottom action opens why', () => {
-  assert.match(html, /<button class="home-details" type="button" data-go="analysis">[\s\S]*id="homeDetailsLabel"/);
+test('home details opens dedicated Run Details and analysis still links to Why', () => {
+  assert.match(html, /<button class="home-details" type="button" data-go="run-details">[\s\S]*id="homeDetailsLabel"/);
   assert.match(app, /\$\('#homeDetailsLabel'\)\.textContent = T\.runDetails/);
   assert.match(app, /<button class="btnwide" data-go="why">\$\{T\.whyScore\}/);
 });
