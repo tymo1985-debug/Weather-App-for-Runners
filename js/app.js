@@ -275,6 +275,13 @@ function staticText() {
   $('#moreAboutTitle').textContent = T.moreAboutTitle; $('#moreAboutSub').textContent = T.moreAboutSub;
   $('#moreSettingsPanelTitle').textContent = T.moreSettingsTitle;
   $('#moreAboutPanelTitle').textContent = T.moreAboutTitle;
+  $('#morePaceIcon').innerHTML = glyph.alarm;
+  $('#moreScoreIcon').innerHTML = glyph.runner;
+  $('#moreWatchIcon').innerHTML = glyph.alarm;
+  $('#morePlacesIcon').innerHTML = glyph.star;
+  $('#moreSettingsIcon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
+  $('#moreAboutIcon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 10v7M12 7h.01" stroke-linecap="round"/></svg>`;
   $$('[data-weather-mode]').forEach(b => {
     b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
   });
@@ -709,9 +716,12 @@ $$('.seg[data-range]').forEach(b => b.addEventListener('click', () => {
 }));
 $('#cardScore').addEventListener('click', () => go('why'));
 $('#strip').addEventListener('click', () => go(S.range === 'days' ? 'daily' : 'hourly'));
-$('#btnPlace').addEventListener('click', () => go('cities'));
+$('#btnPlace').addEventListener('click', e => {
+  if (e.target.closest('.hero__pin')) return locate();
+  go('cities');
+});
 $('#btnAddCity').addEventListener('click', () => go('details'));
-$('#btnLocate').addEventListener('click', locate);
+$('#btnLocate').addEventListener('click', () => locate());
 $('.duration-quick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick-duration]');
   if (!b) return;
@@ -777,14 +787,24 @@ $('#watchBest').addEventListener('click', async () => {
 });
 $('#logRunFeedback').addEventListener('click', () => openFeedbackSheet());
 
-function locate() {
-  if (!navigator.geolocation) return toast(T.myLocation + ' —');
+function locate({ recenterMap = false } = {}) {
+  if (!navigator.geolocation) { toast(T.locationUnavailable); return; }
+  toast(T.locating);
   navigator.geolocation.getCurrentPosition(async pos => {
-    const p = await reverseGeocode(+pos.coords.latitude.toFixed(3),
-      +pos.coords.longitude.toFixed(3), S.langCode, T.myLocation);
-    if (!validPlace(p)) return;
-    S.place = p; const c = loadCities(); c[0] = p; saveCities(c); load();
-  }, () => toast(T.searchOffline), { timeout: 8000, maximumAge: 6e5 });
+    const lat = +pos.coords.latitude.toFixed(3), lon = +pos.coords.longitude.toFixed(3);
+    const p = await reverseGeocode(lat, lon, S.langCode, T.myLocation);
+    if (!validPlace(p)) { toast(T.locationUnavailable); return; }
+    S.place = p;
+    const cities = loadCities();
+    cities[0] = p;
+    saveCities(cities);
+    if (recenterMap) R.map?.setView([p.lat, p.lon], 8);
+    toast(T.locationUpdated(p.name));
+    load();
+  }, err => {
+    const msg = err?.code === 1 ? T.locationDenied : err?.code === 3 ? T.locationTimeout : T.locationUnavailable;
+    toast(msg);
+  }, { enableHighAccuracy: false, timeout: 10000, maximumAge: 120000 });
 }
 
 // ── 2. ПОЧАСОВОЙ ───────────────────────────────────────────────────────────
@@ -1480,8 +1500,11 @@ function setRadarExpanded(on) {
   setTimeout(() => R.map?.invalidateSize(), 40);
 }
 
-$('#weatherPlace').addEventListener('click', () => go('cities'));
-$('#weatherLocate').addEventListener('click', locate);
+$('#weatherPlace').addEventListener('click', e => {
+  if (e.target.closest('.weather-hero__pin')) return locate();
+  go('cities');
+});
+$('#weatherLocate').addEventListener('click', () => locate());
 $('.weather-hub-tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-weather-section]'); if (!b) return;
   S.weatherSection = b.dataset.weatherSection;
@@ -1949,7 +1972,7 @@ function bindMapControls() {
   $('#radarPlay').addEventListener('click', () => R.timer ? stopPlay() : startPlay());
   $('#btnZoomIn').addEventListener('click', () => R.map.zoomIn());
   $('#btnZoomOut').addEventListener('click', () => R.map.zoomOut());
-  $('#btnMapLocate').addEventListener('click', () => R.map.setView([S.place.lat, S.place.lon], 8));
+  $('#btnMapLocate').addEventListener('click', () => locate({ recenterMap: true }));
   $('#btnLayers').addEventListener('click', e => {
     e.stopPropagation();
     setLayerMenuOpen($('#mapLayerMenu').hidden);
@@ -2006,12 +2029,8 @@ function formatPeriodDay(d) {
 
 function renderStats() {
   const now = placeNow(S.bundle);
-  const weekday = (now.getDay() + 6) % 7;
-  const start = new Date(now); start.setDate(now.getDate() - weekday);
-  const end = new Date(start); end.setDate(start.getDate() + 6);
-  $('#statsPeriodLabel').textContent = `${formatPeriodDay(start)} – ${formatPeriodDay(end)}`;
 
-  $$('[data-stats-tab]').forEach(b => {
+  $('[data-stats-tab]').forEach(b => {
     const active = b.dataset.statsTab === S.statsTab;
     b.classList.toggle('is-on', active);
     b.setAttribute('aria-selected', String(active));
@@ -2034,9 +2053,17 @@ function renderStats() {
       if (entries.length >= 7) break;
     }
   }
+  const usingHistory = entries.some(x => x.saved);
+  const periodStart = usingHistory ? (() => {
+    const d = new Date(now); const weekday = (d.getDay() + 6) % 7; d.setDate(d.getDate() - weekday); return d;
+  })() : new Date(now);
+  const periodEnd = new Date(periodStart); periodEnd.setDate(periodEnd.getDate() + 6);
+  $('#statsPeriodLabel').textContent = `${formatPeriodDay(periodStart)} – ${formatPeriodDay(periodEnd)}`;
+  $('#statsAverageLabel').textContent = usingHistory ? T.statsAverage : T.statsForecastScore;
+
   const avg = entries.length ? Math.round(entries.reduce((a,x)=>a+x.score,0)/entries.length) : null;
   $('#statsAverage').textContent = avg ?? '—';
-  $('#statsTrend').textContent = entries.length ? (entries.some(x=>x.saved) ? T.statsHistory : T.statsCurrentConditions) : '';
+  $('#statsTrend').textContent = entries.length ? (usingHistory ? T.statsHistory : T.statsForecast) : '';
   $('#statsBars').innerHTML = entries.length ? entries.map(x => `<div class="stats-bar">
       <span class="stats-bar__value">${x.score}</span>
       <span class="stats-bar__track"><i style="height:${Math.max(8,x.score)}%;background:${bandColor(x.score)}"></i></span>
