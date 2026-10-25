@@ -52,6 +52,7 @@ const EN = {
   nearTermNow: 'Go now — waiting is unlikely to help.',
   nearTermWait: (now, later, wait) => `Better in about ${wait}: ${now} → ${later}/100`,
   nearTermUnavailable: 'Not enough forecast data for a near-term comparison.',
+  runScoreUnavailable: 'Run score unavailable', airDataUnavailable: 'Air quality data unavailable',
   runTips: {
     thunder: 'Thunderstorms are forecast during the run; consider another time.',
     rainLater: 'Rain is more likely later in the run; a light rain layer may help.',
@@ -279,6 +280,7 @@ const RU = {
   nearTermNow: 'Можно бежать сейчас — ждать особого смысла нет.',
   nearTermWait: (now, later, wait) => `Лучше выйти примерно через ${wait}: ${now} → ${later}/100`,
   nearTermUnavailable: 'Не хватает прогноза для сравнения ближайших часов.',
+  runScoreUnavailable: 'Недостаточно данных для оценки', airDataUnavailable: 'Нет данных о качестве воздуха',
   runTips: {
     thunder: 'Во время пробежки возможна гроза; лучше выбрать другое время.',
     rainLater: 'Ближе к концу пробежки вероятен дождь; лёгкая защита от дождя может пригодиться.',
