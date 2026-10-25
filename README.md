@@ -43,6 +43,22 @@ python3 -m http.server 8000
 Для установки на телефон нужен HTTPS - выложите папку на GitHub Pages, Netlify,
 Vercel или Cloudflare Pages. Сборка не требуется.
 
+### Android (Capacitor)
+
+Android-приложение использует тот же утверждённый интерфейс из веб-файлов. Перед
+каждой нативной сборкой они копируются в Capacitor-проект и синхронизируются:
+
+```bash
+npm ci
+npm run android-sync
+cd android
+./gradlew assembleDebug
+```
+
+Debug APK появится в `android/app/build/outputs/apk/debug/`. Для выпуска обновления
+нужно подписать release-сборку тем же ключом, которым подписано уже установленное
+приложение; ключи подписи в репозиторий не добавляются.
+
 ## Данные
 
 Погода, качество воздуха, пыльца и поиск городов - [Open-Meteo](https://open-meteo.com),

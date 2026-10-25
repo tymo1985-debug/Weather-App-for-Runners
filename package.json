@@ -2,6 +2,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test test/*.mjs"
+    "test": "node --test test/*.mjs",
+    "build:mobile": "node scripts/prepare-mobile.mjs",
+    "android-sync": "npm run build:mobile && npx cap sync android",
+    "android-open": "npm run android-sync && npx cap open android",
+    "android-run": "npm run android-sync && npx cap run android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
   }
 }
