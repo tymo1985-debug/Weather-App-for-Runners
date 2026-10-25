@@ -54,13 +54,12 @@ test('Weather Hub reuses running score and keeps city search internal', () => {
   assert.match(app, /load\(\); back\(\);/);
 });
 
-test('radar expands in place and Prague hero is local/offline', () => {
+test('radar expands in place and the weather hero is city-neutral/offline', () => {
   assert.match(css, /\.weather-radar-card\.is-expanded/);
-  assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
-  assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v43/);
-  assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
+  assert.doesNotMatch(app, /isPraguePlace/);
+  assert.match(sw, /shell-v47/);
+  assert.match(sw, /\.\/css\/mobile-layout\.css/);
   assert.match(sw, /\.\/js\/hero-theme\.js/);
   assert.match(sw, /\.\/js\/radar-utils\.js/);
 });
@@ -160,7 +159,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.35.0');
+  assert.equal(APP_VERSION, '0.35.1');
   assert.equal(RELEASE_DATE, '2026-10-25');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);

@@ -38,6 +38,7 @@ const S = {
   screen: 'home', stack: []
 };
 let T = LANGS[S.langCode];
+try { history.replaceState({ runWeatherScreen: S.screen }, ''); } catch {}
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -79,7 +80,10 @@ function go(name, push = true) {
   if (name === S.screen) return;
   const oldFocus = document.activeElement;
   if (S.screen === 'radar' && name !== 'radar') { stopPlay(); setRadarExpanded(false); }   // не крутим радар в фоне
-  if (push) { S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20); }
+  if (push) {
+    S.stack.push(S.screen); if (S.stack.length > 40) S.stack.splice(0, 20);
+    try { history.pushState({ runWeatherScreen: name }, ''); } catch {}
+  }
   S.screen = name;
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
   const activeTab = tabFor(name);
@@ -93,7 +97,16 @@ function go(name, push = true) {
     if (target) { if (target.tagName === 'H1') target.tabIndex = -1; target.focus(); }
   }
 }
-function back() { go(S.stack.pop() || 'home', false); }
+function back() {
+  if (S.stack.length) { history.back(); return; }
+  go('home', false);
+}
+
+window.addEventListener('popstate', e => {
+  const fallback = S.stack.pop() || 'home';
+  const requested = e.state?.runWeatherScreen;
+  go(RENDER[requested] ? requested : fallback, false);
+});
 
 document.addEventListener('click', e => {
   const g = e.target.closest('[data-go]'); if (g) return go(g.dataset.go);
@@ -356,7 +369,7 @@ function staticText() {
 function renderHome() {
   const homeHero = $('.home-hero');
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
-  applyWeatherHeroTheme(homeHero, cur.weather_code, cur.is_day, isPraguePlace(S.place));
+  applyWeatherHeroTheme(homeHero, cur.weather_code, cur.is_day);
   $('#placeName').textContent = S.place.name;
   $('#heroDate').textContent = `${dowOf(d)}, ${dateOf(d)} • ${hhmm(d)}`;
   $('#heroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);
@@ -1370,12 +1383,10 @@ function renderAir() {
 }
 
 // ── 9. WEATHER HUB ─────────────────────────────────────────────────────────
-const isPraguePlace = place => /^(prague|praha|prag|прага)$/i.test(String(place?.name || '').trim());
-
 function renderWeatherHub() {
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
   const hero = $('#weatherHero');
-  applyWeatherHeroTheme(hero, cur.weather_code, cur.is_day, isPraguePlace(S.place));
+  applyWeatherHeroTheme(hero, cur.weather_code, cur.is_day);
   $('#weatherPlaceName').textContent = S.place.name;
   $('#weatherHeroDate').textContent = `${dowOf(d)}, ${dateOf(d)} · ${hhmm(d)}`;
   $('#weatherHeroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);

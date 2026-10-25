@@ -11,7 +11,7 @@ test('weather hero classifies common weather states', () => {
   assert.equal(weatherHeroTheme(45), 'fog');
 });
 
-test('weather hero applies day, night and optional local artwork independently', () => {
+test('weather hero applies day and night without city-specific artwork', () => {
   const values = new Set();
   const element = {
     dataset: {},
@@ -21,12 +21,11 @@ test('weather hero applies day, night and optional local artwork independently',
       toggle: (item, on) => on ? values.add(item) : values.delete(item)
     }
   };
-  applyWeatherHeroTheme(element, 61, 0, false);
+  applyWeatherHeroTheme(element, 61, 0);
   assert.ok(values.has('hero-theme--rain'));
   assert.ok(values.has('is-night'));
-  assert.ok(!values.has('is-prague'));
-  applyWeatherHeroTheme(element, 0, 1, true);
+  applyWeatherHeroTheme(element, 0, 1);
   assert.ok(values.has('hero-theme--clear'));
   assert.ok(values.has('is-day'));
-  assert.ok(values.has('is-prague'));
+  assert.ok(!values.has('is-prague'));
 });

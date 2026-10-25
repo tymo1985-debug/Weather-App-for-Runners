@@ -1,0 +1,115 @@
+/* Final mobile layout layer. It intentionally contains only cross-screen
+   safe-area and adaptive-height rules, plus the universal weather backdrop. */
+
+/* Later component rules used to reset this padding to zero. Keep headings and
+   back controls below Android/iOS system bars on every top-level page. */
+.stats-page.safe-top,
+.screen--weather .weather-hero.safe-top,
+.more-page.safe-top{
+  padding-top:max(18px,env(safe-area-inset-top));
+}
+
+.more-page__head{
+  display:grid;
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  align-items:center;
+  min-height:52px;
+  margin:0 0 8px;
+}
+.more-page__head h1{
+  margin:0;
+  min-width:0;
+  text-align:center;
+  font-size:24px;
+  line-height:1.15;
+  letter-spacing:-.6px;
+}
+.more-page__back{
+  width:44px;
+  height:44px;
+  display:grid;
+  place-items:center;
+  border-radius:50%;
+  font-size:34px;
+  line-height:1;
+  color:var(--ink);
+}
+.more-page__back:active{background:#E7EBEF}
+
+/* Let the main sheet reach the bottom navigation on tall phones. The freshness
+   label occupies the flexible remainder instead of leaving an unexplained gap. */
+.screen--home.is-active{display:flex;flex-direction:column}
+.screen--home .home-sheet{flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.screen--home .home-updated{
+  display:block;
+  padding:18px 2px 8px;
+}
+
+/* Every location uses the same weather-driven system. No city photograph or
+   skyline is selected by a place name. The scene is deliberately atmospheric. */
+.home-hero .hero__sky,
+.weather-hero .weather-hero__backdrop{
+  background-color:#4A9CDA;
+  background-image:
+    radial-gradient(ellipse at 14% 76%,rgba(255,255,255,.18) 0 10%,transparent 11%),
+    radial-gradient(ellipse at 30% 82%,rgba(255,255,255,.12) 0 13%,transparent 14%),
+    radial-gradient(circle at 82% 20%,rgba(255,255,255,.17) 0 7%,transparent 8%),
+    linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%);
+}
+.home-hero .hero__scene{display:none}
+.hero-theme--cloud .hero__sky,
+.hero-theme--cloud .weather-hero__backdrop{
+  background-image:
+    radial-gradient(ellipse at 20% 72%,rgba(255,255,255,.20) 0 18%,transparent 19%),
+    radial-gradient(ellipse at 62% 78%,rgba(255,255,255,.14) 0 23%,transparent 24%),
+    linear-gradient(160deg,#5A88AD 0%,#8AAAC1 52%,#D4DEE4 100%);
+}
+.hero-theme--fog .hero__sky,
+.hero-theme--fog .weather-hero__backdrop{
+  background-image:
+    radial-gradient(ellipse at 20% 72%,rgba(255,255,255,.18) 0 22%,transparent 23%),
+    linear-gradient(160deg,#718B9C 0%,#AABBC4 52%,#DDE4E7 100%);
+}
+.hero-theme--rain .hero__sky,
+.hero-theme--rain .weather-hero__backdrop{
+  background-image:repeating-linear-gradient(112deg,transparent 0 25px,rgba(210,235,250,.10) 26px 28px,transparent 29px 48px),linear-gradient(160deg,#385D78 0%,#647F91 52%,#AAB8C0 100%);
+}
+.hero-theme--storm .hero__sky,
+.hero-theme--storm .weather-hero__backdrop{
+  background-image:repeating-linear-gradient(112deg,transparent 0 25px,rgba(210,235,250,.10) 26px 28px,transparent 29px 48px),linear-gradient(160deg,#232D49 0%,#48536F 50%,#79829A 100%);
+}
+.hero-theme--snow .hero__sky,
+.hero-theme--snow .weather-hero__backdrop{
+  background-image:
+    radial-gradient(circle at 16% 24%,rgba(255,255,255,.55) 0 3px,transparent 4px),
+    radial-gradient(circle at 64% 38%,rgba(255,255,255,.48) 0 3px,transparent 4px),
+    radial-gradient(circle at 84% 18%,rgba(255,255,255,.52) 0 2px,transparent 3px),
+    linear-gradient(160deg,#779AB4 0%,#B4CAD8 54%,#EEF5F7 100%);
+}
+.home-hero.is-night .hero__sky,
+.weather-hero.is-night .weather-hero__backdrop{
+  background-image:
+    radial-gradient(circle at 82% 18%,rgba(255,255,255,.62) 0 3%,transparent 3.5%),
+    linear-gradient(160deg,#101B38 0%,#223A61 55%,#536A85 100%);
+}
+
+@media(max-width:360px){
+  .more-page__head h1{font-size:22px}
+}
+
+/* WebView-safe final colors: keep the dynamic system independent of support
+   for layered gradient syntax used by the atmospheric decoration above. */
+.home-hero .hero__sky,
+.weather-hero .weather-hero__backdrop{background:linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%)!important}
+.home-hero.hero-theme--cloud .hero__sky,
+.weather-hero.hero-theme--cloud .weather-hero__backdrop{background:linear-gradient(160deg,#5A88AD 0%,#8AAAC1 52%,#D4DEE4 100%)!important}
+.home-hero.hero-theme--rain .hero__sky,
+.weather-hero.hero-theme--rain .weather-hero__backdrop{background:linear-gradient(160deg,#385D78 0%,#647F91 52%,#AAB8C0 100%)!important}
+.home-hero.hero-theme--snow .hero__sky,
+.weather-hero.hero-theme--snow .weather-hero__backdrop{background:linear-gradient(160deg,#779AB4 0%,#B4CAD8 54%,#EEF5F7 100%)!important}
+.home-hero.hero-theme--storm .hero__sky,
+.weather-hero.hero-theme--storm .weather-hero__backdrop{background:linear-gradient(160deg,#232D49 0%,#48536F 50%,#79829A 100%)!important}
+.home-hero.hero-theme--fog .hero__sky,
+.weather-hero.hero-theme--fog .weather-hero__backdrop{background:linear-gradient(160deg,#718B9C 0%,#AABBC4 52%,#DDE4E7 100%)!important}
+.home-hero.is-night .hero__sky,
+.weather-hero.is-night .weather-hero__backdrop{background:linear-gradient(160deg,#101B38 0%,#223A61 55%,#536A85 100%)!important}

@@ -10,12 +10,11 @@ export function weatherHeroTheme(code) {
   return 'clear';
 }
 
-export function applyWeatherHeroTheme(element, code, isDay, localArtwork = false) {
+export function applyWeatherHeroTheme(element, code, isDay) {
   if (!element) return 'clear';
   const theme = weatherHeroTheme(code);
-  element.classList.remove(...THEMES.map(x => `hero-theme--${x}`), 'is-day', 'is-night', 'is-prague');
+  element.classList.remove(...THEMES.map(x => `hero-theme--${x}`), 'is-day', 'is-night');
   element.classList.add(`hero-theme--${theme}`, Number(isDay) === 0 ? 'is-night' : 'is-day');
-  element.classList.toggle('is-prague', !!localArtwork);
   element.dataset.weatherTheme = theme;
   return theme;
 }

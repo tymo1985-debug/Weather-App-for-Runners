@@ -14,6 +14,7 @@
 <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/accessibility.css">
+  <link rel="stylesheet" href="css/mobile-layout.css">
 </head>
 <body>
 <div id="app">
@@ -503,7 +504,10 @@
 <!-- 13 - ЕЩЁ -->
 <section class="screen screen--more" data-screen="details">
   <div class="more-page safe-top">
-    <h1 id="moreTitle"></h1>
+    <header class="more-page__head">
+      <button class="more-page__back" type="button" data-back aria-label="Back">‹</button>
+      <h1 id="moreTitle"></h1>
+    </header>
     <div class="more-menu">
       <button class="more-row" type="button" data-go="planner"><span class="more-row__ic more-row__ic--blue" id="morePaceIcon"></span><span><b id="morePaceTitle"></b><small id="morePaceSub"></small></span><em>›</em></button>
       <button class="more-row" type="button" data-go="why"><span class="more-row__ic more-row__ic--blue" id="moreScoreIcon"></span><span><b id="moreScoreTitle"></b><small id="moreScoreSub"></small></span><em>›</em></button>
