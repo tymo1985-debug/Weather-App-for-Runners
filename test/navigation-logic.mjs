@@ -12,7 +12,7 @@ test('home score opens why and remains an accessible button', () => {
   assert.match(html, /<button class="home-score" id="cardScore" type="button">/);
   assert.match(html, /id="scoreWhy"/);
   assert.match(app, /\$\('#cardScore'\)\.addEventListener\('click', \(\) => go\('why'\)\)/);
-  assert.match(app, /\$\('#cardScore'\)\.setAttribute\('aria-label', T\.scoreExplanation\(sc, bandText\(sc\)\)\)/);
+  assert.match(app, /\$\('#cardScore'\)\.setAttribute\('aria-label', hasScore \? T\.scoreExplanation\(sc, bandText\(sc\)\) : T\.runScoreUnavailable\)/);
 });
 
 test('home details opens dedicated Run Details and analysis still links to Why', () => {
