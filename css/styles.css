@@ -915,6 +915,26 @@ body.radar-expanded .tabbar{display:none}
   .home-metric{gap:5px;padding:0 5px}.home-metric__icon{width:27px;height:27px}
   .home-metric b{font-size:18px}.home-metric span:not(.home-metric__icon){font-size:10.5px}
 }
+
+/* ── UNIVERSAL DYNAMIC WEATHER HERO ─────────────────────────── */
+.home-hero,.weather-hero{
+  --hero-sky:linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%);
+  --hero-tint:linear-gradient(180deg,rgba(19,55,92,.04),rgba(17,47,72,.22));
+}
+.hero-theme--cloud{--hero-sky:linear-gradient(160deg,#5A88AD 0%,#8AAAC1 52%,#D4DEE4 100%);--hero-tint:linear-gradient(180deg,rgba(34,55,75,.22),rgba(24,42,54,.38))}
+.hero-theme--rain{--hero-sky:linear-gradient(160deg,#385D78 0%,#647F91 52%,#AAB8C0 100%);--hero-tint:linear-gradient(180deg,rgba(22,45,61,.34),rgba(14,34,47,.5))}
+.hero-theme--snow{--hero-sky:linear-gradient(160deg,#779AB4 0%,#B4CAD8 54%,#EEF5F7 100%);--hero-tint:linear-gradient(180deg,rgba(70,99,119,.16),rgba(35,62,78,.34))}
+.hero-theme--storm{--hero-sky:linear-gradient(160deg,#232D49 0%,#48536F 50%,#79829A 100%);--hero-tint:linear-gradient(180deg,rgba(21,23,48,.48),rgba(12,24,42,.62))}
+.hero-theme--fog{--hero-sky:linear-gradient(160deg,#718B9C 0%,#AABBC4 52%,#DDE4E7 100%);--hero-tint:linear-gradient(180deg,rgba(74,94,105,.2),rgba(38,55,64,.38))}
+.home-hero.is-night,.weather-hero.is-night{--hero-sky:linear-gradient(160deg,#101B38 0%,#223A61 55%,#536A85 100%);--hero-tint:linear-gradient(180deg,rgba(7,13,34,.55),rgba(5,15,29,.7))}
+.home-hero .hero__sky,.weather-hero .weather-hero__backdrop{background:var(--hero-sky)}
+.home-hero.is-prague .hero__sky,.weather-hero.is-prague .weather-hero__backdrop{
+  background-image:var(--hero-tint),url("../assets/prague-weather-hero.svg");
+  background-size:cover;background-position:center 43%;
+}
+.hero-theme--rain .hero__scene,.hero-theme--storm .hero__scene,.hero-theme--fog .hero__scene{opacity:.24;filter:saturate(.45)}
+.hero-theme--snow .hero__scene{opacity:.55;filter:saturate(.2) brightness(1.14)}
+.is-night .hero__scene{opacity:.2;filter:saturate(.35) brightness(.72)}
 @media(max-width:340px){
   .home-today__head{align-items:flex-start;flex-direction:column;gap:8px}
   .home-best-badge{max-width:100%}

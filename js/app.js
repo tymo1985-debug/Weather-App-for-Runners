@@ -9,6 +9,7 @@ import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
 import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from './version.js';
 import { nearestRadarFrameIndex } from './radar-utils.js';
+import { applyWeatherHeroTheme } from './hero-theme.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, loadActivePlace, saveActivePlace,
   loadLocationMode, saveLocationMode, loadManualPlace, saveManualPlace, validPlace,
@@ -348,8 +349,8 @@ function staticText() {
 // ── 1. ГЛАВНАЯ ─────────────────────────────────────────────────────────────
 function renderHome() {
   const homeHero = $('.home-hero');
-  homeHero.classList.toggle('is-prague', isPraguePlace(S.place));
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
+  applyWeatherHeroTheme(homeHero, cur.weather_code, cur.is_day, isPraguePlace(S.place));
   $('#placeName').textContent = S.place.name;
   $('#heroDate').textContent = `${dowOf(d)}, ${dateOf(d)} • ${hhmm(d)}`;
   $('#heroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);
@@ -1367,7 +1368,7 @@ const isPraguePlace = place => /^(prague|praha|prag|прага)$/i.test(String(p
 function renderWeatherHub() {
   const W = S.bundle.weather, cur = W.current, h = nowHour(), d = placeNow(S.bundle);
   const hero = $('#weatherHero');
-  hero.classList.toggle('is-prague', isPraguePlace(S.place));
+  applyWeatherHeroTheme(hero, cur.weather_code, cur.is_day, isPraguePlace(S.place));
   $('#weatherPlaceName').textContent = S.place.name;
   $('#weatherHeroDate').textContent = `${dowOf(d)}, ${dateOf(d)} · ${hhmm(d)}`;
   $('#weatherHeroIcon').innerHTML = weatherIcon(cur.weather_code, cur.is_day);
