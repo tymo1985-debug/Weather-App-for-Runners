@@ -69,11 +69,13 @@ const RENDER = {
   home: renderHome, hourly: renderHourly, daily: renderDaily, analysis: renderAnalysis,
   why: renderWhy, factor: renderFactor, timeline: renderTimeline, air: renderAir,
   stats: renderStats, 'run-details': renderRunDetails, planner: renderPlanner,
-  details: renderDetails, cities: renderCities, radar: renderWeatherHub
+  details: renderDetails, settings: renderDetails, about: renderDetails,
+  cities: renderCities, radar: renderWeatherHub
 };
 const TAB_OF = { home: 'home', hourly: 'home', daily: 'home', analysis: 'home', why: 'home',
   factor: 'home', timeline: 'home', 'run-details': 'home', planner: 'details', stats: 'stats',
-  air: 'radar', radar: 'radar', cities: 'details', details: 'details' };
+  air: 'radar', radar: 'radar', cities: 'details', settings: 'details', about: 'details', details: 'details' };
+const TOP_LEVEL_SCREENS = new Set(['home', 'radar', 'stats', 'details']);
 const tabFor = name => (['hourly', 'daily'].includes(name) && S.stack.at(-1) === 'radar') ? 'radar' : TAB_OF[name];
 
 function go(name, push = true) {
@@ -85,6 +87,7 @@ function go(name, push = true) {
     try { history.pushState({ runWeatherScreen: name }, ''); } catch {}
   }
   S.screen = name;
+  document.body.classList.toggle('is-secondary-screen', !TOP_LEVEL_SCREENS.has(name));
   $$('.screen').forEach(s => s.classList.toggle('is-active', s.dataset.screen === name));
   const activeTab = tabFor(name);
   $$('.tab').forEach(t => t.classList.toggle('is-on', t.dataset.go === activeTab));
@@ -109,7 +112,16 @@ window.addEventListener('popstate', e => {
 });
 
 document.addEventListener('click', e => {
-  const g = e.target.closest('[data-go]'); if (g) return go(g.dataset.go);
+  const g = e.target.closest('[data-go]');
+  if (g) {
+    const name = g.dataset.go;
+    const isTab = g.classList.contains('tab');
+    if (isTab) {
+      S.stack.length = 0;
+      try { history.replaceState({ runWeatherScreen: name }, ''); } catch {}
+    }
+    return go(name, !isTab);
+  }
   if (e.target.closest('[data-back]')) return back();
   if (e.target.closest('[data-close-sheet]')) return closeSheet();
   if (e.target.closest('[data-share]')) return share();
@@ -289,7 +301,6 @@ function staticText() {
   $('#moreTitle').textContent = T.moreTitle;
   $('#morePaceTitle').textContent = T.morePaceTitle; $('#morePaceSub').textContent = T.morePaceSub;
   $('#moreScoreTitle').textContent = T.moreScoreTitle; $('#moreScoreSub').textContent = T.moreScoreSub;
-  $('#moreWatchTitle').textContent = T.moreWatchTitle; $('#moreWatchSub').textContent = T.moreWatchSub;
   $('#morePlacesTitle').textContent = T.morePlacesTitle; $('#morePlacesSub').textContent = T.morePlacesSub;
   $('#moreSettingsTitle').textContent = T.moreSettingsTitle; $('#moreSettingsSub').textContent = T.moreSettingsSub;
   $('#moreAboutTitle').textContent = T.moreAboutTitle; $('#moreAboutSub').textContent = T.moreAboutSub;
@@ -297,7 +308,6 @@ function staticText() {
   $('#moreAboutPanelTitle').textContent = T.moreAboutTitle;
   $('#morePaceIcon').innerHTML = glyph.alarm.replaceAll('#5B8DEF', 'currentColor');
   $('#moreScoreIcon').innerHTML = glyph.runner;
-  $('#moreWatchIcon').innerHTML = glyph.alarm.replaceAll('#5B8DEF', 'currentColor');
   $('#morePlacesIcon').innerHTML = glyph.star;
   $('#moreSettingsIcon').innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     <circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.12 2.12-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V20.3h-3v-.09a1.7 1.7 0 0 0-1.03-1.55 1.7 1.7 0 0 0-1.88.34l-.06.06-2.12-2.12.06-.06A1.7 1.7 0 0 0 7 15a1.7 1.7 0 0 0-1.55-1.03H5.3v-3h.15A1.7 1.7 0 0 0 7 9.94a1.7 1.7 0 0 0-.34-1.88L6.6 8l2.12-2.12.06.06a1.7 1.7 0 0 0 1.88.34A1.7 1.7 0 0 0 11.7 4.7v-.1h3v.1a1.7 1.7 0 0 0 1.03 1.58 1.7 1.7 0 0 0 1.88-.34l.06-.06L19.8 8l-.06.06a1.7 1.7 0 0 0-.34 1.88 1.7 1.7 0 0 0 1.55 1.03h.15v3h-.15A1.7 1.7 0 0 0 19.4 15Z"/></svg>`;
@@ -394,7 +404,7 @@ function renderHome() {
   $('#scoreHeadLbl').textContent = hasScore ? T.runStatusTitle(bandText(sc)) : T.runningConditions;
   $('#homeConditions').textContent = mainConditions(h);
   $('#homeFeelsValue').textContent = `${round(h?.feels ?? cur.apparent_temperature)}°`;
-  $('#homeWindValue').textContent = h ? `${round(h.wind)} km/h` : '—';
+  $('#homeWindValue').textContent = h ? `${round(h.wind)} ${T.speedUnit}` : '—';
   $('#homeRainValue').textContent = h ? `${h.pop}%` : '—';
   $('#scoreWhy').textContent = T.whyScoreShort(sc);
   $('#cardScore').setAttribute('aria-label', hasScore ? T.scoreExplanation(sc, bandText(sc)) : T.runScoreUnavailable);
@@ -1093,7 +1103,7 @@ const FMETA = () => ({
     h.factors.temp.v >= 85 ? T.optimalWord : h.feels > 20 ? T.tooWarm.toLowerCase() : T.tooCold.toLowerCase()],
   humid: [T.fHumid, glyph.humid, h => `${round(h.rh)}%`, h =>
     h.factors.humid.v >= 85 ? T.comfortable : h.rh > 62 ? T.highHumidity : T.lowHumidity],
-  wind: [T.fWind, glyph.wind, h => `${round(h.wind)} km/h`, h =>
+  wind: [T.fWind, glyph.wind, h => `${round(h.wind)} ${T.speedUnit}`, h =>
     h.wind <= 9 ? T.light : h.wind <= 20 ? T.moderate.toLowerCase() : T.high.toLowerCase()],
   rain: [T.fRain, glyph.rain, h => `${h.pop}%`, h =>
     h.pop < 15 ? T.veryLow : h.pop < 40 ? T.low.toLowerCase() : T.high.toLowerCase()],
@@ -1180,8 +1190,8 @@ const SUBROWS = (key, h) => {
       [T.humidity, `${round(h.rh)}%`, glyph.humid]],
     humid: [[T.humidity, `${round(h.rh)}%`, glyph.humid], [T.dewPoint, `${round(h.dew)}°`, glyph.dew],
       [T.feelsLike, `${round(h.feels)}°`, glyph.feels]],
-    wind: [[T.fWind, `${round(h.wind)} km/h`, glyph.wind],
-      [T.gusts, h.gust ? `${round(h.gust)} km/h` : '—', glyph.wind],
+    wind: [[T.fWind, `${round(h.wind)} ${T.speedUnit}`, glyph.wind],
+      [T.gusts, h.gust ? `${round(h.gust)} ${T.speedUnit}` : '—', glyph.wind],
       [T.feelsLike, `${round(h.feels)}°`, glyph.feels]],
     rain: [[T.colPrecip, `${h.pop}%`, glyph.rain], ['mm/h', h.mm.toFixed(1), glyph.rain],
       [T.fSurface, h.recentMm > 0.5 ? T.wetEstimated : T.dryEstimated, glyph.surface]],
@@ -1433,7 +1443,7 @@ function renderWeatherNow() {
   $('#weatherNowIcon').innerHTML = weatherIcon(h.code, h.isDay);
   $('#weatherNowTemp').textContent = `${round(h.temp)}°`;
   $('#weatherNowFeels').textContent = `${T.feelsLike} ${round(h.feels)}°`;
-  $('#weatherNowWind').textContent = `${round(h.wind)} km/h`;
+  $('#weatherNowWind').textContent = `${round(h.wind)} ${T.speedUnit}`;
   $('#weatherNowRain').textContent = `${h.pop}%`;
 
   const list = S.hours.slice(n, n + 6);
@@ -1471,7 +1481,7 @@ function renderWeatherHourly() {
         <span class="weather-hour__condition">${T.weather[h.code] || ''}</span>
         <b>${round(h.temp)}°</b>
         <small class="weather-hour__rain">${glyph.rain}<span>${Math.round(h.pop)}%</span></small>
-        <small class="weather-hour__wind">${glyph.wind}<span>${round(h.wind)} km/h</span></small>
+        <small class="weather-hour__wind">${glyph.wind}<span>${round(h.wind)} ${T.speedUnit}</span></small>
       </button>`).join('')}</div>`;
     return;
   }
@@ -1498,7 +1508,7 @@ function renderWeatherHourly() {
       <span class="weather-graph__summary-icon">${weatherIcon(selected.code, selected.isDay)}</span>
       <span><small>${S.weatherGraphIndex === 0 ? T.now : hhmm(selected.t)}</small><b>${round(selected.temp)}°</b></span>
       <span><small>${T.colPrecip}</small><b>${Math.round(selected.pop)}%</b></span>
-      <span><small>${T.fWind}</small><b>${round(selected.wind)} km/h</b></span>
+      <span><small>${T.fWind}</small><b>${round(selected.wind)} ${T.speedUnit}</b></span>
     </div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${T.weatherHourlyTitle}">
       ${guides}
@@ -1514,7 +1524,7 @@ function renderWeatherHourly() {
         const hitX = i === 0 ? L - step/2 : x - step/2;
         return `<rect x="${(x-7).toFixed(1)}" y="${(RAIN_BASE-bh).toFixed(1)}" width="14" height="${bh.toFixed(1)}" rx="4" class="${i === S.weatherGraphIndex ? 'weather-graph__rain is-selected' : 'weather-graph__rain'}"/>
           ${label}
-          <rect x="${Math.max(0,hitX).toFixed(1)}" y="${(TOP-14).toFixed(1)}" width="${step.toFixed(1)}" height="${(RAIN_BASE-TOP+28).toFixed(1)}" fill="transparent" data-weather-graph-index="${i}" tabindex="0" role="button" aria-label="${hhmm(h.t)}, ${round(h.temp)}°, ${Math.round(h.pop)}%, ${round(h.wind)} km/h"/>`;
+          <rect x="${Math.max(0,hitX).toFixed(1)}" y="${(TOP-14).toFixed(1)}" width="${step.toFixed(1)}" height="${(RAIN_BASE-TOP+28).toFixed(1)}" fill="transparent" data-weather-graph-index="${i}" tabindex="0" role="button" aria-label="${hhmm(h.t)}, ${round(h.temp)}°, ${Math.round(h.pop)}%, ${round(h.wind)} ${T.speedUnit}"/>`;
       }).join('')}
     </svg>
   </div>`;
@@ -1667,9 +1677,20 @@ function setForecastStatus(kind) {
   const compact = $('#radarQuickStatus');
   if (compact) {
     compact.className = 'radar-quick__status' + stateClass;
-    compact.textContent = message;
+    compact.textContent = kind === 'ready' ? '' : message;
   }
   updateRadarQuick();
+  if (kind === 'ready') updateCompactRadarStatus();
+}
+
+function updateCompactRadarStatus() {
+  const compact = $('#radarQuickStatus');
+  const frame = R.frames[R.idx];
+  if (!compact || !frame) return;
+  const at = R.idx === R.nowIdx ? T.now : hhmm(atPlace(frame.time));
+  const isModel = frame.kind === 'model';
+  compact.className = `radar-quick__status${isModel ? ' is-ready' : ''}`;
+  compact.textContent = `${isModel ? T.modelForecastWord : T.observedWord} · ${at}`;
 }
 
 const RADAR_QUICK_OFFSETS = [0, 30, 60, 180, 360];
@@ -2055,6 +2076,7 @@ function showFrame(i) {
   $('#radarTime').setAttribute('aria-valuetext', `${i === R.nowIdx ? T.now : hhmm(atPlace(f.time))} · ${stateWord}`);
   $$('#radarTicks span').forEach(el => el.classList.toggle('on', +el.dataset.i === i));
   updateRadarQuick();
+  updateCompactRadarStatus();
 
   // Один раз объясняем, что дальше получаса это уже не радар.
   if (f.kind === 'model' && !R.modelToldOnce) { R.modelToldOnce = true; toast(T.modelNote); }
@@ -2304,7 +2326,7 @@ function renderStats() {
     $('#statsConditionsTitle').textContent = T.statsConditions;
     $('#statsConditions').innerHTML = [
       [glyph.temp, T.statsTempRange, minTemp == null || maxTemp == null ? '—' : `${round(minTemp)}° – ${round(maxTemp)}°`],
-      [glyph.wind, T.statsAvgWind, avgWind == null ? '—' : `${avgWind} km/h`],
+      [glyph.wind, T.statsAvgWind, avgWind == null ? '—' : `${avgWind} ${T.speedUnit}`],
       [glyph.rain, T.statsAvgRain, avgRain == null ? '—' : `${avgRain}%`]
     ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('');
     return;
@@ -2335,7 +2357,7 @@ function renderStats() {
   $('#statsConditionsTitle').textContent = T.statsConditions;
   $('#statsConditions').innerHTML = [
     [glyph.temp, T.statsTemp, avgTemp == null ? '—' : `${avgTemp}°`],
-    [glyph.wind, T.statsWind, avgWind == null ? '—' : `${avgWind} km/h`],
+    [glyph.wind, T.statsWind, avgWind == null ? '—' : `${avgWind} ${T.speedUnit}`],
     [glyph.rain, T.statsRain, avgRain == null ? '—' : `${avgRain}%`]
   ].map(([ic,k,v]) => `<div class="stats-condition"><span>${ic}</span><small>${k}</small><b>${v}</b></div>`).join('');
 }
@@ -2363,7 +2385,7 @@ function renderRunDetails() {
   $('#runDetailsList').innerHTML = [
     [glyph.temp, T.temperature, `${round(h.temp)}°`],
     [glyph.feels, T.feelsLike, `${round(h.feels)}°`],
-    [glyph.wind, T.fWind, `${round(h.wind)} km/h`],
+    [glyph.wind, T.fWind, `${round(h.wind)} ${T.speedUnit}`],
     [glyph.humid, T.fHumid, `${round(h.rh)}%`],
     [glyph.rain, T.fRain, `${h.pop}%`],
     [glyph.uv, T.uvIndex, `${round(h.uv)} (${uvWord(h.uv)})`],
@@ -2394,7 +2416,7 @@ function renderPlanner() {
     b.classList.toggle('is-on', active); return active;
   });
   const { d, iso } = plannerTargetDate();
-  $('#plannerDate').textContent = `${dowOf(d)}, ${dateOf(d)}`;
+  $('#plannerDate').textContent = S.plannerDayOffset === 0 ? T.plannerNext24 : `${dowOf(d)}, ${dateOf(d)}`;
   $('#plannerPrev').disabled = S.plannerDayOffset <= 0;
   $('#plannerNext').disabled = S.plannerDayOffset >= 6;
 
@@ -2404,9 +2426,9 @@ function renderPlanner() {
   const candidateHours = S.hours.filter(h => h.ts >= startMs - 30 * 60e3 && h.ts <= endMs + runDuration() * 60e3);
   const options = runStartOptions(candidateHours, runDuration(), { now: startMs, horizonHours: 24 });
   const best = bestStartOption(options);
-  const limit = 10;
+  const limit = 5;
   const bestIndex = Math.max(0, options.indexOf(best));
-  const sliceStart = Math.max(0, Math.min(Math.max(0, options.length - limit), bestIndex - 3));
+  const sliceStart = Math.max(0, Math.min(Math.max(0, options.length - limit), bestIndex - 2));
   const shown = options.slice(sliceStart, sliceStart + limit);
   S.plannerChoices = shown;
   S.plannerChoice = best && shown.includes(best) ? best : shown[0] || null;
@@ -2523,8 +2545,6 @@ function renderDetails() {
   $('#whatsNewList').innerHTML = (RELEASE_NOTES[S.langCode] || RELEASE_NOTES.en)
     .map(note => `<li>${note}</li>`).join('');
   $('#moreAboutSub').textContent = `v${APP_VERSION}`;
-  const watchOn = !!S.watch?.enabled || !!S.backgroundWatch?.active;
-  $('#moreWatchSub').textContent = watchOn ? T.watchActive : T.moreWatchSub;
 }
 $('#profileList').addEventListener('click', e => {
   const b = e.target.closest('[data-opt]'); if (b) openProfileSheet(b.dataset.opt);
@@ -2599,21 +2619,22 @@ $('#plannerSlots').addEventListener('click', e => {
   $('#plannerExplain').innerHTML = plannerExplanation(choice, best, S.plannerChoices || []);
 });
 $('#plannerCalendar').addEventListener('click', addPlannerToCalendar);
-$('#moreSettingsRow').addEventListener('click', () => { $('#moreSettingsPanel').hidden = false; $('#moreAboutPanel').hidden = true; });
-$('#moreAboutRow').addEventListener('click', () => { $('#moreAboutPanel').hidden = false; $('#moreSettingsPanel').hidden = true; });
-$('#moreSettingsClose').addEventListener('click', () => { $('#moreSettingsPanel').hidden = true; });
-$('#moreAboutClose').addEventListener('click', () => { $('#moreAboutPanel').hidden = true; });
-
 // ── ГОРОДА ─────────────────────────────────────────────────────────────────
 function renderCities() {
   const cities = loadCities();
   const list = $('#cityList'); list.replaceChildren();
   cities.forEach((c, i) => {
-    const row = document.createElement('div'); row.className = 'cityrow';
+    const active = Math.abs(c.lat - S.place.lat) < 0.00001 && Math.abs(c.lon - S.place.lon) < 0.00001;
+    const row = document.createElement('div'); row.className = `cityrow${active ? ' is-active' : ''}`;
     const button = document.createElement('button'); button.dataset.city = i;
     const name = document.createElement('b'); name.textContent = c.name;
     const country = document.createElement('small'); country.textContent = c.country || '';
-    button.append(name, country); row.append(button);
+    button.append(name, country);
+    if (active) {
+      const badge = document.createElement('span'); badge.className = 'cityrow__active';
+      badge.textContent = `✓ ${T.activeCity}`; button.append(badge);
+    }
+    row.append(button);
     if (cities.length > 1) {
       const remove = document.createElement('button'); remove.className = 'del';
       remove.dataset.delcity = i; remove.textContent = T.remove;

@@ -238,7 +238,6 @@
   <header class="topbar safe-top">
     <button class="iconbtn" data-back></button>
     <span class="topbar__spacer"></span>
-    <span class="topbar__spacer"></span>
   </header>
   <div class="sheet sheet--flat">
     <div class="card" id="aqiCard"></div>
@@ -297,6 +296,16 @@
         <div id="weatherHourly" class="weather-hourly"></div>
       </section>
 
+      <section class="weather-card weather-now-card weather-panel" data-weather-panel="radar">
+        <div class="weather-card__head"><b id="weatherNowTitle"></b></div>
+        <div class="weather-now">
+          <div class="weather-now__main"><span id="weatherNowIcon"></span><b id="weatherNowTemp">—</b><small id="weatherNowFeels"></small></div>
+          <div class="weather-now__metric"><span id="weatherNowWindIcon"></span><b id="weatherNowWind">—</b><small id="weatherNowWindLabel"></small></div>
+          <div class="weather-now__metric"><span id="weatherNowRainIcon"></span><b id="weatherNowRain">—</b><small id="weatherNowRainLabel"></small></div>
+        </div>
+        <div class="weather-now-chart" id="weatherNowChart"></div>
+      </section>
+
       <section class="weather-card weather-radar-card weather-panel" id="weatherRadarCard" data-weather-panel="radar">
         <div class="weather-card__head weather-radar-card__head">
           <div><b id="weatherRadarTitle"></b><small id="weatherRadarSubtitle"></small></div>
@@ -345,16 +354,6 @@
           </div>
           <small class="radar-quick__status" id="radarQuickStatus" aria-live="polite"></small>
         </div>
-      </section>
-
-      <section class="weather-card weather-now-card weather-panel" data-weather-panel="radar">
-        <div class="weather-card__head"><b id="weatherNowTitle"></b></div>
-        <div class="weather-now">
-          <div class="weather-now__main"><span id="weatherNowIcon"></span><b id="weatherNowTemp">—</b><small id="weatherNowFeels"></small></div>
-          <div class="weather-now__metric"><span id="weatherNowWindIcon"></span><b id="weatherNowWind">—</b><small id="weatherNowWindLabel"></small></div>
-          <div class="weather-now__metric"><span id="weatherNowRainIcon"></span><b id="weatherNowRain">—</b><small id="weatherNowRainLabel"></small></div>
-        </div>
-        <div class="weather-now-chart" id="weatherNowChart"></div>
       </section>
 
       <section class="weather-card weather-panel" data-weather-panel="forecast">
@@ -414,8 +413,8 @@
 <!-- 11 - ПОДРОБНОСТИ ДЛЯ БЕГА -->
 <section class="screen screen--run-details" data-screen="run-details">
   <header class="modal-top safe-top">
+    <button class="modal-close" type="button" data-back aria-label="Back">‹</button>
     <h1 id="runDetailsTitle"></h1>
-    <button class="modal-close" type="button" data-back aria-label="Close">×</button>
   </header>
   <div class="run-details-page">
     <div class="run-details-tabs" role="tablist">
@@ -435,8 +434,8 @@
 <!-- 12 - ПЛАНИРОВЩИК -->
 <section class="screen screen--planner" data-screen="planner">
   <header class="modal-top safe-top">
+    <button class="modal-close" type="button" data-back aria-label="Back">‹</button>
     <h1 id="plannerTitle"></h1>
-    <button class="modal-close" type="button" data-back aria-label="Close">×</button>
   </header>
   <div class="planner-page">
     <div class="planner-tabs" role="tablist">
@@ -511,14 +510,28 @@
     <div class="more-menu">
       <button class="more-row" type="button" data-go="planner"><span class="more-row__ic more-row__ic--blue" id="morePaceIcon"></span><span><b id="morePaceTitle"></b><small id="morePaceSub"></small></span><em>›</em></button>
       <button class="more-row" type="button" data-go="why"><span class="more-row__ic more-row__ic--blue" id="moreScoreIcon"></span><span><b id="moreScoreTitle"></b><small id="moreScoreSub"></small></span><em>›</em></button>
-      <button class="more-row" type="button" data-go="planner"><span class="more-row__ic more-row__ic--amber" id="moreWatchIcon"></span><span><b id="moreWatchTitle"></b><small id="moreWatchSub"></small></span><em>›</em></button>
       <button class="more-row" type="button" data-go="cities"><span class="more-row__ic more-row__ic--amber" id="morePlacesIcon"></span><span><b id="morePlacesTitle"></b><small id="morePlacesSub"></small></span><em>›</em></button>
-      <button class="more-row" type="button" id="moreSettingsRow"><span class="more-row__ic more-row__ic--blue" id="moreSettingsIcon"></span><span><b id="moreSettingsTitle"></b><small id="moreSettingsSub"></small></span><em>›</em></button>
-      <button class="more-row" type="button" id="moreAboutRow"><span class="more-row__ic more-row__ic--blue" id="moreAboutIcon"></span><span><b id="moreAboutTitle"></b><small id="moreAboutSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" id="moreSettingsRow" data-go="settings"><span class="more-row__ic more-row__ic--blue" id="moreSettingsIcon"></span><span><b id="moreSettingsTitle"></b><small id="moreSettingsSub"></small></span><em>›</em></button>
+      <button class="more-row" type="button" id="moreAboutRow" data-go="about"><span class="more-row__ic more-row__ic--blue" id="moreAboutIcon"></span><span><b id="moreAboutTitle"></b><small id="moreAboutSub"></small></span><em>›</em></button>
     </div>
 
-    <div class="more-settings" id="moreSettingsPanel" hidden>
-      <div class="more-settings__head"><b id="moreSettingsPanelTitle"></b><button type="button" id="moreSettingsClose">×</button></div>
+    <div class="more-legacy" hidden aria-hidden="true">
+      <h3 id="detailsTitle"></h3><div id="detailsList"></div><div id="detailsLinks"></div>
+      <h3 id="profileTitle"></h3>
+      <h3 id="historyTitle"></h3><div id="historyList"></div>
+      <h3 id="langTitle"></h3>
+      <h3 id="appVersionTitle"></h3><b id="whatsNewTitle"></b>
+    </div>
+  </div>
+</section>
+
+<section class="screen screen--more" data-screen="settings">
+  <div class="more-page safe-top">
+    <header class="more-page__head">
+      <button class="more-page__back" type="button" data-back aria-label="Back">‹</button>
+      <h1 id="moreSettingsPanelTitle"></h1><span></span>
+    </header>
+    <div class="more-settings more-settings--page">
       <div id="profileList"></div>
       <div class="chooser" id="langChooser"></div>
       <div class="more-route">
@@ -529,22 +542,21 @@
         <div id="routeWeatherDetails" class="routewx routewx--details" aria-live="polite" hidden></div>
       </div>
     </div>
+  </div>
+</section>
 
-    <div class="more-about" id="moreAboutPanel" hidden>
-      <div class="more-settings__head"><b id="moreAboutPanelTitle"></b><button type="button" id="moreAboutClose">×</button></div>
+<section class="screen screen--more" data-screen="about">
+  <div class="more-page safe-top">
+    <header class="more-page__head">
+      <button class="more-page__back" type="button" data-back aria-label="Back">‹</button>
+      <h1 id="moreAboutPanelTitle"></h1><span></span>
+    </header>
+    <div class="more-about more-about--page">
       <div class="app-update-card__head"><p id="appVersionMeta"></p><span class="app-update-card__badge" id="appVersionBadge"></span></div>
       <ul id="whatsNewList"></ul>
       <button class="btn btn--ghost" id="btnInstall" hidden></button>
       <p class="tagline" id="tagline"></p>
       <p class="fineprint" id="fineprint"></p>
-    </div>
-
-    <div class="more-legacy" hidden aria-hidden="true">
-      <h3 id="detailsTitle"></h3><div id="detailsList"></div><div id="detailsLinks"></div>
-      <h3 id="profileTitle"></h3>
-      <h3 id="historyTitle"></h3><div id="historyList"></div>
-      <h3 id="langTitle"></h3>
-      <h3 id="appVersionTitle"></h3><b id="whatsNewTitle"></b>
     </div>
   </div>
 </section>

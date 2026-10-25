@@ -43,3 +43,24 @@ test('browser history makes Android system Back follow the app stack',()=>{
   assert.match(androidActivity,/OnBackPressedCallback/);
   assert.match(androidActivity,/bridge\.getWebView\(\)\.goBack\(\)/);
 });
+
+test('secondary screens clear system bars and hide root navigation',()=>{
+  assert.match(mobile,/\.topbar\.safe-top/);
+  assert.match(mobile,/\.modal-top\.safe-top/);
+  assert.match(mobile,/body\.is-secondary-screen \.tabbar\{display:none\}/);
+  assert.match(app,/TOP_LEVEL_SCREENS/);
+});
+
+test('Settings and About are focused screens with their own Back control',()=>{
+  assert.match(html,/data-screen="settings"[\s\S]*moreSettingsPanelTitle/);
+  assert.match(html,/data-screen="about"[\s\S]*moreAboutPanelTitle/);
+  assert.match(html,/id="moreSettingsRow" data-go="settings"/);
+  assert.match(html,/id="moreAboutRow" data-go="about"/);
+});
+
+test('active city and frequent compact controls have clear phone ergonomics',()=>{
+  assert.match(app,/cityrow__active/);
+  assert.match(app,/T\.activeCity/);
+  assert.match(mobile,/\.radar-quick__choices button/);
+  assert.match(mobile,/\.cityrow \.del\{min-height:44px/);
+});

@@ -43,6 +43,14 @@ test('Weather Hub order is hero score hourly radar daily air', () => {
   assert.ok(order.every((pos, i) => pos >= 0 && (i === 0 || pos > order[i - 1])));
 });
 
+test('Weather overview presents current conditions before the radar', () => {
+  const start = html.indexOf('data-screen="radar"');
+  const hub = html.slice(start, html.indexOf('data-screen="stats"', start));
+  assert.ok(hub.indexOf('id="weatherNowTitle"') < hub.indexOf('id="weatherRadarCard"'));
+  assert.equal(LANGS.en.weatherTabRadar, 'Overview');
+  assert.equal(LANGS.ru.weatherTabRadar, 'Обзор');
+});
+
 test('Weather Hub reuses running score and keeps city search internal', () => {
   assert.match(app, /radar: renderWeatherHub/);
   assert.match(app, /currentRun\(\)\.score/);
@@ -58,7 +66,7 @@ test('radar expands in place and the weather hero is city-neutral/offline', () =
   assert.match(css, /\.weather-radar-card\.is-expanded/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.doesNotMatch(app, /isPraguePlace/);
-  assert.match(sw, /shell-v47/);
+  assert.match(sw, /shell-v48/);
   assert.match(sw, /\.\/css\/mobile-layout\.css/);
   assert.match(sw, /\.\/js\/hero-theme\.js/);
   assert.match(sw, /\.\/js\/radar-utils\.js/);
@@ -159,7 +167,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.35.1');
+  assert.equal(APP_VERSION, '0.36.0');
   assert.equal(RELEASE_DATE, '2026-10-25');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);

@@ -1,9 +1,10 @@
-export const APP_VERSION = '0.35.1';
-export const APP_BUILD = 42;
+export const APP_VERSION = '0.36.0';
+export const APP_BUILD = 43;
 export const RELEASE_DATE = '2026-10-25';
 
 export const RELEASE_NOTES = {
   en: [
+    '0.36.0 streamlines Android navigation and safe areas, turns Weather into an overview, clarifies radar provenance and the next-24-hours planner, improves touch targets and contrast, marks the active city, and moves Settings and About to focused screens.',
     '0.35.1 fixes Android safe areas and Back navigation, fills the tall Home layout, and replaces the Prague-specific silhouette with a universal weather-driven backdrop for every city.',
     '0.35.0 hardens city and GPS state, forecast freshness and DST handling; adds honest radar timing and GPX limits; introduces dynamic weather artwork; and improves Android, offline and accessibility behavior.',
     '0.34.2 remembers the active city, prevents missing air-quality data from appearing as a measured score, validates forecast coverage, fixes daylight-saving forecast timestamps, refreshes stale forecasts automatically, and shows no score instead of a false zero.',
@@ -24,6 +25,7 @@ export const RELEASE_NOTES = {
     'Play, the full timeline and map controls now live only in full-screen radar.'
   ],
   ru: [
+    '0.36.0 упрощает навигацию и safe-area на Android, превращает Погоду в понятный обзор, уточняет источник кадров радара и период планировщика, увеличивает зоны касания и контраст, отмечает активный город и переносит Настройки и О приложении на отдельные экраны.',
     '0.35.1 исправляет safe-area и возврат на Android, заполняет высокий главный экран и заменяет пражский силуэт универсальным погодным фоном для любого города.',
     '0.35.0 укрепляет логику города и GPS, актуальность прогноза и переход DST; честно ограничивает время радара и GPX; добавляет динамическое погодное оформление и улучшает Android, офлайн-режим и доступность.',
     '0.34.2 сохраняет активный город, не заменяет отсутствующие данные о воздухе выдуманной оценкой, проверяет полноту прогноза, корректирует время при переходе на летнее и зимнее время, автоматически обновляет прогноз и показывает отсутствие оценки вместо ложного нуля.',

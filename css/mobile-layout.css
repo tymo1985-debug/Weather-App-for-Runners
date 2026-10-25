@@ -9,6 +9,45 @@
   padding-top:max(18px,env(safe-area-inset-top));
 }
 
+/* Secondary screens own their navigation. Their headers must clear the real
+   Android status bar, while the global tab bar stays reserved for root tabs. */
+.topbar.safe-top,
+.modal-top.safe-top{
+  padding-top:max(16px,env(safe-area-inset-top));
+}
+body.is-secondary-screen .tabbar{display:none}
+body.is-secondary-screen .screen.is-active{
+  padding-bottom:max(20px,env(safe-area-inset-bottom));
+}
+
+.topbar__spacer{width:auto;flex:1 1 auto}
+.modal-top{
+  justify-content:flex-start;
+  gap:10px;
+  padding-left:14px;
+  padding-right:14px;
+}
+.modal-top h1{flex:1;text-align:left}
+.modal-close{width:44px;height:44px;flex:none;font-size:34px;line-height:1}
+.more-settings--page,.more-about--page{margin-top:0}
+
+/* Phone ergonomics: every frequent control remains comfortably tappable. */
+.utab,
+.stats-tabs button,.planner-tabs button,.run-details-tabs button,
+.radar-quick__choices button,
+.cityrow .del{min-height:44px}
+.cityrow .del{min-width:64px;padding:0 10px;border-radius:10px}
+.cityrow.is-active{background:#F1F8F4;border-radius:14px;padding-left:10px;padding-right:8px}
+.cityrow__active{display:block;margin-top:4px;color:#167348;font-size:12px;font-weight:700}
+
+@media (hover:hover){
+  button:hover{filter:brightness(.985)}
+}
+button:active{filter:brightness(.94)}
+
+/* Increase contrast without changing the approved palette or hierarchy. */
+:root{--muted:#66758D}
+
 .more-page__head{
   display:grid;
   grid-template-columns:44px minmax(0,1fr) 44px;

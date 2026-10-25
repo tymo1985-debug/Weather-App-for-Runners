@@ -70,9 +70,9 @@ test('Stats tabs and period arrows drive distinct functional views', () => {
 });
 
 test('Planner shows a full recommendation set around the best time', () => {
-  assert.match(app, /const limit = 10/);
+  assert.match(app, /const limit = 5/);
   assert.match(app, /const candidateHours = S\.hours\.filter/);
-  assert.match(app, /bestIndex - 3/);
+  assert.match(app, /bestIndex - 2/);
   assert.match(css, /\.planner-slot\{min-height:60px\}/);
 });
 
