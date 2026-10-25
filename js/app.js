@@ -357,18 +357,20 @@ function renderHome() {
   $('#cardScore').style.setProperty('--score-angle', `${Math.max(0, Math.min(100, sc)) * 3.6}deg`);
   $('#scoreBig').textContent = hasScore ? sc : '—';
   $('#scoreBig').dataset.digits = hasScore ? String(sc).length : '0';
-  $('#scoreLabel').textContent = hasScore ? bandText(sc) : T.noDataTitle;
+  $('#scoreLabel').textContent = hasScore ? bandText(sc) : T.runScoreUnavailable;
   $('#scoreHeadLbl').textContent = hasScore ? T.runStatusTitle(bandText(sc)) : T.runningConditions;
   $('#homeConditions').textContent = mainConditions(h);
   $('#homeFeelsValue').textContent = `${round(h?.feels ?? cur.apparent_temperature)}°`;
   $('#homeWindValue').textContent = h ? `${round(h.wind)} km/h` : '—';
   $('#homeRainValue').textContent = h ? `${h.pop}%` : '—';
   $('#scoreWhy').textContent = T.whyScoreShort(sc);
-  $('#cardScore').setAttribute('aria-label', hasScore ? T.scoreExplanation(sc, bandText(sc)) : T.noDataTitle);
+  $('#cardScore').setAttribute('aria-label', hasScore ? T.scoreExplanation(sc, bandText(sc)) : T.runScoreUnavailable);
   const w = recommendation.later;
   $('#scoreSub').textContent = !hasScore ? T.nearTermUnavailable : w
     ? T.laterGain(recommendation.gain, T.waitDuration(recommendation.waitMin), sc >= 65)
     : subFor(sc);
+  if (hasScore && !Number.isFinite(h?.aqi))
+    $('#scoreSub').textContent += ` · ${T.airDataUnavailable}`;
   if (recommendation.limiting)
     $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(recommendation.limiting.hour.t), T.limitReasons[recommendation.limiting.reason])}`;
   const announcement = hasScore
@@ -932,7 +934,7 @@ function renderAnalysis() {
   if (!Number.isFinite(run.score)) {
     $('#ringWrap').textContent = T.nearTermUnavailable;
     $('#analysisChecks').replaceChildren();
-    $('#analysisNote').textContent = T.noDataTitle;
+    $('#analysisNote').textContent = T.runScoreUnavailable;
     return;
   }
   const sc = run.score;
@@ -1044,7 +1046,7 @@ function renderWhy() {
   if (!Number.isFinite(run.score)) {
     $('#whyTitle').textContent = T.whyRun(runDuration());
     $('#whyRing').textContent = T.nearTermUnavailable;
-    $('#whyCap').textContent = T.noDataTitle;
+    $('#whyCap').textContent = T.runScoreUnavailable;
     $('#breakdown').replaceChildren();
     return;
   }
@@ -1370,7 +1372,7 @@ function renderWeatherHub() {
   const runCard = $('#weatherRunScore');
   runCard.className = `weather-run-score is-${hasScore ? band(score) : 'unknown'}`;
   $('#weatherRunValue').textContent = hasScore ? score : '—';
-  $('#weatherRunBand').textContent = hasScore ? bandText(score) : T.noDataTitle;
+  $('#weatherRunBand').textContent = hasScore ? bandText(score) : T.runScoreUnavailable;
   runCard.setAttribute('aria-label', hasScore
     ? `${T.weatherRunNow}: ${score} ${T.of100}, ${bandText(score)}. ${T.weatherRunAction}`
     : `${T.weatherRunNow}: ${T.nearTermUnavailable}`);
