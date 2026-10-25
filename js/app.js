@@ -9,7 +9,7 @@ import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
 import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from './version.js';
 import {
-  DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, validPlace,
+  DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, loadActivePlace, saveActivePlace, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
   buildHours, bestWindow, bestWindowOfDay, currentRunSummary, nearTermRecommendation, runAdvice, runStartOptions, bestStartOption, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
@@ -17,7 +17,7 @@ import {
 
 // ── Состояние ──────────────────────────────────────────────────────────────
 const S = {
-  place: loadCities()[0] || DEFAULT_PLACE,
+  place: loadActivePlace(),
   profile: loadProfile(),
   plan: loadRunPlan(),
   watch: loadWatch(),
@@ -101,8 +101,9 @@ async function share() {
 }
 
 // ── Данные ─────────────────────────────────────────────────────────────────
-let requestId = 0, controller;
+let requestId = 0, controller, lastLoadAttemptAt = 0;
 async function load() {
+  lastLoadAttemptAt = Date.now();
   const id = ++requestId, place = S.place;
   controller?.abort();
   controller = new AbortController();
@@ -349,26 +350,30 @@ function renderHome() {
        stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></svg>${round(W.daily.temperature_2m_min[0])}°</span>`;
 
   const recommendation = currentRun();
-  const sc = recommendation.score ?? 0, b = band(sc);
+  const hasScore = Number.isFinite(recommendation.score);
+  const sc = hasScore ? recommendation.score : 0;
+  const b = hasScore ? band(sc) : 'unknown';
   $('#cardScore').className = 'home-score is-' + b;
   $('#cardScore').style.setProperty('--score-angle', `${Math.max(0, Math.min(100, sc)) * 3.6}deg`);
-  $('#scoreBig').textContent = sc;
-  $('#scoreBig').dataset.digits = String(sc).length;
-  $('#scoreLabel').textContent = bandText(sc);
-  $('#scoreHeadLbl').textContent = T.runStatusTitle(bandText(sc));
+  $('#scoreBig').textContent = hasScore ? sc : '—';
+  $('#scoreBig').dataset.digits = hasScore ? String(sc).length : '0';
+  $('#scoreLabel').textContent = hasScore ? bandText(sc) : T.noDataTitle;
+  $('#scoreHeadLbl').textContent = hasScore ? T.runStatusTitle(bandText(sc)) : T.runningConditions;
   $('#homeConditions').textContent = mainConditions(h);
   $('#homeFeelsValue').textContent = `${round(h?.feels ?? cur.apparent_temperature)}°`;
   $('#homeWindValue').textContent = h ? `${round(h.wind)} km/h` : '—';
   $('#homeRainValue').textContent = h ? `${h.pop}%` : '—';
   $('#scoreWhy').textContent = T.whyScoreShort(sc);
-  $('#cardScore').setAttribute('aria-label', T.scoreExplanation(sc, bandText(sc)));
+  $('#cardScore').setAttribute('aria-label', hasScore ? T.scoreExplanation(sc, bandText(sc)) : T.noDataTitle);
   const w = recommendation.later;
-  $('#scoreSub').textContent = w
+  $('#scoreSub').textContent = !hasScore ? T.nearTermUnavailable : w
     ? T.laterGain(recommendation.gain, T.waitDuration(recommendation.waitMin), sc >= 65)
     : subFor(sc);
   if (recommendation.limiting)
     $('#scoreSub').textContent += ` · ${T.windowLimit(hhmm(recommendation.limiting.hour.t), T.limitReasons[recommendation.limiting.reason])}`;
-  const announcement = `${T.runningConditions}: ${sc} ${T.of100}, ${bandText(sc)}. ${$('#scoreSub').textContent}`;
+  const announcement = hasScore
+    ? `${T.runningConditions}: ${sc} ${T.of100}, ${bandText(sc)}. ${$('#scoreSub').textContent}`
+    : `${T.runningConditions}: ${T.nearTermUnavailable}`;
   if ($('#recommendationStatus').textContent !== announcement) $('#recommendationStatus').textContent = announcement;
   $('#factWindow').textContent = w
     ? `${windowText(w)} · ${w.score}/100${recommendation.overnight ? ` · ${T.overnightWindow}` : ''}`
@@ -380,7 +385,7 @@ function renderHome() {
     ? T.nearTermWait(near.nowScore, near.later.score,
       T.waitDuration(Math.max(15, Math.round(near.later.waitMin / 15) * 15))) : T.nearTermNow;
   const tips = runAdvice(near?.later || near?.current, runDuration());
-  const personal = effortHint(S.history, sc);
+  const personal = hasScore ? effortHint(S.history, sc) : null;
   const personalText = personal ? T.personalEffort(personal.count,
     personal.tendency === 'harder' ? T.tendencyHarder : personal.tendency === 'easier' ? T.tendencyEasier : T.tendencyExpected) : '';
   const adviceText = [...tips.map(key => T.runTips[key]), personalText].filter(Boolean).join(' ');
@@ -792,6 +797,7 @@ function locate({ recenterMap = false } = {}) {
     const p = await reverseGeocode(lat, lon, S.langCode, T.myLocation);
     if (!validPlace(p)) { toast(T.locationUnavailable); return; }
     S.place = p;
+    saveActivePlace(p);
     const cities = loadCities();
     cities[0] = p;
     saveCities(cities);
@@ -922,7 +928,14 @@ function ring(score, size = 112) {
 
 // ── 4. ОБЗОР ───────────────────────────────────────────────────────────────
 function renderAnalysis() {
-  const run = currentRun(), sc = run.score ?? 0;
+  const run = currentRun();
+  if (!Number.isFinite(run.score)) {
+    $('#ringWrap').textContent = T.nearTermUnavailable;
+    $('#analysisChecks').replaceChildren();
+    $('#analysisNote').textContent = T.noDataTitle;
+    return;
+  }
+  const sc = run.score;
   const h = run.window?.limiting.hour || run.window?.slice[0] || nowHour();
   const w = bestWindow(S.hours, runDuration());
   $('#ringWrap').innerHTML = ring(sc) +
@@ -1027,7 +1040,15 @@ $$('.utab[data-btab]').forEach(b => b.addEventListener('click', () => {
 }));
 
 function renderWhy() {
-  const run = currentRun(), sc = run.score ?? 0;
+  const run = currentRun();
+  if (!Number.isFinite(run.score)) {
+    $('#whyTitle').textContent = T.whyRun(runDuration());
+    $('#whyRing').textContent = T.nearTermUnavailable;
+    $('#whyCap').textContent = T.noDataTitle;
+    $('#breakdown').replaceChildren();
+    return;
+  }
+  const sc = run.score;
   $('#whyTitle').textContent = T.whyRun(runDuration());
   $('#whyRing').innerHTML = ring(sc, 120);
   $('#whyCap').textContent = `${subFor(sc)} · ${run.window ? windowText(run.window) : '—'}${run.limiting ? ` · ${T.windowLimit(hhmm(run.limiting.hour.t), T.limitReasons[run.limiting.reason])}` : ''}`;
@@ -1344,12 +1365,15 @@ function renderWeatherHub() {
   $('#weatherHeroMinMax').innerHTML =
     `<span>↑ ${round(W.daily.temperature_2m_max[0])}°</span><span>↓ ${round(W.daily.temperature_2m_min[0])}°</span>`;
 
-  const sc = currentRun().score ?? 0;
+  const score = currentRun().score;
+  const hasScore = Number.isFinite(score);
   const runCard = $('#weatherRunScore');
-  runCard.className = `weather-run-score is-${band(sc)}`;
-  $('#weatherRunValue').textContent = sc;
-  $('#weatherRunBand').textContent = bandText(sc);
-  runCard.setAttribute('aria-label', `${T.weatherRunNow}: ${sc} ${T.of100}, ${bandText(sc)}. ${T.weatherRunAction}`);
+  runCard.className = `weather-run-score is-${hasScore ? band(score) : 'unknown'}`;
+  $('#weatherRunValue').textContent = hasScore ? score : '—';
+  $('#weatherRunBand').textContent = hasScore ? bandText(score) : T.noDataTitle;
+  runCard.setAttribute('aria-label', hasScore
+    ? `${T.weatherRunNow}: ${score} ${T.of100}, ${bandText(score)}. ${T.weatherRunAction}`
+    : `${T.weatherRunNow}: ${T.nearTermUnavailable}`);
 
   renderWeatherHourly();
   renderWeatherDaily();
@@ -2571,9 +2595,22 @@ function renderCities() {
 }
 $('#cityList').addEventListener('click', e => {
   const d = e.target.closest('[data-delcity]');
-  if (d) { const c = loadCities(); c.splice(+d.dataset.delcity, 1); saveCities(c); renderCities(); return; }
+  if (d) {
+    const cities = loadCities(), removed = cities.splice(+d.dataset.delcity, 1)[0];
+    saveCities(cities);
+    if (removed && S.place.lat === removed.lat && S.place.lon === removed.lon) {
+      S.place = loadCities()[0] || DEFAULT_PLACE;
+      saveActivePlace(S.place);
+      load();
+    }
+    renderCities(); return;
+  }
   const c = e.target.closest('[data-city]');
-  if (c) { S.place = loadCities()[+c.dataset.city]; load(); back(); }
+  if (c) {
+    S.place = loadCities()[+c.dataset.city];
+    saveActivePlace(S.place);
+    load(); back();
+  }
 });
 let searchTimer, searchRequestId = 0, searchController;
 $('#cityQ').addEventListener('input', e => {
@@ -2601,7 +2638,7 @@ $('#cityQ').addEventListener('input', e => {
         const city = res[+li.dataset.res], cities = loadCities();
         if (!validPlace(city)) return;
         if (!cities.some(x => x.name === city.name && Math.abs(x.lat - city.lat) < .01)) cities.push(city);
-        saveCities(cities); S.place = city;
+        saveCities(cities); S.place = city; saveActivePlace(city);
         ++searchRequestId; searchController?.abort();
         $('#cityQ').value = ''; $('#cityRes').replaceChildren();
         load(); back();
@@ -2711,7 +2748,7 @@ function openFeedbackSheet() {
     const b = e.target.closest('[data-effort]'); if (!b) return;
     S.history = addRun({
       place: S.place.name,
-      score: run.score ?? 0,
+      score: Number.isFinite(run.score) ? run.score : null,
       duration: runDuration(),
       distanceKm: S.plan.mode === 'distance' ? S.plan.distanceKm : null,
       effort: Number(b.dataset.effort),
@@ -2740,11 +2777,21 @@ if ('serviceWorker' in navigator) {
     } catch {}
   });
 }
+// Refresh at 12 minutes, before the 30-minute cached forecast expires.
+// Throttle retries on weak connections and recover when Android WebView resumes.
+function refreshIfNeeded(force = false) {
+  if (!S.bundle || navigator.onLine === false) return;
+  const now = Date.now();
+  if (now - lastLoadAttemptAt < 5 * 60e3) return;
+  if (force || now - S.bundle.at > 12 * 60e3) load();
+}
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && S.bundle && Date.now() - S.bundle.at > 12 * 60e3) load();
+  if (!document.hidden) refreshIfNeeded();
 });
+window.addEventListener('online', () => refreshIfNeeded(true));
 setInterval(() => {
   if (!S.bundle || document.hidden) return;
+  refreshIfNeeded();
   if (expireDisplayedBundle()) return;
   if (S.screen === 'home') renderHome();
 }, 60e3);
