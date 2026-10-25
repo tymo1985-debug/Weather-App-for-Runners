@@ -12,7 +12,8 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/accessibility.css">
 </head>
 <body>
 <div id="app">
@@ -416,7 +417,7 @@
     <button class="modal-close" type="button" data-back aria-label="Close">×</button>
   </header>
   <div class="run-details-page">
-    <div class="run-details-tabs">
+    <div class="run-details-tabs" role="tablist">
       <button type="button" class="is-on" data-run-details-range="now"></button>
       <button type="button" data-run-details-range="today"></button>
       <button type="button" data-run-details-range="tomorrow"></button>
@@ -437,7 +438,7 @@
     <button class="modal-close" type="button" data-back aria-label="Close">×</button>
   </header>
   <div class="planner-page">
-    <div class="planner-tabs">
+    <div class="planner-tabs" role="tablist">
       <button type="button" class="is-on" data-planner-tab="best"></button>
       <button type="button" data-planner-tab="plan"></button>
     </div>

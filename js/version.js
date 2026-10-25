@@ -1,9 +1,10 @@
-export const APP_VERSION = '0.34.2';
-export const APP_BUILD = 40;
+export const APP_VERSION = '0.35.0';
+export const APP_BUILD = 41;
 export const RELEASE_DATE = '2026-10-25';
 
 export const RELEASE_NOTES = {
   en: [
+    '0.35.0 hardens city and GPS state, forecast freshness and DST handling; adds honest radar timing and GPX limits; introduces dynamic weather artwork; and improves Android, offline and accessibility behavior.',
     '0.34.2 remembers the active city, prevents missing air-quality data from appearing as a measured score, validates forecast coverage, fixes daylight-saving forecast timestamps, refreshes stale forecasts automatically, and shows no score instead of a false zero.',
     '0.34.1 improves Hourly graph readability, makes Stats periods honest about forecast coverage, enlarges touch targets, explains Planner choices, improves empty training history, and labels observed versus model radar frames.',
     '0.34.0 removes redundant header settings buttons, turns Hourly into a full-height list/graph, shows all 10 forecast days, makes Stats tabs and week navigation functional, and expands Planner recommendations to fill the screen.',
@@ -22,6 +23,7 @@ export const RELEASE_NOTES = {
     'Play, the full timeline and map controls now live only in full-screen radar.'
   ],
   ru: [
+    '0.35.0 укрепляет логику города и GPS, актуальность прогноза и переход DST; честно ограничивает время радара и GPX; добавляет динамическое погодное оформление и улучшает Android, офлайн-режим и доступность.',
     '0.34.2 сохраняет активный город, не заменяет отсутствующие данные о воздухе выдуманной оценкой, проверяет полноту прогноза, корректирует время при переходе на летнее и зимнее время, автоматически обновляет прогноз и показывает отсутствие оценки вместо ложного нуля.',
     '0.34.1 улучшает читаемость почасового графика, честно показывает покрытие прогноза в Статистике, увеличивает зоны касания, объясняет выбор Планировщика, улучшает пустую историю тренировок и явно различает наблюдение и модельный прогноз радара.',
     '0.34.0 убирает дублирующие кнопки настроек в шапках, разворачивает Почасовой прогноз на весь экран, показывает все 10 дней, делает вкладки и недели Статистики рабочими и расширяет список времени в Планировщике.',

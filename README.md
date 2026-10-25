@@ -1,15 +1,16 @@
-# Run Weather - PWA
+# Run Weather — Android / Capacitor и PWA
 
-Прогноз погоды с оценкой условий для бега. Собрано ровно по десяти экранам макета:
-главная, почасовой прогноз, 10 дней, обзор условий, разбор оценки, разбор фактора,
-таймлайн на сутки, воздух и пыльца, радар осадков, детали и настройки.
+Прогноз погоды с оценкой условий для бега. Основной мобильный вариант — Android-
+приложение на Capacitor; PWA использует тот же интерфейс и расчётный движок.
+Текущая разметка содержит 14 экранов и сохраняет утверждённую структуру Run,
+Weather, Stats и More.
 
 Интерфейс на английском (как в макете) и на русском - переключатель в разделе Profile.
 По умолчанию язык берётся из системы.
 
 ## Экраны и код
 
-| Экран макета | Функция в `js/app.js` |
+| Экран | Функция в `js/app.js` |
 |---|---|
 | 1. Home / Main Screen | `renderHome`, `renderStrip` |
 | 2. Hourly Forecast | `renderHourly` |
@@ -21,6 +22,10 @@
 | 8. Air quality & pollen | `renderAir` |
 | 9. Radar / Map | `initRadar` |
 | 10. Weather details & settings | `renderDetails` |
+| 11. Stats | `renderStats` |
+| 12. Run Details | `renderRunDetails` |
+| 13. Planner | `renderPlanner` |
+| 14. Cities | `renderCities` |
 
 ## Файлы
 
@@ -30,7 +35,9 @@
 - `js/engine.js` - загрузка данных и расчёт оценки
 - `js/i18n.js` - строки интерфейса (en / ru)
 - `js/icons.js` - иконки погоды и интерфейса, фазы Луны, растения
+- `js/radar-utils.js`, `js/hero-theme.js` - независимая логика радара и Dynamic Weather Hero
 - `sw.js`, `manifest.webmanifest`, `icons/` - установка и офлайн
+- `android/` - нативный проект Capacitor (это источник APK, а не PWA-ярлык)
 
 ## Запуск
 
@@ -58,6 +65,10 @@ cd android
 Debug APK появится в `android/app/build/outputs/apk/debug/`. Для выпуска обновления
 нужно подписать release-сборку тем же ключом, которым подписано уже установленное
 приложение; ключи подписи в репозиторий не добавляются.
+
+Проверки Android и ограничения выпуска перечислены в
+[`docs/android-acceptance.md`](docs/android-acceptance.md). Наличие PWA-сборки само
+по себе не считается проверкой APK.
 
 ## Данные
 

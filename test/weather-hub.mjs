@@ -59,8 +59,10 @@ test('radar expands in place and Prague hero is local/offline', () => {
   assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
   assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v42/);
+  assert.match(sw, /shell-v43/);
   assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
+  assert.match(sw, /\.\/js\/hero-theme\.js/);
+  assert.match(sw, /\.\/js\/radar-utils\.js/);
 });
 
 test('hourly Weather Hub supports cards and graph without a new fetch path', () => {
@@ -158,7 +160,7 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.34.2');
+  assert.equal(APP_VERSION, '0.35.0');
   assert.equal(RELEASE_DATE, '2026-10-25');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
