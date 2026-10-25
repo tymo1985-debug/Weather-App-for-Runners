@@ -2791,9 +2791,9 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('online', () => refreshIfNeeded(true));
 setInterval(() => {
   if (!S.bundle || document.hidden) return;
-  refreshIfNeeded();
   if (expireDisplayedBundle()) return;
-  if (S.screen === 'home') renderHome();
+  refreshIfNeeded();
+  if (S.bundle && S.screen === 'home') renderHome();
 }, 60e3);
 
 const SCREENS = ['home', 'hourly', 'daily', 'analysis', 'why', 'factor', 'timeline', 'air', 'radar', 'details', 'cities'];
