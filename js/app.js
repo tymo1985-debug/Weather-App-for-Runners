@@ -8,6 +8,7 @@ import { parseGpx, loadRoute, saveRoute, routeWindContext } from './route-plan.j
 import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
 import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from './version.js';
+import { nearestRadarFrameIndex } from './radar-utils.js';
 import {
   DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, loadActivePlace, saveActivePlace,
   loadLocationMode, saveLocationMode, loadManualPlace, saveManualPlace, validPlace,
@@ -1636,7 +1637,7 @@ function setForecastStatus(kind) {
   else if (kind === 'retry') { message = T.modelRetrying; stateClass = ' is-retry'; }
   else if (kind === 'ready') {
     const last = [...R.frames].reverse().find(f => f.kind === 'model');
-    message = last ? T.modelReadyUntil(hhmm(atPlace(last.time))) : '';
+    message = last ? `${T.modelApproximate} · ${T.modelReadyUntil(hhmm(atPlace(last.time)))}` : T.modelApproximate;
     stateClass = ' is-ready';
   }
   const full = $('#radarForecastState');
@@ -1655,17 +1656,7 @@ function setForecastStatus(kind) {
 const RADAR_QUICK_OFFSETS = [0, 30, 60, 180, 360];
 
 function radarQuickFrameIndex(offsetMin) {
-  if (!R.frames.length) return -1;
-  if (offsetMin === 0) return R.nowIdx;
-  const base = Math.max(Date.now(), R.frames[R.nowIdx]?.time || Date.now());
-  const target = base + offsetMin * 60e3;
-  let best = -1, bestDelta = Infinity;
-  R.frames.forEach((frame, i) => {
-    if (!frame.forecast || frame.time <= base) return;
-    const delta = Math.abs(frame.time - target);
-    if (delta < bestDelta) { bestDelta = delta; best = i; }
-  });
-  return best;
+  return nearestRadarFrameIndex(R.frames, R.nowIdx, offsetMin);
 }
 
 function updateRadarQuick() {
