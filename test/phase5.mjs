@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../js/app.js', import.meta.url), 'utf8');
-const source = app.slice(app.indexOf('let requestId = 0, controller;'), app.indexOf('const nowIndex ='))
+const source = app.slice(app.indexOf('let requestId = 0, controller'), app.indexOf('const nowIndex ='))
   .replace('function paint() { staticText(); RENDER[S.screen]?.(); }', '');
 const engine = readFileSync(new URL('../js/engine.js', import.meta.url), 'utf8');
 const [, minutes, seconds] = engine.match(/CACHE_TTL_MS = (\d+) \* (\d+)e3/);
