@@ -197,4 +197,3 @@ test('Radar announces observed versus model forecast state', () => {
   assert.match(app, /const stateWord = isModel \? T\.modelForecastWord : T\.observedWord/);
   assert.match(app, /aria-valuetext/);
 });
-
