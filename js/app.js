@@ -9,7 +9,8 @@ import { fetchRouteForecast, routeWeatherAt } from './route-weather.js';
 import { loadHistory, addRun, effortHint } from './run-history.js';
 import { APP_VERSION, RELEASE_DATE, RELEASE_NOTES } from './version.js';
 import {
-  DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, loadActivePlace, saveActivePlace, validPlace,
+  DEFAULT_PLACE, CACHE_TTL_MS, loadProfile, saveProfile, loadCities, saveCities, loadActivePlace, saveActivePlace,
+  loadLocationMode, saveLocationMode, loadManualPlace, saveManualPlace, validPlace,
   fetchAll, cachedBundle, searchCity, reverseGeocode,
   buildHours, bestWindow, bestWindowOfDay, currentRunSummary, nearTermRecommendation, runAdvice, runStartOptions, bestStartOption, band, bandColor, aqiBand, WEIGHTS,
   placeNow, placeOffsetSec
@@ -18,6 +19,7 @@ import {
 // ── Состояние ──────────────────────────────────────────────────────────────
 const S = {
   place: loadActivePlace(),
+  locationMode: loadLocationMode(),
   profile: loadProfile(),
   plan: loadRunPlan(),
   watch: loadWatch(),
@@ -220,6 +222,7 @@ function staticText() {
   $('#tlOptK').textContent = T.differentWeather;
   $('#tlOptV').textContent = T.seeOptions;
   $('#weatherPlacePin').innerHTML = glyph.pin;
+  $('#pinIcon').innerHTML = glyph.pin;
   $('#weatherRunIcon').innerHTML = glyph.runner;
   $('#weatherRunTitle').textContent = T.weatherRunNow;
   $('#weatherRunAction').textContent = T.weatherRunAction;
@@ -281,7 +284,16 @@ function staticText() {
   $$('[data-weather-mode]').forEach(b => {
     b.textContent = b.dataset.weatherMode === 'graph' ? T.weatherHourlyGraph : T.weatherHourlyCards;
   });
-  $('#weatherPlace').setAttribute('aria-label', T.cities);
+  $('#btnPlace').setAttribute('aria-label', T.chooseCity);
+  $('#weatherPlace').setAttribute('aria-label', T.chooseCity);
+  for (const id of ['btnLocate', 'weatherLocate']) {
+    const button = $('#' + id);
+    const active = S.locationMode === 'device';
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+    button.setAttribute('aria-label', active ? T.deviceLocationActive : T.useDeviceLocation);
+    button.title = active ? T.deviceLocationActive : T.useDeviceLocation;
+  }
   $('.weather-hourly-mode').setAttribute('aria-label', T.weatherHourlyTitle);
   $('.weather-air-card .weather-card__link').setAttribute('aria-label', T.weatherAirTitle);
   updateRadarExpandControl();
@@ -722,10 +734,8 @@ $$('.seg[data-range]').forEach(b => b.addEventListener('click', () => {
 }));
 $('#cardScore').addEventListener('click', () => go('why'));
 $('#strip').addEventListener('click', () => go(S.range === 'days' ? 'daily' : 'hourly'));
-$('#btnPlace').addEventListener('click', e => {
-  if (e.target.closest('.hero__pin')) return locate();
-  go('cities');
-});
+$('#btnPlace').addEventListener('click', () => go('cities'));
+$('#btnLocate').addEventListener('click', () => locate());
 $('.duration-quick').addEventListener('click', e => {
   const b = e.target.closest('[data-quick-duration]');
   if (!b) return;
@@ -800,9 +810,8 @@ function locate({ recenterMap = false } = {}) {
     if (!validPlace(p)) { toast(T.locationUnavailable); return; }
     S.place = p;
     saveActivePlace(p);
-    const cities = loadCities();
-    cities[0] = p;
-    saveCities(cities);
+    S.locationMode = 'device';
+    saveLocationMode('device');
     if (recenterMap) R.map?.setView([p.lat, p.lon], 8);
     toast(T.locationUpdated(p.name));
     load();
@@ -1546,10 +1555,8 @@ function setRadarExpanded(on) {
   setTimeout(() => R.map?.invalidateSize(), 40);
 }
 
-$('#weatherPlace').addEventListener('click', e => {
-  if (e.target.closest('.weather-hero__pin')) return locate();
-  go('cities');
-});
+$('#weatherPlace').addEventListener('click', () => go('cities'));
+$('#weatherLocate').addEventListener('click', () => locate());
 $('.weather-hub-tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-weather-section]'); if (!b) return;
   S.weatherSection = b.dataset.weatherSection;
@@ -2601,7 +2608,10 @@ $('#cityList').addEventListener('click', e => {
     const cities = loadCities(), removed = cities.splice(+d.dataset.delcity, 1)[0];
     saveCities(cities);
     if (removed && S.place.lat === removed.lat && S.place.lon === removed.lon) {
-      S.place = loadCities()[0] || DEFAULT_PLACE;
+      S.place = loadCities()[0] || loadManualPlace() || DEFAULT_PLACE;
+      S.locationMode = 'manual';
+      saveLocationMode('manual');
+      saveManualPlace(S.place);
       saveActivePlace(S.place);
       load();
     }
@@ -2610,6 +2620,9 @@ $('#cityList').addEventListener('click', e => {
   const c = e.target.closest('[data-city]');
   if (c) {
     S.place = loadCities()[+c.dataset.city];
+    S.locationMode = 'manual';
+    saveLocationMode('manual');
+    saveManualPlace(S.place);
     saveActivePlace(S.place);
     load(); back();
   }
@@ -2640,7 +2653,8 @@ $('#cityQ').addEventListener('input', e => {
         const city = res[+li.dataset.res], cities = loadCities();
         if (!validPlace(city)) return;
         if (!cities.some(x => x.name === city.name && Math.abs(x.lat - city.lat) < .01)) cities.push(city);
-        saveCities(cities); S.place = city; saveActivePlace(city);
+        saveCities(cities); S.place = city; S.locationMode = 'manual';
+        saveLocationMode('manual'); saveManualPlace(city); saveActivePlace(city);
         ++searchRequestId; searchController?.abort();
         $('#cityQ').value = ''; $('#cityRes').replaceChildren();
         load(); back();

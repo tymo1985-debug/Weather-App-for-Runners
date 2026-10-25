@@ -41,6 +41,28 @@ export function saveCities(c) { localStorage.setItem('rw.cities', JSON.stringify
 // The current selection is not necessarily the first saved city.
 // Keep it in WebView storage across Android APK launches.
 const ACTIVE_PLACE_KEY = 'rw.activePlace';
+const LOCATION_MODE_KEY = 'rw.locationMode';
+const MANUAL_PLACE_KEY = 'rw.manualPlace';
+export function loadLocationMode(storage = localStorage) {
+  try { return storage.getItem(LOCATION_MODE_KEY) === 'device' ? 'device' : 'manual'; }
+  catch { return 'manual'; }
+}
+export function saveLocationMode(mode, storage = localStorage) {
+  if (mode !== 'manual' && mode !== 'device') return false;
+  try { storage.setItem(LOCATION_MODE_KEY, mode); return true; }
+  catch { return false; }
+}
+export function loadManualPlace(storage = localStorage) {
+  try {
+    const place = JSON.parse(storage.getItem(MANUAL_PLACE_KEY) || 'null');
+    return validPlace(place) ? place : null;
+  } catch { return null; }
+}
+export function saveManualPlace(place, storage = localStorage) {
+  if (!validPlace(place)) return false;
+  try { storage.setItem(MANUAL_PLACE_KEY, JSON.stringify(place)); return true; }
+  catch { return false; }
+}
 export function loadActivePlace(storage = localStorage) {
   try {
     const place = JSON.parse(storage.getItem(ACTIVE_PLACE_KEY) || 'null');

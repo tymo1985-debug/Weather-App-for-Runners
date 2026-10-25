@@ -40,11 +40,14 @@ input{font:inherit}
   background:no-repeat bottom/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 150' preserveAspectRatio='none'%3E%3Cg fill='%23ffffff' opacity='.28'%3E%3Cpath d='M0 118h14V96h10v22h13V84h11v34h15v-16h9v16h12V66h5l3-14 3 14h5v52h14V98h10v20h17V80h11v38h14V104h11v14h13V72h10v46h15V96h10v22h14V86h11v32h16V102h9v16h17V78h11v40h15V100h10v18h20V150H0z'/%3E%3C/g%3E%3Cg fill='%23ffffff' opacity='.3'%3E%3Cellipse cx='36' cy='120' rx='34' ry='24'/%3E%3Cellipse cx='74' cy='126' rx='26' ry='18'/%3E%3Cellipse cx='352' cy='118' rx='36' ry='26'/%3E%3Cellipse cx='316' cy='128' rx='24' ry='17'/%3E%3C/g%3E%3Cpath fill='%23ffffff' opacity='.42' d='M0 138h400v12H0z'/%3E%3C/svg%3E")}
 .hero__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .hero__top>div:first-child{min-width:0;flex:1}
+.hero__location{display:flex;align-items:center;gap:7px;max-width:100%}
 .hero__place{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:640;
   letter-spacing:-.4px;max-width:100%;min-width:0;min-height:44px}
-.hero__place>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.hero__pin{width:17px;height:17px;flex:none}
-.hero__pin svg{width:100%;height:100%}
+.hero__place>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hero__locate{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.48);backdrop-filter:blur(7px)}
+.hero__locate span,.hero__locate svg{width:19px;height:19px}.hero__locate svg path{fill:currentColor!important}
+.hero__locate.is-active,.weather-hero__locate.is-active{background:rgba(255,255,255,.3);box-shadow:0 0 0 2px rgba(255,255,255,.28)}
 .hero__place .chev{opacity:.8}
 .hero__date{margin:3px 0 0 1px;font-size:13px;opacity:.94;font-weight:500}
 .hero__actions{display:flex;gap:9px;padding-top:2px}
@@ -653,7 +656,7 @@ input{font:inherit}
 .weather-hero__top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .weather-hero__place{min-width:0;min-height:44px;display:flex;align-items:center;gap:7px;font-size:21px;font-weight:720;
   letter-spacing:-.45px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.24)}
-.weather-hero__place>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.weather-hero__place>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .weather-hero__pin{width:18px;height:18px;flex:none}.weather-hero__pin svg{width:100%;height:100%}
 .weather-hero__locate{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.48);backdrop-filter:blur(7px)}

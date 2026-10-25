@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_PLACE, DEFAULT_PROFILE, loadActivePlace, saveActivePlace,
+  loadLocationMode, saveLocationMode, loadManualPlace, saveManualPlace,
   hasWeatherCoverage, placeOffsetSec, hourTimestamp, scoreHour, buildHours
 } from '../js/engine.js';
 
@@ -32,6 +33,16 @@ test('active city persists independently of the favourite list', () => {
   assert.equal(saveActivePlace({ name: 'wrong', lat: NaN, lon: 3 }, db), false);
   assert.deepEqual(loadActivePlace(db), current);
   assert.deepEqual(loadActivePlace(storage()), DEFAULT_PLACE);
+});
+test('manual and device location modes persist independently', () => {
+  const manual = { name: 'Frankfurt', lat: 50.11, lon: 8.68, country: 'Germany' };
+  const db = storage();
+  assert.equal(loadLocationMode(db), 'manual');
+  assert.equal(saveManualPlace(manual, db), true);
+  assert.deepEqual(loadManualPlace(db), manual);
+  assert.equal(saveLocationMode('device', db), true);
+  assert.equal(loadLocationMode(db), 'device');
+  assert.equal(saveLocationMode('wrong', db), false);
 });
 test('incomplete essential weather arrays are rejected, isolated gaps are accepted', () => {
   const b = fixture();

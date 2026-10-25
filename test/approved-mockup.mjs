@@ -47,8 +47,12 @@ test('collection selectors use the multi-element helper before forEach', () => {
 });
 
 
-test('location pin uses device geolocation while city text keeps the picker', () => {
-  assert.match(app, /btnPlace'\)\.addEventListener\('click', e => \{[\s\S]*hero__pin[\s\S]*locate\(\)[\s\S]*go\('cities'\)/);
+test('device location and city picker use independent accessible buttons', () => {
+  assert.match(html, /id="btnPlace"[\s\S]*id="btnLocate"/);
+  assert.match(app, /btnPlace'\)\.addEventListener\('click', \(\) => go\('cities'\)\)/);
+  assert.match(app, /btnLocate'\)\.addEventListener\('click', \(\) => locate\(\)\)/);
+  assert.match(app, /saveLocationMode\('device'\)/);
+  assert.match(app, /saveLocationMode\('manual'\)/);
   assert.match(app, /navigator\.geolocation\.getCurrentPosition/);
   assert.match(app, /btnMapLocate'\)\.addEventListener\('click', \(\) => locate\(\{ recenterMap: true \}\)\)/);
   assert.match(app, /locationDenied/);

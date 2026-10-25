@@ -59,10 +59,11 @@ test('Profile duration is explicitly the same setting used on Home', () => {
 });
 
 
-test('Run Score keeps optical centering and redundant header settings are removed', () => {
+test('Run Score keeps optical centering and location controls remain focused', () => {
   assert.match(app, /scoreBig'\)\.dataset\.digits = hasScore \? String\(sc\)\.length : '0'/);
   assert.match(css, /\.home-score__value\[data-digits="3"\]/);
   assert.doesNotMatch(html, /id="btnAddCity"/);
-  assert.doesNotMatch(html, /id="weatherLocate"/);
+  assert.match(html, /id="btnLocate"/);
+  assert.match(html, /id="weatherLocate"/);
   assert.doesNotMatch(app, /const settingsIcon =/);
 });

@@ -25,11 +25,13 @@
 
     <div class="hero__top safe-top">
       <div>
-        <button class="hero__place" id="btnPlace">
-          <span class="hero__pin" id="pinIcon"></span>
+        <div class="hero__location">
+        <button class="hero__place" id="btnPlace" type="button">
           <span id="placeName">...</span>
           <svg viewBox="0 0 24 24" class="i12 chev"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
+        <button class="hero__locate" id="btnLocate" type="button"><span id="pinIcon"></span></button>
+        </div>
         <p class="hero__date" id="heroDate">&nbsp;</p>
       </div>
     </div>
@@ -250,10 +252,10 @@
       <div class="weather-hero__shade"></div>
       <div class="weather-hero__top">
         <button class="weather-hero__place" id="weatherPlace" type="button">
-          <span class="weather-hero__pin" id="weatherPlacePin"></span>
           <span id="weatherPlaceName">—</span>
           <svg viewBox="0 0 24 24" class="i14 chev" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>
         </button>
+        <button class="weather-hero__locate" id="weatherLocate" type="button"><span id="weatherPlacePin"></span></button>
       </div>
       <p class="weather-hero__date" id="weatherHeroDate">&nbsp;</p>
       <div class="weather-hero__now">
