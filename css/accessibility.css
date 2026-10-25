@@ -1,0 +1,76 @@
+/* Readability and accessibility layer kept separate from the approved visual
+   design. These rules raise secondary labels that were below a practical phone
+   minimum while preserving the map attribution required by its provider. */
+:root{
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+
+.tab,
+.tabbar .tab,
+.tabbar .tab span:last-child,
+.scorecard__why,
+.fact__k,
+.fineprint,
+.duration-quick__hint,
+.distance-plan__inputs label,
+.availability__inputs label,
+.start-option span,
+.start-option small,
+.watch-status,
+.routewx__head span,
+.routewx__summary span,
+.routewx__alerts span,
+.routewx__point b,
+.routewx__point small,
+.routewx__note,
+.history-row small,
+.history-row em,
+.weather-run-score__copy small,
+.weather-run-score__copy>span,
+.weather-card__head small,
+.radar-quick__choices button,
+.radar-quick__status,
+.weather-hour__time,
+.weather-hour__condition,
+.weather-hour small,
+.weather-day__date small,
+.weather-day__rain b,
+.weather-air__item small,
+.weather-air__item em,
+.home-updated,
+.weather-now__main>small,
+.weather-now__metric small,
+.stats-bar__value,
+.stats-bar small,
+.stats-best>small,
+.stats-history-row small,
+.more-row small,
+.planner-slot__time small,
+.planner-explain small{
+  font-size:max(11.5px,.72rem);
+  line-height:1.35;
+}
+
+.weather-radar__map .radar__now small,
+.weather-radar__map .radar__forecast-state,
+.weather-radar__map .radar__ticks,
+.weather-graph__temp,
+.weather-graph__pop,
+.weather-graph__time,
+.weather-graph__section,
+.weather-graph__legend,
+.weather-now-chart__temp,
+.weather-now-chart__time{
+  font-size:max(11px,.69rem);
+}
+
+@media(max-width:360px){
+  .weather-hour__condition{font-size:11px}
+  .weather-hour small{font-size:11px}
+  .radar-quick__choices button{font-size:11px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+}

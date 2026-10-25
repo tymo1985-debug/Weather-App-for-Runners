@@ -1,5 +1,7 @@
 const KEY='rw.routePlan';
 const R=6371;
+export const MAX_GPX_BYTES=5*1024*1024;
+export const MAX_GPX_POINTS=20000;
 
 const rad=d=>d*Math.PI/180;
 
@@ -50,17 +52,61 @@ function readAttr(attrs,name){
   return m?.[1];
 }
 
-export function parseGpx(text){
+function validPoint(lat,lon){
+  return Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;
+}
+
+function pointsFromXmlDocument(doc){
+  if(!doc?.documentElement) return null;
+  const root=String(doc.documentElement.localName||doc.documentElement.nodeName||'').toLowerCase();
+  if(root!=='gpx'||doc.getElementsByTagName('parsererror').length) return null;
+  const nodes=[];
+  for(const name of ['trkpt','rtept']){
+    const found=doc.getElementsByTagNameNS?.('*',name);
+    const list=found?.length?found:doc.getElementsByTagName(name);
+    for(const node of list) nodes.push(node);
+  }
+  if(nodes.length>MAX_GPX_POINTS) return null;
+  return nodes.flatMap(node=>{
+    const lat=Number(node.getAttribute('lat')),lon=Number(node.getAttribute('lon'));
+    if(!validPoint(lat,lon)) return [];
+    const eleNode=node.getElementsByTagNameNS?.('*','ele')?.[0]||node.getElementsByTagName('ele')[0];
+    const ele=eleNode?Number(eleNode.textContent):null;
+    return [{lat,lon,ele:Number.isFinite(ele)?ele:null}];
+  });
+}
+
+// Node-based unit tests do not provide DOMParser. Production browsers and the
+// Android WebView always use the XML parser above; this bounded fallback keeps
+// the pure data module testable without adding a runtime dependency.
+function pointsFromTestFallback(text){
   const pts=[];
   const re=/<(trkpt|rtept)\b([^>]*?)(?:\/\s*>|>([\s\S]*?)<\/\1\s*>)/gi;
   let m;
-  while((m=re.exec(String(text||'')))){
+  while((m=re.exec(text))){
     const lat=Number(readAttr(m[2],'lat')),lon=Number(readAttr(m[2],'lon'));
     const em=String(m[3]||'').match(/<ele\b[^>]*>([^<]+)<\/ele>/i);
     const ele=em?Number(em[1]):null;
-    if(Number.isFinite(lat)&&Number.isFinite(lon)&&lat>=-90&&lat<=90&&lon>=-180&&lon<=180)
+    if(validPoint(lat,lon))
       pts.push({lat,lon,ele:Number.isFinite(ele)?ele:null});
+    if(pts.length>MAX_GPX_POINTS) return null;
   }
+  return pts;
+}
+
+export function parseGpx(text,{Parser=globalThis.DOMParser}={}){
+  const source=String(text||'');
+  const byteLength=new TextEncoder().encode(source).byteLength;
+  if(!source.trim()||byteLength>MAX_GPX_BYTES) return null;
+  let pts;
+  if(typeof Parser==='function'){
+    try{pts=pointsFromXmlDocument(new Parser().parseFromString(source,'application/xml'));}
+    catch{return null;}
+  }else{
+    if(!/^(?:\s*<\?xml\b[^>]*>)?\s*<gpx\b/i.test(source)||!/<\/gpx\s*>\s*$/i.test(source)) return null;
+    pts=pointsFromTestFallback(source);
+  }
+  if(!pts) return null;
   if(pts.length<2) return null;
   let distanceKm=0,ascentM=0,bx=0,by=0;
   let previousEle=Number.isFinite(pts[0].ele)?pts[0].ele:null;

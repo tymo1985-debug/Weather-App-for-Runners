@@ -1,12 +1,12 @@
 const PREFIX = 'weather-runner-';
-const SHELL_CACHE = `${PREFIX}shell-v41`;
+const SHELL_CACHE = `${PREFIX}shell-v48`;
 const API_CACHE = `${PREFIX}api-v6`;
 const API_TTL_MS = 5 * 60 * 1000;
 const API_MAX_ENTRIES = 20;
 const SHELL = [
-  './', './css/styles.css',
-  './js/app.js', './js/home-ui.js', './js/run-plan.js', './js/weather-watch.js', './js/background-watch.js', './js/route-plan.js', './js/route-weather.js', './js/run-history.js', './js/engine.js', './js/icons.js',
-  './js/i18n.js', './js/version.js', './manifest.webmanifest', './assets/prague-weather-hero.svg',
+  './', './css/styles.css', './css/accessibility.css', './css/mobile-layout.css',
+  './js/app.js', './js/home-ui.js', './js/run-plan.js', './js/weather-watch.js', './js/background-watch.js', './js/route-plan.js', './js/route-weather.js', './js/run-history.js', './js/engine.js', './js/icons.js', './js/radar-utils.js', './js/hero-theme.js',
+  './js/i18n.js', './js/version.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png',
   './vendor/leaflet/leaflet.js', './vendor/leaflet/leaflet.css'
 ];

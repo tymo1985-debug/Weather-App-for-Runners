@@ -17,7 +17,10 @@ test('icon buttons get names and keyboard focus remains visible', () => {
   for (const id of ['btnLayers', 'btnMapLocate', 'btnZoomIn', 'btnZoomOut', 'radarTime']) {
     assert.match(app, new RegExp(`\\$\\('#${id}'\\)\\.setAttribute\\('aria-label'`));
   }
-  assert.doesNotMatch(html, /id="btnLocate"|id="btnAddCity"|id="weatherLocate"/);
+  assert.doesNotMatch(html, /id="btnAddCity"/);
+  assert.match(html, /id="btnLocate"/);
+  assert.match(html, /id="weatherLocate"/);
+  assert.match(app, /button\.setAttribute\('aria-label'/);
   assert.match(app, /\[data-back\].*setAttribute\('aria-label'/);
   assert.match(app, /\[data-share\].*setAttribute\('aria-label'/);
   assert.match(css, /:focus-visible\{outline:/);

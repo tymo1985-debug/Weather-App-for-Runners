@@ -38,8 +38,77 @@ export function loadCities() {
 }
 export function saveCities(c) { localStorage.setItem('rw.cities', JSON.stringify(c.filter(validPlace))); }
 
+// The current selection is not necessarily the first saved city.
+// Keep it in WebView storage across Android APK launches.
+const ACTIVE_PLACE_KEY = 'rw.activePlace';
+const LOCATION_MODE_KEY = 'rw.locationMode';
+const MANUAL_PLACE_KEY = 'rw.manualPlace';
+export function loadLocationMode(storage = localStorage) {
+  try { return storage.getItem(LOCATION_MODE_KEY) === 'device' ? 'device' : 'manual'; }
+  catch { return 'manual'; }
+}
+export function saveLocationMode(mode, storage = localStorage) {
+  if (mode !== 'manual' && mode !== 'device') return false;
+  try { storage.setItem(LOCATION_MODE_KEY, mode); return true; }
+  catch { return false; }
+}
+export function loadManualPlace(storage = localStorage) {
+  try {
+    const place = JSON.parse(storage.getItem(MANUAL_PLACE_KEY) || 'null');
+    return validPlace(place) ? place : null;
+  } catch { return null; }
+}
+export function saveManualPlace(place, storage = localStorage) {
+  if (!validPlace(place)) return false;
+  try { storage.setItem(MANUAL_PLACE_KEY, JSON.stringify(place)); return true; }
+  catch { return false; }
+}
+export function loadActivePlace(storage = localStorage) {
+  try {
+    const place = JSON.parse(storage.getItem(ACTIVE_PLACE_KEY) || 'null');
+    if (validPlace(place)) return place;
+  } catch {}
+  try {
+    const cities = JSON.parse(storage.getItem('rw.cities') || 'null');
+    if (Array.isArray(cities)) {
+      const first = cities.find(validPlace);
+      if (first) return first;
+    }
+  } catch {}
+  return DEFAULT_PLACE;
+}
+export function saveActivePlace(place, storage = localStorage) {
+  if (!validPlace(place)) return false;
+  try { storage.setItem(ACTIVE_PLACE_KEY, JSON.stringify(place)); return true; }
+  catch { return false; }
+}
+
 // ── Загрузка ───────────────────────────────────────────────────────────────
 const cacheKey = (p) => `rw.data.${p.lat.toFixed(2)},${p.lon.toFixed(2)}`;
+
+// No confident running score when core weather variables are unavailable.
+// Isolated hourly gaps may use a real neighbouring reading (within 3 hours).
+const ESSENTIAL_HOURLY = [
+  'temperature_2m', 'apparent_temperature', 'relative_humidity_2m',
+  'precipitation', 'precipitation_probability', 'wind_speed_10m'
+];
+export function hasWeatherCoverage(weather) {
+  const h = weather?.hourly, times = h?.time;
+  if (!Array.isArray(times) || !times.length || !weather?.current || !weather?.daily) return false;
+  for (const name of ESSENTIAL_HOURLY) {
+    const series = h[name];
+    if (!Array.isArray(series) || series.length !== times.length) return false;
+    for (let i = 0; i < series.length; i++) {
+      if (Number.isFinite(series[i])) continue;
+      let nearby = false;
+      for (let k = 1; k <= 3; k++) {
+        if (Number.isFinite(series[i - k]) || Number.isFinite(series[i + k])) { nearby = true; break; }
+      }
+      if (!nearby) return false;
+    }
+  }
+  return true;
+}
 
 export async function fetchAll(place, signal) {
   const q = `latitude=${place.lat}&longitude=${place.lon}&timezone=auto`;
@@ -56,6 +125,7 @@ export async function fetchAll(place, signal) {
     fetch(fUrl, { signal }).then(r => { if (!r.ok) throw new Error('forecast'); return r.json(); }),
     fetch(aUrl, { signal }).then(r => r.ok ? r.json() : null).catch(() => null)
   ]);
+  if (!hasWeatherCoverage(w)) throw new Error('incomplete-forecast');
   const bundle = { weather: w, air: a, place, at: Date.now() };
   try { localStorage.setItem(cacheKey(place), JSON.stringify(bundle)); }
   catch {
@@ -74,8 +144,8 @@ export function cachedBundle(place) {
   try {
     const b = JSON.parse(localStorage.getItem(cacheKey(place)) || 'null');
     return b && Number.isFinite(b.at) && Date.now() - b.at >= 0 &&
-      Date.now() - b.at <= CACHE_TTL_MS && b.weather?.hourly?.time?.length &&
-      Date.parse(b.weather.hourly.time.at(-1) + 'Z') - (b.weather.utc_offset_seconds || 0) * 1000 > Date.now() - 1800e3
+      Date.now() - b.at <= CACHE_TTL_MS && hasWeatherCoverage(b.weather) &&
+      hourTimestamp(b, b.weather.hourly.time.at(-1)) > Date.now() - 1800e3
       ? b : null;
   } catch { return null; }
 }
@@ -132,7 +202,7 @@ function uvScore(uv) {
   return clamp(100 - (uv - 2.5) * 9);
 }
 function airScore(aqi, profile) {
-  if (aqi == null) return 85;
+  if (!Number.isFinite(aqi)) return null;
   const k = profile.air === 'high' ? 1.5 : 1;
   if (aqi <= 20) return 100;
   return clamp(100 - (aqi - 20) * 0.85 * k);
@@ -154,10 +224,11 @@ export function scoreHour(h, profile) {
     rain: { v: rainScore(h.pop, h.mm, profile), w: WEIGHTS.rain },
     wind: { v: windScore(h.wind), w: WEIGHTS.wind },
     humid: { v: humidScore(h.rh), w: WEIGHTS.humid },
-    air: { v: airScore(h.aqi, profile), w: WEIGHTS.air },
     uv: { v: uvScore(h.uv), w: WEIGHTS.uv },
     surface: { v: surfaceScore(h.recentMm, h.temp), w: WEIGHTS.surface }
   };
+  const air = airScore(h.aqi, profile);
+  if (air != null) f.air = { v: air, w: WEIGHTS.air };
   const pol = pollenScore(h.pollen, profile);
   if (pol != null) f.pollen = { v: pol, w: 8 };
 
@@ -181,16 +252,57 @@ export const bandColor = (s) =>
   s >= 80 ? '#1F9D4D' : s >= 65 ? '#E9A21B' : s >= 45 ? '#EF6C2E' : '#DC4B3E';
 
 // ── Нормализация часов ─────────────────────────────────────────────────────
-// Смещение места от UTC. У бандлов, сохранённых прошлой версией, поля нет —
-// тогда берём смещение браузера, как было раньше.
-export function placeOffsetSec(bundle) {
-  const v = bundle?.weather?.utc_offset_seconds;
-  return Number.isFinite(v) ? v : -new Date().getTimezoneOffset() * 60;
+// Use IANA timezone at the exact instant, including daylight-saving transitions.
+// Fixed utc_offset_seconds remains a fallback for legacy and invalid bundles.
+const zoneFormatters = new Map();
+function zoneFormatter(zone) {
+  if (!zoneFormatters.has(zone)) {
+    zoneFormatters.set(zone, new Intl.DateTimeFormat('en-GB', {
+      timeZone: zone, year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23'
+    }));
+  }
+  return zoneFormatters.get(zone);
+}
+export function placeOffsetSec(bundle, ms = Date.now()) {
+  const zone = bundle?.weather?.timezone;
+  if (zone) {
+    try {
+      const fields = Object.fromEntries(zoneFormatter(zone).formatToParts(new Date(ms))
+        .filter(part => part.type !== 'literal').map(part => [part.type, Number(part.value)]));
+      const wall = Date.UTC(fields.year, fields.month - 1, fields.day, fields.hour, fields.minute, fields.second);
+      return Math.round((wall - Math.floor(ms / 1000) * 1000) / 1000);
+    } catch {}
+  }
+  const offset = bundle?.weather?.utc_offset_seconds;
+  return Number.isFinite(offset) ? offset : -new Date(ms).getTimezoneOffset() * 60;
 }
 
-// Дата, у которой локальные геттеры показывают стенные часы места.
+// Map a local forecast hour to a true UTC instant. On autumn DST fallback,
+// repeated local hours use successive UTC hours instead of colliding.
+export function hourTimestamp(bundle, iso, previousTs = null) {
+  const wall = Date.parse(String(iso) + 'Z');
+  if (!Number.isFinite(wall)) return NaN;
+  const offsets = [...new Set([
+    placeOffsetSec(bundle, wall - 36 * 3600e3),
+    placeOffsetSec(bundle, wall),
+    placeOffsetSec(bundle, wall + 36 * 3600e3)
+  ])];
+  const candidates = offsets.map(offset => wall - offset * 1000)
+    .filter(ts => placeOffsetSec(bundle, ts) === (wall - ts) / 1000)
+    .sort((a, b) => a - b);
+  if (!candidates.length) return wall - placeOffsetSec(bundle, wall) * 1000;
+  if (!Number.isFinite(previousTs)) return candidates[0];
+  const later = candidates.filter(ts => ts > previousTs);
+  if (!later.length) return candidates.at(-1);
+  const next = previousTs + 3600e3;
+  return later.sort((a, b) => Math.abs(a - next) - Math.abs(b - next))[0];
+}
+
+// A Date whose local getters reflect the place's wall clock.
 export function placeNow(bundle, ms = Date.now()) {
-  return new Date(ms + placeOffsetSec(bundle) * 1000 + new Date().getTimezoneOffset() * 60000);
+  const shifted = ms + placeOffsetSec(bundle, ms) * 1000;
+  return new Date(shifted + new Date(ms).getTimezoneOffset() * 60000);
 }
 
 // Значение из ряда: пропуски заменяем соседним часом, иначе нейтральным запасом.
@@ -206,7 +318,6 @@ function at(arr, i, fallback) {
 
 export function buildHours(bundle, profile) {
   const H = bundle.weather.hourly;
-  const offMs = placeOffsetSec(bundle) * 1000;
   const air = bundle.air?.hourly;
   const airIdx = new Map();
   if (air) air.time.forEach((t, i) => airIdx.set(t, i));
@@ -214,6 +325,7 @@ export function buildHours(bundle, profile) {
   const out = [];
   for (let i = 0; i < H.time.length; i++) {
     const ai = airIdx.has(H.time[i]) ? airIdx.get(H.time[i]) : null;
+    const ts = hourTimestamp(bundle, H.time[i], out.length ? out[out.length - 1].ts : null);
     const recentMm = (H.precipitation.slice(Math.max(0, i - 4), i + 1) || [])
       .reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
     const pollen = ai == null ? null : Math.max(
@@ -224,7 +336,7 @@ export function buildHours(bundle, profile) {
     const temp = at(H.temperature_2m, i, 12);
     const h = {
       // t — стенные часы места (для подписей), ts — настоящий момент (для сравнений)
-      t: new Date(H.time[i]), ts: Date.parse(H.time[i] + 'Z') - offMs, iso: H.time[i],
+      t: new Date(H.time[i]), ts, iso: H.time[i],
       temp, feels: at(H.apparent_temperature, i, temp),
       rh: at(H.relative_humidity_2m, i, 60), dew: at(H.dew_point_2m, i, temp - 5),
       mm: at(H.precipitation, i, 0), pop: at(H.precipitation_probability, i, 0),
@@ -250,7 +362,8 @@ function windowAt(hours, i, durationMin) {
   const len = Math.ceil(durationMin / 60);
   if (!(durationMin > 0) || i + len > hours.length) return null;
   const slice = hours.slice(i, i + len);
-  if (slice.some((h, k) => k && h.ts - slice[k - 1].ts !== 3600e3)) return null;
+  if (slice.some(h => !Number.isFinite(h.score)) ||
+      slice.some((h, k) => k && h.ts - slice[k - 1].ts !== 3600e3)) return null;
   const avg = slice.reduce((sum, h, k) =>
     sum + h.score * Math.min(60, durationMin - k * 60), 0) / durationMin;
   // An hourly hazard applies to the whole run, even when its overlap is only

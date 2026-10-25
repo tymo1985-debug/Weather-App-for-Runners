@@ -43,22 +43,33 @@ test('Weather Hub order is hero score hourly radar daily air', () => {
   assert.ok(order.every((pos, i) => pos >= 0 && (i === 0 || pos > order[i - 1])));
 });
 
+test('Weather overview presents current conditions before the radar', () => {
+  const start = html.indexOf('data-screen="radar"');
+  const hub = html.slice(start, html.indexOf('data-screen="stats"', start));
+  assert.ok(hub.indexOf('id="weatherNowTitle"') < hub.indexOf('id="weatherRadarCard"'));
+  assert.equal(LANGS.en.weatherTabRadar, 'Overview');
+  assert.equal(LANGS.ru.weatherTabRadar, 'Обзор');
+});
+
 test('Weather Hub reuses running score and keeps city search internal', () => {
   assert.match(app, /radar: renderWeatherHub/);
   assert.match(app, /currentRun\(\)\.score/);
   assert.match(app, /weatherMode: 'cards'/);
-  assert.match(app, /weatherPlace'\)\.addEventListener\('click', e => \{[\s\S]*weather-hero__pin[\s\S]*locate\(\)[\s\S]*go\('cities'\)/);
+  assert.match(html, /id="weatherPlace"[\s\S]*id="weatherLocate"/);
+  assert.match(app, /weatherPlace'\)\.addEventListener\('click', \(\) => go\('cities'\)\)/);
+  assert.match(app, /weatherLocate'\)\.addEventListener\('click', \(\) => locate\(\)\)/);
   assert.match(html, /data-screen="cities"/);
   assert.match(app, /load\(\); back\(\);/);
 });
 
-test('radar expands in place and Prague hero is local/offline', () => {
+test('radar expands in place and the weather hero is city-neutral/offline', () => {
   assert.match(css, /\.weather-radar-card\.is-expanded/);
-  assert.match(css, /prague-weather-hero\.svg/);
   assert.match(app, /function setRadarExpanded\(on\)/);
-  assert.match(app, /prague\|praha\|prag\|прага/);
-  assert.match(sw, /shell-v41/);
-  assert.match(sw, /\.\/assets\/prague-weather-hero\.svg/);
+  assert.doesNotMatch(app, /isPraguePlace/);
+  assert.match(sw, /shell-v48/);
+  assert.match(sw, /\.\/css\/mobile-layout\.css/);
+  assert.match(sw, /\.\/js\/hero-theme\.js/);
+  assert.match(sw, /\.\/js\/radar-utils\.js/);
 });
 
 test('hourly Weather Hub supports cards and graph without a new fetch path', () => {
@@ -156,8 +167,8 @@ test('compact radar preview replaces the slider with five quick times', () => {
 });
 
 test('Profile exposes current app version and release notes', () => {
-  assert.equal(APP_VERSION, '0.34.1');
-  assert.equal(RELEASE_DATE, '2026-09-24');
+  assert.equal(APP_VERSION, '0.36.0');
+  assert.equal(RELEASE_DATE, '2026-10-25');
   assert.ok(RELEASE_NOTES.en.length >= 3 && RELEASE_NOTES.ru.length >= 3);
   assert.match(html, /id="appVersionMeta"/);
   assert.match(html, /id="whatsNewList"/);
@@ -193,4 +204,3 @@ test('Radar announces observed versus model forecast state', () => {
   assert.match(app, /const stateWord = isModel \? T\.modelForecastWord : T\.observedWord/);
   assert.match(app, /aria-valuetext/);
 });
-

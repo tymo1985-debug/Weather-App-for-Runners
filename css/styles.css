@@ -40,11 +40,14 @@ input{font:inherit}
   background:no-repeat bottom/100% 100% url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 150' preserveAspectRatio='none'%3E%3Cg fill='%23ffffff' opacity='.28'%3E%3Cpath d='M0 118h14V96h10v22h13V84h11v34h15v-16h9v16h12V66h5l3-14 3 14h5v52h14V98h10v20h17V80h11v38h14V104h11v14h13V72h10v46h15V96h10v22h14V86h11v32h16V102h9v16h17V78h11v40h15V100h10v18h20V150H0z'/%3E%3C/g%3E%3Cg fill='%23ffffff' opacity='.3'%3E%3Cellipse cx='36' cy='120' rx='34' ry='24'/%3E%3Cellipse cx='74' cy='126' rx='26' ry='18'/%3E%3Cellipse cx='352' cy='118' rx='36' ry='26'/%3E%3Cellipse cx='316' cy='128' rx='24' ry='17'/%3E%3C/g%3E%3Cpath fill='%23ffffff' opacity='.42' d='M0 138h400v12H0z'/%3E%3C/svg%3E")}
 .hero__top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
 .hero__top>div:first-child{min-width:0;flex:1}
+.hero__location{display:flex;align-items:center;gap:7px;max-width:100%}
 .hero__place{display:flex;align-items:center;gap:5px;font-size:22px;font-weight:640;
   letter-spacing:-.4px;max-width:100%;min-width:0;min-height:44px}
-.hero__place>span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.hero__pin{width:17px;height:17px;flex:none}
-.hero__pin svg{width:100%;height:100%}
+.hero__place>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hero__locate{width:44px;height:44px;flex:none;border-radius:50%;display:grid;place-items:center;color:#fff;
+  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.48);backdrop-filter:blur(7px)}
+.hero__locate span,.hero__locate svg{width:19px;height:19px}.hero__locate svg path{fill:currentColor!important}
+.hero__locate.is-active,.weather-hero__locate.is-active{background:rgba(255,255,255,.3);box-shadow:0 0 0 2px rgba(255,255,255,.28)}
 .hero__place .chev{opacity:.8}
 .hero__date{margin:3px 0 0 1px;font-size:13px;opacity:.94;font-weight:500}
 .hero__actions{display:flex;gap:9px;padding-top:2px}
@@ -646,14 +649,11 @@ input{font:inherit}
   radial-gradient(circle at 18% 22%,rgba(255,255,255,.34) 0 7%,transparent 8%),
   radial-gradient(circle at 70% 18%,rgba(255,255,255,.22) 0 11%,transparent 12%),
   linear-gradient(165deg,#3A91DE 0%,#70B6E9 58%,#C3E1F2 100%)}
-.weather-hero.is-prague .weather-hero__backdrop{
-  background-image:linear-gradient(180deg,rgba(19,55,92,.06),rgba(17,47,72,.18)),url("../assets/prague-weather-hero.svg");
-  background-size:cover;background-position:center 48%}
 .weather-hero__shade{z-index:-1;background:linear-gradient(180deg,rgba(13,39,66,.28),rgba(13,39,66,.02) 42%,rgba(13,39,66,.36))}
 .weather-hero__top{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .weather-hero__place{min-width:0;min-height:44px;display:flex;align-items:center;gap:7px;font-size:21px;font-weight:720;
   letter-spacing:-.45px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.24)}
-.weather-hero__place>span:nth-child(2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.weather-hero__place>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .weather-hero__pin{width:18px;height:18px;flex:none}.weather-hero__pin svg{width:100%;height:100%}
 .weather-hero__locate{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;
   background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.48);backdrop-filter:blur(7px)}
@@ -820,10 +820,7 @@ body.radar-expanded .tabbar{display:none}
 /* ── HOME REDESIGN · RUN-FIRST ─────────────────────────────── */
 .screen--home{background:#F4F5F6}
 .home-hero{min-height:388px;padding:0 24px 42px;isolation:isolate}
-.home-hero .hero__sky{background:
-  linear-gradient(90deg,rgba(7,24,25,.67) 0%,rgba(8,28,27,.34) 38%,rgba(8,24,25,.05) 70%),
-  linear-gradient(180deg,rgba(7,24,36,.18),rgba(7,20,23,.08) 45%,rgba(4,17,18,.33)),
-  url("../assets/prague-weather-hero.svg") center 44%/cover no-repeat}
+.home-hero .hero__sky{background:linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%)}
 .home-hero .hero__scene{display:none}
 .home-hero .hero__top{position:relative;z-index:2}
 .home-hero .hero__place{font-size:22px;font-weight:700;text-shadow:0 2px 12px rgba(0,0,0,.28)}
@@ -912,6 +909,22 @@ body.radar-expanded .tabbar{display:none}
   .home-metric{gap:5px;padding:0 5px}.home-metric__icon{width:27px;height:27px}
   .home-metric b{font-size:18px}.home-metric span:not(.home-metric__icon){font-size:10.5px}
 }
+
+/* ── UNIVERSAL DYNAMIC WEATHER HERO ─────────────────────────── */
+.home-hero,.weather-hero{
+  --hero-sky:linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%);
+  --hero-tint:linear-gradient(180deg,rgba(19,55,92,.04),rgba(17,47,72,.22));
+}
+.hero-theme--cloud{--hero-sky:linear-gradient(160deg,#5A88AD 0%,#8AAAC1 52%,#D4DEE4 100%);--hero-tint:linear-gradient(180deg,rgba(34,55,75,.22),rgba(24,42,54,.38))}
+.hero-theme--rain{--hero-sky:linear-gradient(160deg,#385D78 0%,#647F91 52%,#AAB8C0 100%);--hero-tint:linear-gradient(180deg,rgba(22,45,61,.34),rgba(14,34,47,.5))}
+.hero-theme--snow{--hero-sky:linear-gradient(160deg,#779AB4 0%,#B4CAD8 54%,#EEF5F7 100%);--hero-tint:linear-gradient(180deg,rgba(70,99,119,.16),rgba(35,62,78,.34))}
+.hero-theme--storm{--hero-sky:linear-gradient(160deg,#232D49 0%,#48536F 50%,#79829A 100%);--hero-tint:linear-gradient(180deg,rgba(21,23,48,.48),rgba(12,24,42,.62))}
+.hero-theme--fog{--hero-sky:linear-gradient(160deg,#718B9C 0%,#AABBC4 52%,#DDE4E7 100%);--hero-tint:linear-gradient(180deg,rgba(74,94,105,.2),rgba(38,55,64,.38))}
+.home-hero.is-night,.weather-hero.is-night{--hero-sky:linear-gradient(160deg,#101B38 0%,#223A61 55%,#536A85 100%);--hero-tint:linear-gradient(180deg,rgba(7,13,34,.55),rgba(5,15,29,.7))}
+.home-hero .hero__sky,.weather-hero .weather-hero__backdrop{background:var(--hero-sky)}
+.hero-theme--rain .hero__scene,.hero-theme--storm .hero__scene,.hero-theme--fog .hero__scene{opacity:.24;filter:saturate(.45)}
+.hero-theme--snow .hero__scene{opacity:.55;filter:saturate(.2) brightness(1.14)}
+.is-night .hero__scene{opacity:.2;filter:saturate(.35) brightness(.72)}
 @media(max-width:340px){
   .home-today__head{align-items:flex-start;flex-direction:column;gap:8px}
   .home-best-badge{max-width:100%}
@@ -1072,10 +1085,7 @@ body.radar-expanded .tabbar{display:none}
   padding:0 20px 30px;
 }
 .home-hero .hero__sky{
-  background:
-    linear-gradient(90deg,rgba(7,24,25,.48) 0%,rgba(8,28,27,.24) 40%,rgba(8,24,25,.02) 72%),
-    linear-gradient(180deg,rgba(7,24,36,.08),rgba(7,20,23,.03) 48%,rgba(4,17,18,.20)),
-    url("../assets/prague-weather-hero.svg") center 43%/cover no-repeat;
+  background:linear-gradient(165deg,#3593DF 0%,#72B9E9 58%,#C7E2F1 100%);
 }
 .home-hero .hero__top{padding-top:max(12px,env(safe-area-inset-top))}
 .home-hero .hero__place{font-size:19px;min-height:38px}
@@ -1191,13 +1201,6 @@ body.radar-expanded .tabbar{display:none}
     linear-gradient(180deg,#4A9CDA 0%,#76B8E2 55%,#BDD9DF 100%);
 }
 .home-hero .hero__scene{display:block;opacity:.42;filter:saturate(.65)}
-.home-hero.is-prague .hero__sky{
-  background:
-    linear-gradient(90deg,rgba(7,24,25,.48) 0%,rgba(8,28,27,.24) 40%,rgba(8,24,25,.02) 72%),
-    linear-gradient(180deg,rgba(7,24,36,.08),rgba(7,20,23,.03) 48%,rgba(4,17,18,.20)),
-    url("../assets/prague-weather-hero.svg") center 43%/cover no-repeat;
-}
-.home-hero.is-prague .hero__scene{display:none}
 
 
 /* ── RADAR FORECAST CLARITY + SCORE OPTICS · 0.33.3 ─────────── */

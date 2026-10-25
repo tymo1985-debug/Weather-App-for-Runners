@@ -1,0 +1,13 @@
+{
+  "appId": "com.alextymoshchuk.runweather",
+  "appName": "Run Weather",
+  "webDir": "www",
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover",
+      "style": "LIGHT",
+      "hidden": false
+    }
+  }
+}
