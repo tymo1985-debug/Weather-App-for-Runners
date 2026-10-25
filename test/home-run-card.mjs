@@ -60,7 +60,7 @@ test('Profile duration is explicitly the same setting used on Home', () => {
 
 
 test('Run Score keeps optical centering and redundant header settings are removed', () => {
-  assert.match(app, /scoreBig'\)\.dataset\.digits = String\(sc\)\.length/);
+  assert.match(app, /scoreBig'\)\.dataset\.digits = hasScore \? String\(sc\)\.length : '0'/);
   assert.match(css, /\.home-score__value\[data-digits="3"\]/);
   assert.doesNotMatch(html, /id="btnAddCity"/);
   assert.doesNotMatch(html, /id="weatherLocate"/);
