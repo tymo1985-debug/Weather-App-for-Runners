@@ -2780,18 +2780,22 @@ if ('serviceWorker' in navigator) {
 // Refresh at 12 minutes, before the 30-minute cached forecast expires.
 // Throttle retries on weak connections and recover when Android WebView resumes.
 function refreshIfNeeded(force = false) {
-  if (!S.bundle || navigator.onLine === false) return;
+  if (navigator.onLine === false) return;
   const now = Date.now();
-  if (now - lastLoadAttemptAt < 5 * 60e3) return;
-  if (force || now - S.bundle.at > 12 * 60e3) load();
+  const elapsed = now - lastLoadAttemptAt;
+  if (!S.bundle) {
+    if (force || elapsed >= 5 * 60e3) load();
+    return;
+  }
+  if (force || (elapsed >= 5 * 60e3 && now - S.bundle.at > 12 * 60e3)) load();
 }
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) refreshIfNeeded();
 });
 window.addEventListener('online', () => refreshIfNeeded(true));
 setInterval(() => {
-  if (!S.bundle || document.hidden) return;
-  if (expireDisplayedBundle()) return;
+  if (document.hidden) return;
+  if (!S.bundle || expireDisplayedBundle()) { refreshIfNeeded(); return; }
   refreshIfNeeded();
   if (S.bundle && S.screen === 'home') renderHome();
 }, 60e3);
